@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RM - Login</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="icon" href="/static/img/RM_logo.ico" type="image/x-icon">
+</head>
+<body class="login-page">
+    <div class="side-by-side-layout">
+        <!-- Lado esquerdo - Informações da empresa -->
+        <div class="info-side">
+            <div class="info-content">
+                <div class="info-container">
+                    <h1 class="main-title">
+                        <span class="title-highlight">Inovação</span> para<br>
+                        conquistar<br>
+                        <span class="title-highlight">resultados</span>
+                    </h1>
+                    
+                    <p class="main-subtitle">Verificador de viabilidade com mapas CTO</p>
+                    
+                    <!-- Features compactas -->
+                    <div class="compact-features">
+                        <div class="compact-feature">
+                            <h4>Precisão de análise</h4>
+                            <p>Valida mapas CTO com regras consistentes.</p>
+                        </div>
+                        <div class="compact-feature">
+                            <h4>Relatórios rápidos</h4>
+                            <p>Resumo executivo em segundos.</p>
+                        </div>
+                        <div class="compact-feature">
+                            <h4>Integração simples</h4>
+                            <p>Upload direto e histórico centralizado.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Lado direito - Formulário de login -->
+        <div class="login-side">
+            <div class="login-card">
+                <h2 class="card-title">Entre em sua conta</h2>
+                
+                {% if messages %}
+                    <ul class="messages">
+                        {% for message in messages %}
+                            <li class="{{ message.tags }}">{{ message }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+                
+                <form method="post" class="form">
+                    {% csrf_token %}
+                    <div class="form-row">
+                        <label for="id_username">E-mail</label>
+                        <input type="text" name="username" id="id_username" value="castrox.dev@gmail.com" required>
+                    </div>
+                    
+                    <div class="form-row">
+                        <label for="id_password">Senha</label>
+                        <input type="password" name="password" id="id_password" required>
+                    </div>
+                    
+                    <div class="remember">
+                        <input type="checkbox" id="remember" name="remember">
+                        <label for="remember">Lembrar e-mail</label>
+                    </div>
+                    
+                    <button type="submit" class="btn primary full-width">Continuar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/js/login.js"></script>
+</body>
+</html>

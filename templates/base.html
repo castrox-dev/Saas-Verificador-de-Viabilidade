@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Sistema de verificação de viabilidade para mapas CTO - RM Systems">
+    <meta name="theme-color" content="#888888">
+    <title>{% block title %}Verificador de Viabilidade{% endblock %}</title>
+    {% load static %}
+    <link rel="icon" href="{% static 'img/RM_logo.ico' %}">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    {% block extra_head %}{% endblock %}
+  </head>
+  <body class="{% block body_class %}{% endblock %}">
+    <!-- Skip to main content link for screen readers -->
+    <a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
+    
+    <header class="topbar" role="banner">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <img class="brand-logo" src="{% static 'img/logo_letreiro.png' %}" alt="Logo da RM Systems" style="height: 32px; width: auto;" />
+        <h1 style="margin:0;color:var(--gray-dark);font-size:18px;">Verificador de Viabilidade (SaaS)</h1>
+      </div>
+      <nav role="navigation" aria-label="Navegação principal">
+        {% if user.is_authenticated %}
+          <a href="/dashboard/" aria-current="{% if request.resolver_match.url_name == 'dashboard' %}page{% endif %}">Dashboard</a>
+          <a href="{% url 'rm:logout' %}">Sair</a>
+        {% else %}
+          <a href="/login/" aria-current="{% if request.resolver_match.url_name == 'login' %}page{% endif %}">Entrar</a>
+        {% endif %}
+      </nav>
+    </header>
+    <main id="main-content" class="container" role="main">
+      {% if messages %}
+        <div class="messages" role="alert" aria-live="polite">
+          {% for message in messages %}
+            <div class="message {{ message.tags }}" role="status">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </main>
+    <footer class="footer" role="contentinfo">
+      <p>&copy; {% now "Y" %} Viabilidade SaaS - RM Systems. Todos os direitos reservados.</p>
+    </footer>
+    
+    <!-- Sistema de Toast -->
+    <script src="{% static 'js/toast.js' %}"></script>
+    {% block extra_scripts %}{% endblock %}
+  </body>
+</html>

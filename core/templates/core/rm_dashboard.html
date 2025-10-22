@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RM Systems - Dashboard Administrativo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .sidebar {
+            background: white;
+            min-height: calc(100vh - 76px);
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+        .sidebar .nav-link {
+            color: #495057;
+            padding: 15px 20px;
+            border-bottom: 1px solid #e9ecef;
+            transition: all 0.3s;
+        }
+        .sidebar .nav-link:hover {
+            background-color: #f8f9fa;
+            color: #667eea;
+            transform: translateX(5px);
+        }
+        .sidebar .nav-link.active {
+            background-color: #667eea;
+            color: white;
+        }
+        .main-content {
+            padding: 30px;
+        }
+        .stats-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            transition: transform 0.3s;
+        }
+        .stats-card:hover {
+            transform: translateY(-5px);
+        }
+        .stats-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+        }
+        .icon-companies { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .icon-users { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .icon-maps { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+        .icon-reports { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+        
+        .recent-activity {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+        .activity-item {
+            padding: 15px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 10px;
+            padding: 10px 20px;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-shield-alt me-2"></i>
+                RM Systems
+            </a>
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user-circle me-1"></i>
+                        {{ user.username }}
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'rm:logout' %}">
+                            <i class="fas fa-sign-out-alt me-2"></i>Sair
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 px-0">
+                <div class="sidebar">
+                    <nav class="nav flex-column">
+                        <a class="nav-link active" href="{% url 'rm:admin_dashboard' %}">
+                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                        </a>
+                        <a class="nav-link" href="{% url 'rm:company_list' %}">
+                            <i class="fas fa-building me-2"></i>Empresas
+                        </a>
+                        <a class="nav-link" href="{% url 'rm:user_list' %}">
+                            <i class="fas fa-users me-2"></i>Usuários
+                        </a>
+                        <a class="nav-link" href="{% url 'rm:map_list' %}">
+                            <i class="fas fa-map me-2"></i>Mapas CTO
+                        </a>
+                        <a class="nav-link" href="{% url 'rm:reports' %}">
+                            <i class="fas fa-chart-bar me-2"></i>Relatórios
+                        </a>
+                    </nav>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10">
+                <div class="main-content">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2>Dashboard Administrativo</h2>
+                        <div class="text-muted">
+                            <i class="fas fa-calendar me-1"></i>
+                            {{ today|date:"d/m/Y" }}
+                        </div>
+                    </div>
+
+                    <!-- Stats Cards -->
+                    <div class="row mb-4">
+                        <div class="col-md-3 mb-3">
+                            <div class="stats-card">
+                                <div class="d-flex align-items-center">
+                                    <div class="stats-icon icon-companies">
+                                        <i class="fas fa-building"></i>
+                                    </div>
+                                    <div class="ms-3">
+                                        <h3 class="mb-0">{{ total_companies }}</h3>
+                                        <p class="text-muted mb-0">Empresas</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="stats-card">
+                                <div class="d-flex align-items-center">
+                                    <div class="stats-icon icon-users">
+                                        <i class="fas fa-users"></i>
+                                    </div>
+                                    <div class="ms-3">
+                                        <h3 class="mb-0">{{ total_users }}</h3>
+                                        <p class="text-muted mb-0">Usuários</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="stats-card">
+                                <div class="d-flex align-items-center">
+                                    <div class="stats-icon icon-maps">
+                                        <i class="fas fa-map"></i>
+                                    </div>
+                                    <div class="ms-3">
+                                        <h3 class="mb-0">{{ total_maps }}</h3>
+                                        <p class="text-muted mb-0">Mapas CTO</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="stats-card">
+                                <div class="d-flex align-items-center">
+                                    <div class="stats-icon icon-reports">
+                                        <i class="fas fa-chart-line"></i>
+                                    </div>
+                                    <div class="ms-3">
+                                        <h3 class="mb-0">{{ active_companies }}</h3>
+                                        <p class="text-muted mb-0">Ativas</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <!-- Recent Activity -->
+                        <div class="col-md-8">
+                            <div class="recent-activity">
+                                <h5 class="mb-4">
+                                    <i class="fas fa-clock me-2"></i>
+                                    Atividade Recente
+                                </h5>
+                                {% if recent_activities %}
+                                    {% for activity in recent_activities %}
+                                        <div class="activity-item">
+                                            <div class="d-flex align-items-center">
+                                                <div class="me-3">
+                                                    <i class="fas fa-{{ activity.icon }} text-primary"></i>
+                                                </div>
+                                                <div class="flex-grow-1">
+                                                    <p class="mb-1">{{ activity.description }}</p>
+                                                    <small class="text-muted">{{ activity.timestamp|timesince }} atrás</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="text-center text-muted py-4">
+                                        <i class="fas fa-info-circle fa-2x mb-3"></i>
+                                        <p>Nenhuma atividade recente</p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions -->
+                        <div class="col-md-4">
+                            <div class="recent-activity">
+                                <h5 class="mb-4">
+                                    <i class="fas fa-bolt me-2"></i>
+                                    Ações Rápidas
+                                </h5>
+                                <div class="d-grid gap-2">
+                                    <a href="{% url 'rm:company_create' %}" class="btn btn-primary">
+                                        <i class="fas fa-plus me-2"></i>
+                                        Nova Empresa
+                                    </a>
+                                    <a href="{% url 'rm:user_create' %}" class="btn btn-outline-primary">
+                                        <i class="fas fa-user-plus me-2"></i>
+                                        Novo Usuário
+                                    </a>
+                                    <a href="{% url 'rm:reports' %}" class="btn btn-outline-primary">
+                                        <i class="fas fa-download me-2"></i>
+                                        Gerar Relatório
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

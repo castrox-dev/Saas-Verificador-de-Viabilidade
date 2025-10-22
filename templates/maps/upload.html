@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}Upload de Mapa CTO{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Upload de Mapa CTO</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="form-group mb-3">
+                            <label for="{{ form.file.id_for_label }}" class="form-label">{{ form.file.label }}</label>
+                            {{ form.file }}
+                            {% if form.file.errors %}
+                                <div class="text-danger">{{ form.file.errors }}</div>
+                            {% endif %}
+                            <div class="form-text">
+                                Formatos aceitos: .xlsx, .xls, .csv. Tamanho máximo: 10MB.
+                            </div>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="{{ form.file_name.id_for_label }}" class="form-label">{{ form.file_name.label }}</label>
+                            {{ form.file_name }}
+                            {% if form.file_name.errors %}
+                                <div class="text-danger">{{ form.file_name.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <div class="text-danger">{{ form.description.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        {% if user.is_rm_admin and form.company %}
+                        <div class="form-group mb-3">
+                            <label for="{{ form.company.id_for_label }}" class="form-label">{{ form.company.label }}</label>
+                            {{ form.company }}
+                            {% if form.company.errors %}
+                                <div class="text-danger">{{ form.company.errors }}</div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'map_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Voltar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-upload"></i> Fazer Upload
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

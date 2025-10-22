@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ company.name }} - Verificador CTO</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .sidebar {
+            background: white;
+            min-height: calc(100vh - 76px);
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+        .sidebar .nav-link {
+            color: #495057;
+            padding: 15px 20px;
+            border-bottom: 1px solid #e9ecef;
+            transition: all 0.3s;
+        }
+        .sidebar .nav-link:hover {
+            background-color: #f8f9fa;
+            color: #4facfe;
+            transform: translateX(5px);
+        }
+        .sidebar .nav-link.active {
+            background-color: #4facfe;
+            color: white;
+        }
+        .main-content {
+            padding: 30px;
+        }
+        .upload-area {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            text-align: center;
+            border: 3px dashed #e9ecef;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .upload-area:hover {
+            border-color: #4facfe;
+            background-color: #f8f9ff;
+        }
+        .upload-area.dragover {
+            border-color: #4facfe;
+            background-color: #f0f8ff;
+            transform: scale(1.02);
+        }
+        .upload-icon {
+            font-size: 4rem;
+            color: #4facfe;
+            margin-bottom: 20px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            border: none;
+            border-radius: 10px;
+            padding: 12px 30px;
+            font-weight: 600;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4);
+        }
+        .progress-container {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            margin-top: 20px;
+            display: none;
+        }
+        .file-info {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .analysis-result {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            margin-top: 20px;
+            display: none;
+        }
+        .result-success {
+            border-left: 5px solid #28a745;
+        }
+        .result-warning {
+            border-left: 5px solid #ffc107;
+        }
+        .result-error {
+            border-left: 5px solid #dc3545;
+        }
+        .recent-uploads {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            margin-top: 30px;
+        }
+        .upload-item {
+            padding: 15px 0;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .upload-item:last-child {
+            border-bottom: none;
+        }
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status-warning {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .status-error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'company:dashboard' %}">
+                <i class="fas fa-building me-2"></i>
+                {{ company.name }}
+            </a>
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user-circle me-1"></i>
+                        {{ user.username }}
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'company:logout' %}">
+                            <i class="fas fa-sign-out-alt me-2"></i>Sair
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 px-0">
+                <div class="sidebar">
+                    <nav class="nav flex-column">
+                        <a class="nav-link" href="{% url 'company:dashboard' %}">
+                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                        </a>
+                        {% if user.can_manage_users %}
+                            <a class="nav-link" href="{% url 'company:user_list' %}">
+                                <i class="fas fa-users me-2"></i>Usuários
+                            </a>
+                        {% endif %}
+                        <a class="nav-link" href="{% url 'company:map_list' %}">
+                            <i class="fas fa-map me-2"></i>Mapas CTO
+                        </a>
+                        <a class="nav-link active" href="{% url 'company:verificador' %}">
+                            <i class="fas fa-search me-2"></i>Verificador
+                        </a>
+                        <a class="nav-link" href="{% url 'company:map_history' %}">
+                            <i class="fas fa-history me-2"></i>Histórico
+                        </a>
+                    </nav>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10">
+                <div class="main-content">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h3>
+                            <i class="fas fa-search me-2"></i>
+                            Verificador de Viabilidade CTO
+                        </h3>
+                        <div class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Faça upload do mapa CTO para análise
+                        </div>
+                    </div>
+
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <!-- Upload Area -->
+                    <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                        <div class="upload-icon">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                        </div>
+                        <h4>Arraste o arquivo aqui ou clique para selecionar</h4>
+                        <p class="text-muted mb-4">
+                            Formatos aceitos: .dwg, .dxf, .pdf<br>
+                            Tamanho máximo: 50MB
+                        </p>
+                        <button type="button" class="btn btn-primary">
+                            <i class="fas fa-folder-open me-2"></i>
+                            Selecionar Arquivo
+                        </button>
+                    </div>
+
+                    <form id="uploadForm" method="post" enctype="multipart/form-data" style="display: none;">
+                        {% csrf_token %}
+                        <input type="file" id="fileInput" name="cto_file" accept=".dwg,.dxf,.pdf" onchange="handleFileSelect(this)">
+                    </form>
+
+                    <!-- Progress Container -->
+                    <div class="progress-container" id="progressContainer">
+                        <h5>
+                            <i class="fas fa-cog fa-spin me-2"></i>
+                            Processando arquivo...
+                        </h5>
+                        <div class="file-info" id="fileInfo"></div>
+                        <div class="progress mb-3">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" style="width: 0%" id="progressBar"></div>
+                        </div>
+                        <p class="text-muted mb-0">
+                            <i class="fas fa-clock me-1"></i>
+                            Aguarde enquanto analisamos o mapa CTO...
+                        </p>
+                    </div>
+
+                    <!-- Analysis Result -->
+                    <div class="analysis-result" id="analysisResult">
+                        <h5>
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            Análise Concluída
+                        </h5>
+                        <div id="resultContent"></div>
+                    </div>
+
+                    <!-- Recent Uploads -->
+                    <div class="recent-uploads">
+                        <h5 class="mb-4">
+                            <i class="fas fa-history me-2"></i>
+                            Uploads Recentes
+                        </h5>
+                        {% if recent_uploads %}
+                            {% for upload in recent_uploads %}
+                                <div class="upload-item">
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-3">
+                                            <i class="fas fa-file-alt text-primary fa-2x"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-1">{{ upload.filename }}</h6>
+                                            <small class="text-muted">
+                                                <i class="fas fa-calendar me-1"></i>
+                                                {{ upload.created_at|date:"d/m/Y H:i" }}
+                                                <span class="ms-3">
+                                                    <i class="fas fa-user me-1"></i>
+                                                    {{ upload.uploaded_by.username }}
+                                                </span>
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <span class="status-badge status-{{ upload.status_class }} me-2">
+                                            {{ upload.get_status_display }}
+                                        </span>
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'company:map_download' upload.id %}" 
+                                               class="btn btn-sm btn-outline-primary" 
+                                               title="Download">
+                                                <i class="fas fa-download"></i>
+                                            </a>
+                                            {% if upload.analysis_result %}
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-outline-info" 
+                                                        onclick="showAnalysisDetails({{ upload.id }})"
+                                                        title="Ver Análise">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center text-muted py-4">
+                                <i class="fas fa-upload fa-3x mb-3"></i>
+                                <p>Nenhum upload realizado ainda</p>
+                                <small>Faça o primeiro upload de um mapa CTO para começar</small>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Drag and drop functionality
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const uploadForm = document.getElementById('uploadForm');
+        const progressContainer = document.getElementById('progressContainer');
+        const analysisResult = document.getElementById('analysisResult');
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                handleFileSelect(fileInput);
+            }
+        });
+
+        function handleFileSelect(input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                
+                // Validate file type
+                const allowedTypes = ['.dwg', '.dxf', '.pdf'];
+                const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+                
+                if (!allowedTypes.includes(fileExtension)) {
+                    alert('Tipo de arquivo não suportado. Use apenas .dwg, .dxf ou .pdf');
+                    return;
+                }
+                
+                // Validate file size (50MB)
+                if (file.size > 50 * 1024 * 1024) {
+                    alert('Arquivo muito grande. Tamanho máximo: 50MB');
+                    return;
+                }
+                
+                uploadFile(file);
+            }
+        }
+
+        function uploadFile(file) {
+            // Show progress container
+            progressContainer.style.display = 'block';
+            analysisResult.style.display = 'none';
+            
+            // Update file info
+            document.getElementById('fileInfo').innerHTML = `
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-file-alt text-primary me-3"></i>
+                    <div>
+                        <strong>${file.name}</strong><br>
+                        <small class="text-muted">${(file.size / 1024 / 1024).toFixed(2)} MB</small>
+                    </div>
+                </div>
+            `;
+            
+            // Simulate upload progress
+            let progress = 0;
+            const progressBar = document.getElementById('progressBar');
+            const interval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress > 100) progress = 100;
+                
+                progressBar.style.width = progress + '%';
+                
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    // Submit form
+                    uploadForm.submit();
+                }
+            }, 200);
+        }
+
+        function showAnalysisDetails(uploadId) {
+            // This would show a modal with detailed analysis results
+            alert('Funcionalidade de detalhes da análise será implementada');
+        }
+    </script>
+</body>
+</html>
