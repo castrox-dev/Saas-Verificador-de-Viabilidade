@@ -19,12 +19,55 @@
     .btn-primary:hover { background: var(--rm-primary-dark); transform: translateY(-2px); box-shadow: var(--rm-shadow-lg); }
     .form-label { font-weight: 600; color: var(--rm-text-primary); }
     .required::after { content: ' *'; color: var(--rm-error); }
-    .form-control { background: var(--rm-input-bg); border: 1px solid var(--rm-input-border); color: var(--rm-text-primary); }
-    .form-control:focus { border-color: var(--rm-input-focus); box-shadow: 0 0 0 3px rgba(29,78,216,0.15); background: var(--rm-input-bg); color: var(--rm-text-primary); }
-    .form-select { background: var(--rm-input-bg); border: 1px solid var(--rm-input-border); color: var(--rm-text-primary); }
-    .form-select:focus { border-color: var(--rm-input-focus); box-shadow: 0 0 0 3px rgba(29,78,216,0.15); }
-    .form-check-input:checked { background-color: var(--rm-primary); border-color: var(--rm-primary); }
-    .form-check-label { color: var(--rm-text-primary); }
+    .form-control { 
+        background: var(--rm-input-bg) !important; 
+        border: 1px solid var(--rm-input-border) !important; 
+        color: var(--rm-text-primary) !important; 
+        transition: all 0.3s ease;
+    }
+    .form-control:focus { 
+        border-color: var(--rm-input-focus) !important; 
+        box-shadow: 0 0 0 3px rgba(29,78,216,0.15); 
+        background: var(--rm-input-bg) !important; 
+        color: var(--rm-text-primary) !important; 
+    }
+    .form-control::selection {
+        background: var(--rm-primary-100);
+        color: var(--rm-text-primary);
+    }
+    .form-control::-moz-selection {
+        background: var(--rm-primary-100);
+        color: var(--rm-text-primary);
+    }
+    .form-select { 
+        background: var(--rm-input-bg) !important; 
+        border: 1px solid var(--rm-input-border) !important; 
+        color: var(--rm-text-primary) !important; 
+        transition: all 0.3s ease;
+    }
+    .form-select:focus { 
+        border-color: var(--rm-input-focus) !important; 
+        box-shadow: 0 0 0 3px rgba(29,78,216,0.15); 
+        background: var(--rm-input-bg) !important;
+        color: var(--rm-text-primary) !important;
+    }
+    .form-check-input:checked { 
+        background-color: var(--rm-primary); 
+        border-color: var(--rm-primary); 
+    }
+    .form-check-label { 
+        color: var(--rm-text-primary); 
+    }
+    /* Placeholder styling */
+    .form-control::placeholder {
+        color: var(--rm-text-secondary);
+        opacity: 0.7;
+    }
+    /* Input hover effects */
+    .form-control:hover {
+        border-color: var(--rm-primary-light);
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+    }
 </style>
 {% endblock %}
 

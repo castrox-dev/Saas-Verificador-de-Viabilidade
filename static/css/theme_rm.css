@@ -54,8 +54,32 @@
 .alert-info{background:var(--rm-bg-accent);border-color:var(--rm-border-accent);color:var(--rm-primary)}
 
 /* Forms */
-.input, input[type="text"], input[type="email"], input[type="password"], select, textarea{width:100%;padding:.6rem .8rem;border-radius:10px;border:1px solid var(--rm-input-border);background:var(--rm-input-bg);color:var(--rm-text-primary);outline:none;transition:border-color .2s ease, box-shadow .2s ease}
-.input:focus, input:focus, select:focus, textarea:focus{border-color:var(--rm-input-focus);box-shadow:0 0 0 3px rgba(29,78,216,0.15)}
+.input, input[type="text"], input[type="email"], input[type="password"], select, textarea{width:100%;padding:.6rem .8rem;border-radius:10px;border:1px solid var(--rm-input-border) !important;background:var(--rm-input-bg) !important;color:var(--rm-text-primary) !important;outline:none;transition:border-color .2s ease, box-shadow .2s ease}
+.input:focus, input:focus, select:focus, textarea:focus{border-color:var(--rm-input-focus) !important;box-shadow:0 0 0 3px rgba(29,78,216,0.15);background:var(--rm-input-bg) !important;color:var(--rm-text-primary) !important}
+
+/* Form selection styling */
+.input::selection, input::selection, textarea::selection{background:var(--rm-primary-100);color:var(--rm-text-primary)}
+.input::-moz-selection, input::-moz-selection, textarea::-moz-selection{background:var(--rm-primary-100);color:var(--rm-text-primary)}
+
+/* Form hover effects */
+.input:hover, input:hover, select:hover, textarea:hover{border-color:var(--rm-primary-light);box-shadow:0 0 0 2px rgba(59, 130, 246, 0.1)}
+
+/* Placeholder styling */
+.input::placeholder, input::placeholder, textarea::placeholder{color:var(--rm-text-secondary);opacity:0.7}
+
+/* Bootstrap override for form controls */
+.form-control, .form-select {
+    background: var(--rm-input-bg) !important;
+    border: 1px solid var(--rm-input-border) !important;
+    color: var(--rm-text-primary) !important;
+}
+
+.form-control:focus, .form-select:focus {
+    background: var(--rm-input-bg) !important;
+    border-color: var(--rm-input-focus) !important;
+    color: var(--rm-text-primary) !important;
+    box-shadow: 0 0 0 3px rgba(29,78,216,0.15) !important;
+}
 
 /* Layout helpers */
 .container-fluid{max-width:1200px;margin:24px auto;padding:0 24px}

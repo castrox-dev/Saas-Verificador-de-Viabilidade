@@ -211,10 +211,25 @@ def company_login_view(request, company_slug):
         username = request.POST.get('username')
         password = request.POST.get('password')
         user = authenticate(request, username=username, password=password)
+        
+        # Debug logging
+        logger.info(f"Login attempt for company: {company_slug}, username: {username}")
+        if user:
+            logger.info(f"User found: {user.username}, company: {user.company}, is_active: {user.is_active}")
+            if user.company:
+                logger.info(f"User company slug: {user.company.slug}")
+            else:
+                logger.info("User has no company associated")
+        else:
+            logger.info("Authentication failed")
+        
         if user is not None and user.company and user.company.slug == company_slug:
             login(request, user)
+            logger.info(f"Login successful, redirecting to dashboard for {company_slug}")
             return redirect('company:dashboard', company_slug=company_slug)
-        messages.error(request, 'Credenciais inválidas para esta empresa.')
+        else:
+            logger.info("Login failed: user not found, no company, or wrong company")
+            messages.error(request, 'Credenciais inválidas para esta empresa.')
     return render(request, 'company/login.html', context)
 
 
@@ -222,6 +237,11 @@ def company_login_view(request, company_slug):
 @company_access_required(require_admin=False)
 def company_dashboard(request, company_slug):
     company = get_object_or_404(Company, slug=company_slug)
+    
+    # Debug logging
+    logger.info(f"Dashboard access for company: {company_slug}")
+    logger.info(f"User: {request.user.username}, Company: {request.user.company}, Role: {request.user.role}")
+    
     users_qs = CustomUser.objects.filter(company=company)
     maps_qs = CTOMapFile.objects.filter(company=company)
     context = {
