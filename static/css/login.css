@@ -1,2 +1,29 @@
-/* Estilos específicos da página de login */
-.login-page .container{max-width:100%;padding:0;margin:0}
+/* Estilos específicos da página de login de empresa */
+.login-page { min-height: 100vh; }
+
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.logo-container img { height: 40px; width: auto; }
+
+.text-muted { color: var(--muted); }
+.mb-2 { margin-bottom: 12px; }
+.mb-3 { margin-bottom: 16px; }
+
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-weight: 600; color: var(--gray); margin-bottom: 6px; }
+.form-group input { width: 100%; }
+
+.footer-links { text-align: center; margin-top: 16px; }
+.footer-links a { color: var(--primary); text-decoration: none; font-weight: 600; }
+.footer-links a:hover { color: var(--primary-hover); text-decoration: underline; }
+
+/* Ajustes responsivos */
+@media (max-width: 480px) {
+  .login-container { padding: 12px; }
+}

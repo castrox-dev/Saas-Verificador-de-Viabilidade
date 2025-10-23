@@ -5,8 +5,8 @@ import os
 
 
 def create_rm_superusers(apps, schema_editor):
-    # Guard: only seed in DEBUG or when SEED_RM_SUPERS is truthy
-    allow_seed = getattr(settings, 'DEBUG', False) or str(os.getenv('SEED_RM_SUPERS', '')).lower() in ('1', 'true', 'on', 'yes')
+    # Guard: only seed in DEBUG environment (never in production)
+    allow_seed = getattr(settings, 'DEBUG', False)
     if not allow_seed:
         return
     CustomUser = apps.get_model('core', 'CustomUser')
@@ -48,16 +48,17 @@ def create_rm_superusers(apps, schema_editor):
             user.save()
 
 
-def remove_rm_superusers(apps, schema_editor):
-    CustomUser = apps.get_model('core', 'CustomUser')
-    CustomUser.objects.filter(username__in=['castrox.rmsys.com', 'bone.rmsys.com']).delete()
+def noop_reverse(apps, schema_editor):
+    # No-op reverse migration
+    pass
 
 
 class Migration(migrations.Migration):
+
     dependencies = [
         ('core', '0004_add_fibramar_company'),
     ]
 
     operations = [
-        migrations.RunPython(create_rm_superusers, remove_rm_superusers),
+        migrations.RunPython(create_rm_superusers, noop_reverse),
     ]

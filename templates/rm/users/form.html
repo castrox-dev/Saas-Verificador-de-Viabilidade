@@ -155,6 +155,7 @@
                                         <label class="form-check-label">Usuário ativo</label>
                                     </div>
                                 </div>
+                                {% if form.password1 %}
                                 <div class="col-md-6">
                                     <label class="form-label required">Senha</label>
                                     {{ form.password1 }}
@@ -169,6 +170,7 @@
                                         <div class="text-danger small">{{ error }}</div>
                                     {% endfor %}
                                 </div>
+                                {% endif %}
                             </div>
 
                             <div class="mt-4 d-flex gap-2">

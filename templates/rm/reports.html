@@ -128,10 +128,11 @@
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
-  const labels = {{ chart_labels|safe }};
-  const totals = {{ chart_totals|safe }};
-  const processed = {{ chart_processed|safe }};
-  const pending = {{ chart_pending|safe }};
+  // Dados serializados com segurança (fallback para arrays vazios)
+  const labels = JSON.parse("{{ chart_labels|default:'[]'|escapejs }}");
+  const totals = JSON.parse("{{ chart_totals|default:'[]'|escapejs }}");
+  const processed = JSON.parse("{{ chart_processed|default:'[]'|escapejs }}");
+  const pending = JSON.parse("{{ chart_pending|default:'[]'|escapejs }}");
 
   // Bar: total por empresa
   new Chart(document.getElementById('chartMapsByCompany'), {
@@ -150,13 +151,15 @@
     }
   });
 
-  // Pie: status geral
+  // Pie: status geral (com defaults de segurança)
+  const overallProcessed = Number("{{ overall_processed|default:'0' }}");
+  const overallPending = Number("{{ overall_pending|default:'0' }}");
   new Chart(document.getElementById('chartStatus'), {
     type: 'doughnut',
     data: {
       labels: ['Processados', 'Pendentes'],
       datasets: [{
-        data: [{{ overall_processed }}, {{ overall_pending }}],
+        data: [overallProcessed, overallPending],
         backgroundColor: ['rgba(75,192,192,0.7)', 'rgba(255,99,132,0.7)']
       }]
     },

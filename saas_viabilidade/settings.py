@@ -78,8 +78,8 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 LOGIN_REDIRECT_URL = "/dashboard/"
-LOGOUT_REDIRECT_URL = "/login/"
-LOGIN_URL = "/login/"
+LOGOUT_REDIRECT_URL = "/rm/login/"
+LOGIN_URL = "/rm/login/"
 
 # Custom User Model
 AUTH_USER_MODEL = 'core.CustomUser'

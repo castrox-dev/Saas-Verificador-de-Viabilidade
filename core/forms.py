@@ -183,8 +183,8 @@ class CustomUserForm(UserCreationForm):
         
         # Configurar campos baseado no usuário atual
         if self.current_user:
-            if self.current_user.is_rm_admin:
-                # RM admin pode criar qualquer tipo de usuário
+            if self.current_user.is_rm_admin or self.current_user.is_superuser:
+                # RM admin ou superuser podem criar qualquer tipo de usuário
                 self.fields['role'].choices = CustomUser.USER_ROLES
                 self.fields['company'].queryset = Company.objects.filter(is_active=True)
             elif self.current_user.is_company_admin:
@@ -197,7 +197,8 @@ class CustomUserForm(UserCreationForm):
                     id=self.current_user.company.id
                 )
                 self.fields['company'].initial = self.current_user.company
-                self.fields['company'].widget.attrs['readonly'] = True
+                # Remove opção vazia para evitar submissão sem empresa
+                self.fields['company'].empty_label = None
             else:
                 # Usuários normais não podem criar outros usuários
                 raise ValidationError('Sem permissão para criar usuários')
@@ -206,6 +207,10 @@ class CustomUserForm(UserCreationForm):
         cleaned_data = super().clean()
         role = cleaned_data.get('role')
         company = cleaned_data.get('company')
+        
+        # Superuser pode criar qualquer combinação sem bloqueios de formulário
+        if self.current_user and getattr(self.current_user, 'is_superuser', False):
+            return cleaned_data
         
         # Validações baseadas no role
         if role == 'RM' and company:
@@ -227,6 +232,77 @@ class CustomUserForm(UserCreationForm):
         user.last_name = self.cleaned_data['last_name']
         user.phone = self.cleaned_data.get('phone', '')
         
+        if commit:
+            user.save()
+        return user
+
+class CustomUserChangeForm(forms.ModelForm):
+    email = forms.EmailField(required=True)
+    first_name = forms.CharField(max_length=30, required=True)
+    last_name = forms.CharField(max_length=30, required=True)
+    phone = forms.CharField(max_length=20, required=False)
+
+    class Meta:
+        model = CustomUser
+        fields = ('username', 'email', 'first_name', 'last_name', 'phone', 'role', 'company', 'is_active')
+        widgets = {
+            'username': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome de usuário'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'email@exemplo.com'}),
+            'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Sobrenome'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '(11) 99999-9999'}),
+            'role': forms.Select(attrs={'class': 'form-control'}),
+            'company': forms.Select(attrs={'class': 'form-control'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'})
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.current_user = kwargs.pop('current_user', None)
+        super().__init__(*args, **kwargs)
+        
+        # Configurar campos baseado no usuário atual
+        if self.current_user:
+            if self.current_user.is_rm_admin or self.current_user.is_superuser:
+                self.fields['role'].choices = CustomUser.USER_ROLES
+                self.fields['company'].queryset = Company.objects.filter(is_active=True)
+            elif self.current_user.is_company_admin:
+                self.fields['role'].choices = [
+                    ('COMPANY_ADMIN', 'Administrador da Empresa'),
+                    ('COMPANY_USER', 'Usuário da Empresa')
+                ]
+                if self.current_user.company:
+                    self.fields['company'].queryset = Company.objects.filter(id=self.current_user.company.id)
+                    self.fields['company'].initial = self.current_user.company
+                    self.fields['company'].empty_label = None
+            else:
+                raise ValidationError('Sem permissão para editar usuários')
+
+    def clean(self):
+        cleaned_data = super().clean()
+        role = cleaned_data.get('role')
+        company = cleaned_data.get('company')
+        
+        # Superuser pode editar qualquer combinação
+        if self.current_user and getattr(self.current_user, 'is_superuser', False):
+            return cleaned_data
+        
+        if role == 'RM' and company:
+            raise ValidationError('Administradores RM não devem ter empresa associada.')
+        elif role in ['COMPANY_ADMIN', 'COMPANY_USER'] and not company:
+            raise ValidationError('Usuários de empresa devem ter uma empresa associada.')
+        
+        if self.current_user and self.current_user.is_company_admin:
+            if company != self.current_user.company:
+                raise ValidationError('Você só pode editar usuários da sua empresa.')
+        
+        return cleaned_data
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.email = self.cleaned_data['email']
+        user.first_name = self.cleaned_data['first_name']
+        user.last_name = self.cleaned_data['last_name']
+        user.phone = self.cleaned_data.get('phone', '')
         if commit:
             user.save()
         return user

@@ -30,13 +30,13 @@
             <a href="{% url 'rm:logout' %}">Sair</a>
           {% elif user.company and user.is_company_admin %}
             <a href="{% url 'company:dashboard' company_slug=user.company.slug %}" aria-current="{% if request.resolver_match.url_name == 'dashboard' %}page{% endif %}">Dashboard</a>
-            <a href="{% url 'company:logout' %}">Sair</a>
+            <a href="{% url 'company:logout' company_slug=user.company.slug %}">Sair</a>
           {% elif user.company %}
             <a href="{% url 'company:verificador' company_slug=user.company.slug %}" aria-current="{% if request.resolver_match.url_name == 'verificador' %}page{% endif %}">Verificador</a>
-            <a href="{% url 'company:logout' %}">Sair</a>
+            <a href="{% url 'company:logout' company_slug=user.company.slug %}">Sair</a>
           {% endif %}
         {% else %}
-          <a href="/login/" aria-current="{% if request.resolver_match.url_name == 'login' %}page{% endif %}">Entrar</a>
+          <a href="{% url 'rm:login' %}" aria-current="{% if request.resolver_match.url_name == 'login' %}page{% endif %}">Entrar</a>
         {% endif %}
       </nav>
     </header>

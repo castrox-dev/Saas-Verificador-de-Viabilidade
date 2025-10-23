@@ -7,7 +7,8 @@ app_name = 'company'
 urlpatterns = [
     # Autenticação da empresa
     path('login/', views.company_login_view, name='login'),
-    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    # Troca LogoutView por view própria que aceita GET e redireciona para login da empresa
+    path('logout/', views.company_logout_view, name='logout'),
     
     # Painel da empresa (para admins)
     path('painel/', views.company_dashboard, name='dashboard'),
@@ -18,8 +19,8 @@ urlpatterns = [
     # Gestão de usuários da empresa (apenas admins)
     path('painel/usuarios/', views.company_user_list, name='user_list'),
     path('painel/usuarios/criar/', views.company_user_create, name='user_create'),
-    path('painel/usuarios/<int:pk>/editar/', views.company_user_edit, name='user_edit'),
-    path('painel/usuarios/<int:pk>/toggle/', views.company_user_toggle, name='user_toggle'),
+    path('painel/usuarios/<int:user_id>/editar/', views.company_user_edit, name='user_edit'),
+    path('painel/usuarios/<int:user_id>/toggle/', views.company_user_toggle, name='user_toggle'),
     
     # Gestão de mapas da empresa
     path('painel/mapas/', views.company_map_list, name='map_list'),
