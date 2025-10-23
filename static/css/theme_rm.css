@@ -1,0 +1,67 @@
+/* RM Systems Theme Components: buttons, badges, tables, alerts, forms */
+:root{
+  --rm-blue-600:#1D4ED8;--rm-blue-700:#1E40AF;--rm-blue-100:#DBEAFE;
+  --rm-green-500:#10b981;--rm-green-600:#059669;--rm-red-500:#ef4444;--rm-red-600:#dc2626;
+  --rm-amber-500:#f59e0b;--rm-slate-900:#0F172A;--rm-slate-600:#475569;--rm-slate-50:#F8FAFC;
+}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.6rem 1rem;border-radius:10px;border:1px solid transparent;font-weight:600;font-size:.9rem;cursor:pointer;text-decoration:none;transition:all .2s ease;box-shadow:var(--shadow)}
+.btn:hover{transform:translateY(-1px);box-shadow:var(--shadow-lg)}
+.btn:disabled{opacity:.6;cursor:not-allowed;transform:none;box-shadow:none}
+.btn .fas,.btn .fa{font-size:.9rem}
+
+.btn.primary,.btn-primary{background:var(--primary, var(--rm-blue-600));color:#fff;border-color:var(--primary, var(--rm-blue-600))}
+.btn.primary:hover,.btn-primary:hover{background:var(--primary-hover, var(--rm-blue-700));border-color:var(--primary-hover, var(--rm-blue-700))}
+
+.btn-outline,.btn-outline-primary{background:transparent;color:var(--primary, var(--rm-blue-600));border-color:var(--primary, var(--rm-blue-600))}
+.btn-outline:hover,.btn-outline-primary:hover{background:rgba(29,78,216,0.08);color:var(--primary-hover, var(--rm-blue-700));border-color:var(--primary-hover, var(--rm-blue-700))}
+
+.btn-danger{background:var(--rm-red-500);color:#fff;border-color:var(--rm-red-500)}
+.btn-danger:hover{background:var(--rm-red-600);border-color:var(--rm-red-600)}
+.btn-outline-danger{background:transparent;color:var(--rm-red-500);border-color:var(--rm-red-500)}
+.btn-outline-danger:hover{background:rgba(239,68,68,.08);color:var(--rm-red-600);border-color:var(--rm-red-600)}
+
+.btn-success{background:var(--rm-green-500);color:#fff;border-color:var(--rm-green-500)}
+.btn-success:hover{background:var(--rm-green-600);border-color:var(--rm-green-600)}
+.btn-outline-success{background:transparent;color:var(--rm-green-500);border-color:var(--rm-green-500)}
+.btn-outline-success:hover{background:rgba(16,185,129,.08);color:var(--rm-green-600);border-color:var(--rm-green-600)}
+
+.btn-sm{padding:.4rem .7rem;border-radius:8px;font-size:.82rem}
+.btn-icon{display:inline-block}
+
+/* Badges */
+.badge{display:inline-block;padding:.25rem .5rem;border-radius:999px;font-weight:700;font-size:.75rem}
+.badge-success{background:#dcfce7;color:#166534}
+.badge-danger{background:#fee2e2;color:#7f1d1d}
+.badge-warning{background:#fef3c7;color:#92400e}
+.badge-info{background:#dbeafe;color:#1e40af}
+.badge-secondary{background:#e5e7eb;color:#374151}
+
+/* Cards */
+.card{background:var(--card,#fff);border:1px solid var(--border,var(--rm-blue-100));border-radius:16px;box-shadow:var(--shadow)}
+.card-body{padding:1rem 1.25rem}
+
+/* Tables */
+.table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--border,var(--rm-blue-100));border-radius:12px;overflow:hidden}
+.table th,.table td{padding:.75rem 1rem;border-bottom:1px solid var(--white-dark,#E5E7EB);text-align:left;color:var(--text,var(--rm-slate-900))}
+.table thead th{background:#EFF6FF;color:#1E40AF;font-weight:700;border-bottom:1px solid var(--rm-blue-100)}
+.table-striped tbody tr:nth-child(odd){background:var(--rm-slate-50)}
+.table-responsive{width:100%;overflow:auto}
+
+/* Alerts */
+.alert{border-radius:12px;padding:.8rem 1rem;border:1px solid var(--border,var(--rm-blue-100));background:#fff;color:var(--text,var(--rm-slate-900));box-shadow:var(--shadow)}
+.alert-info{background:#EFF6FF;border-color:var(--rm-blue-100);color:#1E40AF}
+
+/* Forms */
+.input, input[type="text"], input[type="email"], input[type="password"], select, textarea{width:100%;padding:.6rem .8rem;border-radius:10px;border:1px solid var(--border,var(--rm-blue-100));background:#fff;color:var(--text,var(--rm-slate-900));outline:none;transition:border-color .2s ease, box-shadow .2s ease}
+.input:focus, input:focus, select:focus, textarea:focus{border-color:var(--primary,var(--rm-blue-600));box-shadow:0 0 0 3px rgba(29,78,216,0.15)}
+
+/* Layout helpers */
+.container-fluid{max-width:1200px;margin:24px auto;padding:0 24px}
+.row{display:block}
+.col-12{width:100%}
+
+/* Topbar subtle override */
+.topbar a{color:#334155}
+.topbar a:hover{color:#fff;background:var(--primary,var(--rm-blue-600))}

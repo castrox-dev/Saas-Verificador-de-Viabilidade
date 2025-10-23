@@ -1,10 +1,16 @@
 from pathlib import Path
+import os
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = "dev-secret-key-change-me"
-DEBUG = True
-ALLOWED_HOSTS = []
+# Load environment variables from .env file
+load_dotenv(BASE_DIR / ".env")
+
+SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-me")
+DEBUG = os.getenv("DEBUG", "True").lower() in ("1", "true", "on", "yes")
+ALLOWED_HOSTS_ENV = os.getenv("ALLOWED_HOSTS", "")
+ALLOWED_HOSTS = [h.strip() for h in ALLOWED_HOSTS_ENV.split(",") if h.strip()] or ["127.0.0.1", "localhost"]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -79,3 +85,12 @@ LOGIN_URL = "/login/"
 AUTH_USER_MODEL = 'core.CustomUser'
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# CSRF and cookie security
+CSRF_TRUSTED_ORIGINS_ENV = os.getenv("CSRF_TRUSTED_ORIGINS", "")
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in CSRF_TRUSTED_ORIGINS_ENV.split(",") if o.strip()]
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "same-origin"
+X_FRAME_OPTIONS = "DENY"

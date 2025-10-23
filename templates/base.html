@@ -4,11 +4,12 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="Sistema de verificação de viabilidade para mapas CTO - RM Systems">
-    <meta name="theme-color" content="#888888">
+    <meta name="theme-color" content="#1D4ED8">
     <title>{% block title %}Verificador de Viabilidade{% endblock %}</title>
     {% load static %}
     <link rel="icon" href="{% static 'img/RM_logo.ico' %}">
     <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/theme_rm.css' %}" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     {% block extra_head %}{% endblock %}
   </head>
@@ -23,8 +24,21 @@
       </div>
       <nav role="navigation" aria-label="Navegação principal">
         {% if user.is_authenticated %}
-          <a href="/dashboard/" aria-current="{% if request.resolver_match.url_name == 'dashboard' %}page{% endif %}">Dashboard</a>
-          <a href="{% url 'rm:logout' %}">Sair</a>
+          {% if user.is_rm_admin %}
+            <a href="{% url 'rm:admin_dashboard' %}" aria-current="{% if request.resolver_match.url_name == 'admin_dashboard' %}page{% endif %}">Dashboard</a>
+          {% elif user.company and user.is_company_admin %}
+            <a href="{% url 'company:dashboard' company_slug=user.company.slug %}" aria-current="{% if request.resolver_match.url_name == 'dashboard' %}page{% endif %}">Dashboard</a>
+          {% elif user.company %}
+            <a href="{% url 'company:verificador' company_slug=user.company.slug %}" aria-current="{% if request.resolver_match.url_name == 'verificador' %}page{% endif %}">Verificador</a>
+          {% endif %}
+          {% if user.is_rm_admin %}
+            <a href="/admin/">Admin</a>
+          {% endif %}
+          {% if user.is_rm_admin %}
+            <a href="{% url 'rm:logout' %}">Sair</a>
+          {% else %}
+            <a href="{% url 'company:logout' %}">Sair</a>
+          {% endif %}
         {% else %}
           <a href="/login/" aria-current="{% if request.resolver_match.url_name == 'login' %}page{% endif %}">Entrar</a>
         {% endif %}

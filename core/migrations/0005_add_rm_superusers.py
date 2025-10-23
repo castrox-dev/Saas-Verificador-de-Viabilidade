@@ -1,8 +1,14 @@
 from django.db import migrations
 from django.contrib.auth.hashers import make_password
+from django.conf import settings
+import os
 
 
 def create_rm_superusers(apps, schema_editor):
+    # Guard: only seed in DEBUG or when SEED_RM_SUPERS is truthy
+    allow_seed = getattr(settings, 'DEBUG', False) or str(os.getenv('SEED_RM_SUPERS', '')).lower() in ('1', 'true', 'on', 'yes')
+    if not allow_seed:
+        return
     CustomUser = apps.get_model('core', 'CustomUser')
 
     users_data = [

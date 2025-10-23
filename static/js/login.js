@@ -15,15 +15,23 @@ document.addEventListener('DOMContentLoaded', function(){
     if (savedEmail) { emailInput.value = savedEmail; if(remember) remember.checked = true; }
   }catch(_){/* ignore */}
 
+  // No passo 1 não exigir senha
+  if (pwdInput) {
+    pwdInput.required = false;
+  }
+
   form.addEventListener('submit', (e) => {
     const step = form.getAttribute('data-step');
     if (step === '1') {
       e.preventDefault();
       // Avança para etapa 2
       if(rowPwd) rowPwd.style.display = '';
+      if (pwdInput) {
+        pwdInput.required = true;
+        setTimeout(() => { try { pwdInput.focus(); } catch(_){} }, 0);
+      }
       if(btn) btn.textContent = 'Entrar';
       form.setAttribute('data-step', '2');
-      if(pwdInput) pwdInput.focus();
     } else {
       // Persistência do e-mail no localStorage
       try {

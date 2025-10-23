@@ -1,5 +1,6 @@
 from django.contrib.auth.decorators import user_passes_test
 from django.core.exceptions import PermissionDenied
+from django.http import HttpResponseForbidden, JsonResponse
 from functools import wraps
 
 def is_rm_admin(user):
@@ -42,14 +43,82 @@ company_admin_required = user_passes_test(
 user_management_required = user_passes_test(can_manage_users, login_url='/login/')
 map_upload_required = user_passes_test(can_upload_maps, login_url='/login/')
 
+
+def company_access_required(require_admin=False):
+    """
+    Decorator que garante acesso multi-tenant por slug de empresa.
+    - RM admins e superusers sempre têm acesso.
+    - Caso contrário, o usuário deve pertencer à empresa do slug.
+    - Se require_admin=True, o usuário também deve ser COMPANY_ADMIN.
+    Respostas padrão: 403 HTML.
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def _wrapped(request, *args, **kwargs):
+            user = request.user
+            # Acesso amplo para RM/superuser
+            if user.is_authenticated and (getattr(user, 'is_rm_admin', False) or getattr(user, 'is_superuser', False)):
+                return view_func(request, *args, **kwargs)
+            # Buscar empresa pelo slug
+            company_slug = kwargs.get('company_slug')
+            if not user.is_authenticated or not company_slug:
+                raise PermissionDenied
+            # Import lazy para evitar ciclos
+            from .models import Company
+            try:
+                company = Company.objects.get(slug=company_slug)
+            except Company.DoesNotExist:
+                raise PermissionDenied
+            # Verificação de pertencimento
+            if not user.company or user.company != company:
+                return HttpResponseForbidden()
+            # Se requer admin, validar
+            if require_admin and not getattr(user, 'is_company_admin', False):
+                return HttpResponseForbidden()
+            return view_func(request, *args, **kwargs)
+        return _wrapped
+    return decorator
+
+
+def company_access_required_json(require_admin=False):
+    """
+    Variante para endpoints JSON/AJAX.
+    - Responde com JsonResponse(status=403) quando sem permissão.
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def _wrapped(request, *args, **kwargs):
+            user = request.user
+            # Acesso amplo para RM/superuser
+            if user.is_authenticated and (getattr(user, 'is_rm_admin', False) or getattr(user, 'is_superuser', False)):
+                return view_func(request, *args, **kwargs)
+            company_slug = kwargs.get('company_slug')
+            if not user.is_authenticated or not company_slug:
+                return JsonResponse({'error': 'Sem permissão'}, status=403)
+            from .models import Company
+            try:
+                company = Company.objects.get(slug=company_slug)
+            except Company.DoesNotExist:
+                return JsonResponse({'error': 'Sem permissão'}, status=403)
+            if not user.company or user.company != company:
+                return JsonResponse({'error': 'Sem permissão'}, status=403)
+            if require_admin and not getattr(user, 'is_company_admin', False):
+                return JsonResponse({'error': 'Sem permissão'}, status=403)
+            return view_func(request, *args, **kwargs)
+        return _wrapped
+    return decorator
+
+
 def same_company_required(view_func):
-    """Decorator que verifica se o usuário pode acessar dados da empresa"""
-    @wraps(view_func)
-    def wrapper(request, *args, **kwargs):
-        # Este decorator deve ser usado em conjunto com outros que passam
-        # o objeto target_user ou company como parâmetro
-        return view_func(request, *args, **kwargs)
-    return wrapper
+    """Mantido por compatibilidade; use company_access_required(False)."""
+    return company_access_required(require_admin=False)(view_func)
+
+
+class SameCompanyRequiredMixin:
+    """Mixin que verifica se o usuário pode acessar dados da empresa"""
+    def dispatch(self, request, *args, **kwargs):
+        # Para uso futuro com CBVs
+        return super().dispatch(request, *args, **kwargs)
 
 # Mixins para Class-Based Views
 class RMAdminRequiredMixin:

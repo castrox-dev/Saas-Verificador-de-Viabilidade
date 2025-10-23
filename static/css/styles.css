@@ -1,38 +1,38 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 /* Nova paleta de cores conforme especificação */
 :root{
-  /* Cores da nova paleta */
-  --white-light: #FFFFFF;     /* Branco Claro */
-  --white-std: #F2F2F2;       /* Branco Padrão */
-  --white-dark: #D9D9D9;      /* Branco Escuro */
-  
-  --gray-light: #CCCCCC;      /* Cinza Claro */
-  --gray: #888888;            /* Cinza Padrão */
-  --gray-dark: #333333;       /* Cinza Escuro */
+  /* Paleta RM Systems (azul profissional, alto contraste) */
+  --white-light: #FFFFFF;
+  --white-std: #F8FAFC;        /* slate-50 */
+  --white-dark: #E5E7EB;       /* gray-200 */
 
-  /* Gradiente de fundo com cinza mais escuro para melhor contraste */
-  --bg: linear-gradient(135deg, #CCCCCC 0%, #888888 100%);
-  --bg2: var(--gray-light);
+  --gray-light: #E2E8F0;       /* slate-200 */
+  --gray: #475569;             /* slate-600 */
+  --gray-dark: #0F172A;        /* slate-900 */
 
-  /* Mapeamento das variáveis existentes para nova paleta */
+  /* Fundo claro com nuance azul */
+  --bg: linear-gradient(135deg, #E8F1FB 0%, #F5F9FF 100%);
+  --bg2: #EEF5FF;
+
+  /* Mapeamento de variáveis para a paleta */
   --white: var(--white-light);
   --card: var(--white-light);
   --text: var(--gray-dark);
   --muted: var(--gray);
-  --border: var(--white-dark);
-  
-  /* Cores funcionais mantidas mas ajustadas */
-  --primary: #888888;         /* Usando cinza padrão como primária */
-  --primary-hover: #333333;   /* Cinza escuro no hover */
-  --primary-700: #333333;     /* Cinza escuro para variações */
-  
-  --success: #10b981;
-  --warning: #f59e0b;
-  --error: #ef4444;
-  
-  /* Sombras ajustadas para nova paleta */
-  --shadow: 0 10px 25px -5px rgba(51, 51, 51, 0.1), 0 10px 10px -5px rgba(51, 51, 51, 0.04);
-  --shadow-lg: 0 25px 50px -12px rgba(51, 51, 51, 0.15);
+  --border: #DBEAFE;           /* blue-100 */
+
+  /* Cores funcionais (primária azul RM) */
+  --primary: #1D4ED8;          /* blue-600 */
+  --primary-hover: #1E40AF;    /* blue-700 */
+  --primary-700: #1E40AF;
+
+  --success: #10b981;          /* emerald-500 */
+  --warning: #f59e0b;          /* amber-500 */
+  --error: #ef4444;            /* red-500 */
+
+  /* Sombras sutilmente azuladas */
+  --shadow: 0 10px 25px -5px rgba(30, 64, 175, 0.08), 0 10px 10px -5px rgba(30, 64, 175, 0.04);
+  --shadow-lg: 0 25px 50px -12px rgba(30, 64, 175, 0.12);
 }
 *{box-sizing:border-box}
 html,body{height:100%}

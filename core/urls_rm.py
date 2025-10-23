@@ -40,4 +40,5 @@ urlpatterns = [
     
     # Estatísticas e relatórios
     path('relatorios/', views.rm_reports, name='reports'),
+    path('relatorios/exportar.csv', views.rm_reports_export_csv, name='reports_export_csv'),
 ]

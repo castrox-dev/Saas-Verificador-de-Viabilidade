@@ -6,14 +6,16 @@ from django.http import HttpResponseForbidden, HttpResponse, Http404, JsonRespon
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.views.decorators.http import require_http_methods
 from django.db import transaction
+from django.db.models import Count, Q
 import logging
 import os
+import csv
 
 from .forms import CTOMapFileForm, CompanyForm, CustomUserForm
 from .models import CTOMapFile, Company, CustomUser
 from .permissions import (
     is_rm_admin, is_company_admin, can_manage_users,
-    rm_admin_required, user_management_required, map_upload_required
+    rm_admin_required, user_management_required, map_upload_required, company_access_required, company_access_required_json
 )
 
 # Configurar logging
@@ -23,12 +25,12 @@ logger = logging.getLogger(__name__)
 def login_view(request):
     """View para login de usuários"""
     if request.method == 'POST':
-        input_id = request.POST.get('username')
-        password = request.POST.get('password')
+        input_id = (request.POST.get('username', '') or '').strip()
+        password = (request.POST.get('password', '') or '').strip()
         
         # Permitir login usando e-mail ou username
         username = input_id
-        if input_id and '@' in input_id:
+        if input_id and '@' in input_id.lower():
             try:
                 u = CustomUser.objects.get(email__iexact=input_id)
                 username = u.username
@@ -56,6 +58,18 @@ def logout_view(request):
     """View para logout de usuários"""
     logout(request)
     return redirect('rm:login')
+
+@login_required
+def dashboard_redirect(request):
+    """Redireciona para o dashboard correto conforme o papel do usuário"""
+    user = request.user
+    if user.is_rm_admin or user.is_superuser:
+        return redirect('rm:admin_dashboard')
+    if user.company:
+        if user.is_company_admin:
+            return redirect('company:dashboard', company_slug=user.company.slug)
+        return redirect('company:verificador', company_slug=user.company.slug)
+    return redirect('rm:admin_dashboard')
 
 @login_required
 def dashboard(request):
@@ -411,12 +425,12 @@ def home_redirect(request):
 def rm_login_view(request):
     """View de login específica para RM Systems"""
     if request.method == 'POST':
-        input_id = request.POST.get('username')
-        password = request.POST.get('password')
+        input_id = (request.POST.get('username', '') or '').strip()
+        password = (request.POST.get('password', '') or '').strip()
         
         # Permitir login usando e-mail ou username
         username = input_id
-        if input_id and '@' in input_id:
+        if input_id and '@' in input_id.lower():
             try:
                 u = CustomUser.objects.get(email__iexact=input_id)
                 username = u.username
@@ -679,15 +693,53 @@ def rm_map_delete(request, pk):
 @rm_admin_required
 def rm_reports(request):
     """Relatórios e estatísticas para RM"""
+    # Agregações por empresa
+    company_counts = Company.objects.annotate(
+        total_maps=Count('cto_maps'),
+        processed_maps=Count('cto_maps', filter=Q(cto_maps__is_processed=True)),
+    ).order_by('name')
+
+    labels = [c.name for c in company_counts]
+    totals = [c.total_maps for c in company_counts]
+    processed = [c.processed_maps for c in company_counts]
+    pending = [t - p for t, p in zip(totals, processed)]
+
     context = {
         'total_companies': Company.objects.count(),
         'active_companies': Company.objects.filter(is_active=True).count(),
         'total_users': CustomUser.objects.count(),
         'active_users': CustomUser.objects.filter(is_active=True).count(),
         'total_maps': CTOMapFile.objects.count(),
-        'companies_with_maps': Company.objects.filter(ctomapfile__isnull=False).distinct().count(),
+        'companies_with_maps': Company.objects.filter(cto_maps__isnull=False).distinct().count(),
+        # Para gráficos
+        'chart_labels': labels,
+        'chart_totals': totals,
+        'chart_processed': processed,
+        'chart_pending': pending,
+        # Resumo geral
+        'overall_processed': CTOMapFile.objects.filter(is_processed=True).count(),
+        'overall_pending': CTOMapFile.objects.filter(is_processed=False).count(),
     }
     return render(request, 'rm/reports.html', context)
+
+@login_required
+@rm_admin_required
+def rm_reports_export_csv(request):
+    """Exporta CSV com contagem de mapas por empresa (total, processados, pendentes)."""
+    company_counts = Company.objects.annotate(
+        total_maps=Count('cto_maps'),
+        processed_maps=Count('cto_maps', filter=Q(cto_maps__is_processed=True)),
+    ).order_by('name')
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="relatorios_rm_mapas_por_empresa.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(['Empresa', 'Total de Mapas', 'Processados', 'Pendentes'])
+    for c in company_counts:
+        writer.writerow([c.name, c.total_maps, c.processed_maps, (c.total_maps - c.processed_maps)])
+
+    return response
 
 
 # ===== VIEWS EMPRESA =====
@@ -701,12 +753,12 @@ def company_login_view(request, company_slug):
         return redirect('home_redirect')
     
     if request.method == 'POST':
-        input_id = request.POST.get('username')
-        password = request.POST.get('password')
+        input_id = (request.POST.get('username', '') or '').strip()
+        password = (request.POST.get('password', '') or '').strip()
         
         # Permitir login usando e-mail ou username
         username = input_id
-        if input_id and '@' in input_id:
+        if input_id and '@' in input_id.lower():
             try:
                 u = CustomUser.objects.get(email__iexact=input_id)
                 username = u.username
@@ -734,6 +786,7 @@ def company_login_view(request, company_slug):
     return render(request, 'login.html', context)
 
 @login_required
+@company_access_required(require_admin=False)
 def company_dashboard(request, company_slug):
     """Dashboard da empresa (admins; RM/superuser têm acesso)"""
     if not (request.user.is_company_admin or request.user.is_rm_admin or request.user.is_superuser):
@@ -755,6 +808,7 @@ def company_dashboard(request, company_slug):
     return render(request, 'core/company_dashboard.html', context)
 
 @login_required
+@company_access_required(require_admin=False)
 def company_verificador(request, company_slug):
     """Verificador da empresa (todos os usuários)"""
     company = get_object_or_404(Company, slug=company_slug)
@@ -770,6 +824,7 @@ def company_verificador(request, company_slug):
     return render(request, 'core/company_verifier.html', context)
 
 @login_required
+@company_access_required(require_admin=False)
 def company_user_list(request, company_slug):
     """Lista de usuários da empresa (apenas admins)"""
     if not (request.user.is_company_admin or request.user.is_rm_admin or request.user.is_superuser):
@@ -782,6 +837,7 @@ def company_user_list(request, company_slug):
     return render(request, 'company/users/list.html', {'users': users, 'company': company})
 
 @login_required
+@company_access_required(require_admin=True)
 def company_user_create(request, company_slug):
     """Criar usuário da empresa (apenas admins)"""
     if not (request.user.is_company_admin or request.user.is_rm_admin or request.user.is_superuser):
@@ -805,6 +861,7 @@ def company_user_create(request, company_slug):
     return render(request, 'company/users/form.html', {'form': form, 'action': 'Criar', 'company': company})
 
 @login_required
+@company_access_required(require_admin=True)
 def company_user_edit(request, company_slug, pk):
     """Editar usuário da empresa (apenas admins)"""
     if not (request.user.is_company_admin or request.user.is_rm_admin or request.user.is_superuser):
@@ -827,6 +884,7 @@ def company_user_edit(request, company_slug, pk):
     return render(request, 'company/users/form.html', {'form': form, 'action': 'Editar', 'company': company})
 
 @login_required
+@company_access_required_json(require_admin=True)
 @require_http_methods(["POST"])
 def company_user_toggle(request, company_slug, pk):
     """Toggle status do usuário da empresa"""
@@ -847,6 +905,7 @@ def company_user_toggle(request, company_slug, pk):
     })
 
 @login_required
+@company_access_required(require_admin=True)
 def company_map_list(request, company_slug):
     """Lista de mapas da empresa (painel admin)"""
     if not (request.user.is_company_admin or request.user.is_rm_admin or request.user.is_superuser):
@@ -859,6 +918,7 @@ def company_map_list(request, company_slug):
     return render(request, 'company/maps/list.html', {'maps': maps, 'company': company})
 
 @login_required
+@company_access_required(require_admin=True)
 def company_map_upload(request, company_slug):
     """Upload de mapa da empresa"""
     if not (request.user.is_company_admin or request.user.is_rm_admin or request.user.is_superuser):
@@ -900,6 +960,7 @@ def rm_company_map_upload(request, company_slug):
     return render(request, 'rm/maps/upload_company.html', {'form': form, 'company': company})
 
 @login_required
+@company_access_required(require_admin=False)
 def company_map_download(request, company_slug, pk):
     """Download de mapa da empresa"""
     company = get_object_or_404(Company, slug=company_slug)
@@ -917,6 +978,7 @@ def company_map_download(request, company_slug, pk):
         raise Http404("Arquivo não encontrado")
 
 @login_required
+@company_access_required_json(require_admin=True)
 @require_http_methods(["POST"])
 def company_map_delete(request, company_slug, pk):
     """Deletar mapa da empresa"""
@@ -945,6 +1007,7 @@ def company_map_delete(request, company_slug, pk):
         })
 
 @login_required
+@company_access_required(require_admin=False)
 def company_map_history(request, company_slug):
     """Histórico de mapas da empresa"""
     company = get_object_or_404(Company, slug=company_slug)

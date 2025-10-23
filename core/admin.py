@@ -1,6 +1,20 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+from django.contrib.admin import AdminSite
 from .models import Company, CustomUser, CTOMapFile
+
+class RMOnlyAdminSite(AdminSite):
+    site_header = "RM Systems Admin"
+    site_title = "RM Admin"
+    index_title = "Painel RM"
+
+    def has_permission(self, request):
+        user = request.user
+        # Permite acesso somente para usuários ativos, staff e com role RM
+        return user.is_active and user.is_staff and getattr(user, 'role', None) == 'RM'
+
+# Instância do AdminSite restrita a RM
+rm_admin_site = RMOnlyAdminSite(name='rm_admin')
 
 @admin.register(Company)
 class CompanyAdmin(admin.ModelAdmin):
@@ -88,3 +102,8 @@ class CTOMapFileAdmin(admin.ModelAdmin):
             if not obj.company and request.user.company:
                 obj.company = request.user.company
         super().save_model(request, obj, form, change)
+
+# Registrar modelos também no AdminSite restrito a RM
+rm_admin_site.register(Company, CompanyAdmin)
+rm_admin_site.register(CustomUser, CustomUserAdmin)
+rm_admin_site.register(CTOMapFile, CTOMapFileAdmin)
