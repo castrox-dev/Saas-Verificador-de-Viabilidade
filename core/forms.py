@@ -10,9 +10,10 @@ class CTOMapFileForm(forms.ModelForm):
         fields = ["file", "description", "company"]
         widgets = {
             'file': forms.FileInput(attrs={
-                'class': 'file-input',
+                'class': 'file-input-hidden',
                 'accept': '.xlsx,.xls,.csv',
-                'id': 'id_file'
+                'id': 'id_file',
+                'style': 'display: none;'
             }),
             'description': forms.Textarea(attrs={
                 'class': 'form-control',

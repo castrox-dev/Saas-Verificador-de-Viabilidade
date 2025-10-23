@@ -1,56 +1,97 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Upload de Mapa CTO - {{ company.name }}{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/upload.css' %}">
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">
-                    <h4 class="mb-0">Upload de Mapa CTO - {{ company.name }}</h4>
+<div class="upload-container">
+    <div class="card">
+        <div class="card-header">
+            <h4 class="mb-0">
+                <i class="fas fa-cloud-upload-alt"></i>
+                Upload de Mapa CTO - {{ company.name }}
+            </h4>
+        </div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <!-- Upload Area with Drag and Drop -->
+                <div id="upload-area" class="upload-area">
+                    <div class="upload-icon">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                    </div>
+                    <div class="upload-text">Arraste e solte seu arquivo aqui</div>
+                    <div class="upload-subtext">ou clique para selecionar</div>
+                    <button type="button" class="upload-button">
+                        <i class="fas fa-folder-open"></i>
+                        Escolher Arquivo
+                    </button>
+                    
+                    <!-- Hidden file input -->
+                    {{ form.file }}
+                    
+                    {% if form.file.errors %}
+                        <div class="text-danger">{{ form.file.errors }}</div>
+                    {% endif %}
                 </div>
-                <div class="card-body">
-                    <form method="post" enctype="multipart/form-data">
-                        {% csrf_token %}
-                        
-                        <div class="form-group mb-3">
-                            <label for="{{ form.file.id_for_label }}" class="form-label">{{ form.file.label }}</label>
-                            {{ form.file }}
-                            {% if form.file.errors %}
-                                <div class="text-danger">{{ form.file.errors }}</div>
-                            {% endif %}
-                            <div class="form-text">
-                                Formatos aceitos: .xlsx, .xls, .csv. Tamanho máximo: 10MB.
-                            </div>
-                        </div>
+                
+                <!-- File Info Display -->
+                <div id="file-info" class="file-info">
+                    <div class="file-name" id="file-name"></div>
+                    <div class="file-size" id="file-size"></div>
+                    <button type="button" id="file-remove" class="file-remove">
+                        <i class="fas fa-times"></i> Remover
+                    </button>
+                    <div class="form-text">
+                        Formatos aceitos: .xlsx, .xls, .csv. Tamanho máximo: 10MB.
+                    </div>
+                </div>
+                
+                <!-- Upload Progress -->
+                <div id="upload-progress" class="upload-progress">
+                    <div id="progress-bar" class="upload-progress-bar"></div>
+                </div>
 
-                        <div class="form-group mb-3">
-                            <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
-                            {{ form.description }}
-                            {% if form.description.errors %}
-                                <div class="text-danger">{{ form.description.errors }}</div>
-                            {% endif %}
-                        </div>
-
-                        {% if form.non_field_errors %}
-                            <div class="alert alert-danger">
-                                {{ form.non_field_errors }}
-                            </div>
+                <!-- Form Fields -->
+                <div class="form-section">
+                    <div class="form-group">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">
+                            <i class="fas fa-edit"></i>
+                            {{ form.description.label }}
+                        </label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="text-danger">{{ form.description.errors }}</div>
                         {% endif %}
-
-                        <div class="d-flex justify-content-between">
-                            <a href="{% url 'company:map_list' company.slug %}" class="btn btn-secondary">
-                                <i class="fas fa-arrow-left"></i> Voltar
-                            </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-upload"></i> Fazer Upload
-                            </button>
-                        </div>
-                    </form>
+                    </div>
                 </div>
-            </div>
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                <div class="btn-group">
+                    <a href="{% url 'company:map_list' company.slug %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Voltar
+                    </a>
+                    <button type="submit" id="submit-btn" class="btn btn-primary" disabled>
+                        <i class="fas fa-upload"></i> Fazer Upload
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/upload.js' %}"></script>
 {% endblock %}

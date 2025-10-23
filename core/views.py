@@ -109,7 +109,13 @@ def dashboard(request):
                         f"Tamanho: {file_size} KB"
                     )
                     
-                return redirect("rm:admin_dashboard")
+                # Redirecionar para o dashboard correto baseado no tipo de usuário
+                if request.user.is_rm_admin:
+                    return redirect("rm:admin_dashboard")
+                elif request.user.company:
+                    return redirect("company:dashboard", company_slug=request.user.company.slug)
+                else:
+                    return redirect("rm:admin_dashboard")
             else:
                 # Processar erros específicos do formulário
                 error_messages = []
@@ -1075,3 +1081,37 @@ def rm_maps_by_company(request):
         'chart_pending': pending,
     }
     return render(request, 'rm/maps/by_company.html', context)
+
+@login_required
+@company_access_required(require_admin=True)
+def company_map_admin(request, company_slug):
+    """Tela de administração avançada de mapas para empresa"""
+    if not (request.user.is_company_admin or request.user.is_rm_admin or request.user.is_superuser):
+        return HttpResponseForbidden()
+    
+    company = get_object_or_404(Company, slug=company_slug)
+    if not (request.user.is_rm_admin or request.user.is_superuser) and request.user.company != company:
+        return HttpResponseForbidden()
+    
+    # Buscar todos os mapas da empresa
+    maps = CTOMapFile.objects.filter(company=company).select_related('uploaded_by').order_by('-uploaded_at')
+    
+    # Calcular estatísticas
+    total_maps = maps.count()
+    processed_maps = maps.filter(is_processed=True).count()
+    pending_maps = maps.filter(is_processed=False).count()
+    
+    # Calcular tamanho total dos arquivos
+    total_size = sum(map_file.file.size for map_file in maps if map_file.file)
+    total_size_mb = round(total_size / (1024 * 1024), 2)
+    
+    context = {
+        'company': company,
+        'maps': maps,
+        'total_maps': total_maps,
+        'processed_maps': processed_maps,
+        'pending_maps': pending_maps,
+        'total_size_mb': total_size_mb,
+    }
+    
+    return render(request, 'company/maps/admin.html', context)

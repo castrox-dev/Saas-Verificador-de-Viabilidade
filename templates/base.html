@@ -26,17 +26,13 @@
         {% if user.is_authenticated %}
           {% if user.is_rm_admin %}
             <a href="{% url 'rm:admin_dashboard' %}" aria-current="{% if request.resolver_match.url_name == 'admin_dashboard' %}page{% endif %}">Dashboard</a>
+            <a href="/admin/">Admin</a>
+            <a href="{% url 'rm:logout' %}">Sair</a>
           {% elif user.company and user.is_company_admin %}
             <a href="{% url 'company:dashboard' company_slug=user.company.slug %}" aria-current="{% if request.resolver_match.url_name == 'dashboard' %}page{% endif %}">Dashboard</a>
+            <a href="{% url 'company:logout' %}">Sair</a>
           {% elif user.company %}
             <a href="{% url 'company:verificador' company_slug=user.company.slug %}" aria-current="{% if request.resolver_match.url_name == 'verificador' %}page{% endif %}">Verificador</a>
-          {% endif %}
-          {% if user.is_rm_admin %}
-            <a href="/admin/">Admin</a>
-          {% endif %}
-          {% if user.is_rm_admin %}
-            <a href="{% url 'rm:logout' %}">Sair</a>
-          {% else %}
             <a href="{% url 'company:logout' %}">Sair</a>
           {% endif %}
         {% else %}
