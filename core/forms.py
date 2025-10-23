@@ -7,7 +7,7 @@ from .models import CTOMapFile, Company, CustomUser
 class CTOMapFileForm(forms.ModelForm):
     class Meta:
         model = CTOMapFile
-        fields = ["file", "description"]
+        fields = ["file", "description", "company"]
         widgets = {
             'file': forms.FileInput(attrs={
                 'class': 'file-input',
@@ -19,6 +19,10 @@ class CTOMapFileForm(forms.ModelForm):
                 'placeholder': 'Adicione uma descrição para identificar melhor este arquivo...',
                 'rows': 3,
                 'maxlength': 500
+            }),
+            'company': forms.Select(attrs={
+                'class': 'form-control',
+                'id': 'id_company'
             })
         }
     
@@ -185,8 +189,8 @@ class CustomUserForm(UserCreationForm):
             elif self.current_user.is_company_admin:
                 # Admin da empresa só pode criar usuários da empresa
                 self.fields['role'].choices = [
-                    ('company_admin', 'Administrador da Empresa'),
-                    ('company_user', 'Usuário da Empresa')
+                    ('COMPANY_ADMIN', 'Administrador da Empresa'),
+                    ('COMPANY_USER', 'Usuário da Empresa')
                 ]
                 self.fields['company'].queryset = Company.objects.filter(
                     id=self.current_user.company.id
@@ -203,9 +207,9 @@ class CustomUserForm(UserCreationForm):
         company = cleaned_data.get('company')
         
         # Validações baseadas no role
-        if role == 'rm_admin' and company:
+        if role == 'RM' and company:
             raise ValidationError('Administradores RM não devem ter empresa associada.')
-        elif role in ['company_admin', 'company_user'] and not company:
+        elif role in ['COMPANY_ADMIN', 'COMPANY_USER'] and not company:
             raise ValidationError('Usuários de empresa devem ter uma empresa associada.')
         
         # Validações baseadas no usuário atual

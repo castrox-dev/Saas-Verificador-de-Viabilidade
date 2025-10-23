@@ -1,0 +1,93 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Portal da Empresa - {{ company.name }}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    .card-action { transition: transform .08s ease-in-out; }
+    .card-action:hover { transform: translateY(-2px); }
+  </style>
+</head>
+<body>
+  <div class="container py-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <h1 class="h3 mb-0">Portal da Empresa</h1>
+      <a class="btn btn-outline-secondary" href="{% url 'rm:company_list' %}">Voltar para Empresas</a>
+    </div>
+
+    <div class="mb-4">
+      <h2 class="h4">{{ company.name }}</h2>
+      <p class="text-muted mb-0">Slug: <code>{{ company.slug }}</code></p>
+    </div>
+
+    <div class="row g-3 mb-4">
+      <div class="col-12 col-md-4">
+        <div class="card card-action h-100">
+          <div class="card-body">
+            <h5 class="card-title">Gerir Membros</h5>
+            <p class="card-text mb-3">Adicionar, editar e ativar/desativar usuários desta empresa.</p>
+            <a class="btn btn-primary" href="{% url 'rm:user_list' %}?company={{ company.slug }}">Abrir gestão de membros</a>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-4">
+        <div class="card card-action h-100">
+          <div class="card-body">
+            <h5 class="card-title">Mapas</h5>
+            <p class="card-text mb-3">Visualizar e baixar mapas CTO desta empresa.</p>
+            <a class="btn btn-primary" href="{% url 'rm:map_list' %}?company={{ company.slug }}">Abrir lista de mapas</a>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-4">
+        <div class="card card-action h-100">
+          <div class="card-body">
+            <h5 class="card-title">Verificador</h5>
+            <p class="card-text mb-3">Fazer upload de novos mapas para verificação.</p>
+            <a class="btn btn-success" href="{% url 'company:map_upload' company_slug=company.slug %}">Abrir verificador / upload</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-12 col-lg-6">
+        <div class="card h-100">
+          <div class="card-body">
+            <h5 class="card-title mb-3">Resumo</h5>
+            <ul class="list-unstyled mb-0">
+              <li>Total de usuários: <strong>{{ total_users }}</strong></li>
+              <li>Usuários ativos: <strong>{{ active_users }}</strong></li>
+              <li>Total de mapas: <strong>{{ total_maps }}</strong></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-lg-6">
+        <div class="card h-100">
+          <div class="card-body">
+            <h5 class="card-title mb-3">Mais recentes</h5>
+            {% if recent_maps %}
+            <ul class="list-group list-group-flush">
+              {% for m in recent_maps %}
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span>{{ m.original_filename }} <small class="text-muted">({{ m.uploaded_at|date:"d/m/Y H:i" }})</small></span>
+                <a class="btn btn-sm btn-outline-primary" href="{% url 'rm:map_download' m.pk %}">Baixar</a>
+              </li>
+              {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-muted mb-0">Sem uploads recentes.</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

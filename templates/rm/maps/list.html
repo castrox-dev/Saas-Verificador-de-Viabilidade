@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 
-{% block title %}Mapas CTO{% endblock %}
+{% block title %}Mapas CTO (RM){% endblock %}
 
 {% block content %}
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2>Mapas CTO</h2>
+                <h2>Mapas CTO (Visão RM)</h2>
                 <a href="{% url 'map_upload' %}" class="btn btn-primary">
                     <i class="fas fa-upload"></i> Upload de Mapa
                 </a>
@@ -43,7 +43,6 @@
                                         </span>
                                     </td>
                                     <td>
-                                        {% if user.is_rm_admin %}
                                         <a href="{% url 'rm:map_download' map.id %}" class="btn btn-sm btn-outline-primary">
                                             <i class="fas fa-download"></i> Download
                                         </a>
@@ -52,18 +51,6 @@
                                                 data-map-id="{{ map.id }}">
                                             <i class="fas fa-trash"></i> Excluir
                                         </button>
-                                        {% else %}
-                                        <a href="{% url 'company:map_download' map.company.slug map.id %}" class="btn btn-sm btn-outline-primary">
-                                            <i class="fas fa-download"></i> Download
-                                        </a>
-                                        {% if user.is_company_admin %}
-                                        <button type="button" 
-                                                class="btn btn-sm btn-outline-danger js-delete-map-company" 
-                                                data-map-id="{{ map.id }}" data-company-slug="{{ map.company.slug }}">
-                                            <i class="fas fa-trash"></i> Excluir
-                                        </button>
-                                        {% endif %}
-                                        {% endif %}
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -90,46 +77,17 @@
   }
   const csrftoken = getCookie('csrftoken');
 
-  // Exclusão via RM
   document.querySelectorAll('.js-delete-map').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = btn.getAttribute('data-map-id');
       const confirmed = confirm('Tem certeza que deseja excluir este arquivo?');
       if (!confirmed) return;
       try {
-        const url = `{% url 'rm:map_delete' 0 %}`.replace('/0/', `/${id}/`);
-        const resp = await fetch(url, {
+        const resp = await fetch(`{% url 'rm:map_delete' 0 %}`.replace('/0/', `/${id}/`), {
           method: 'POST',
-          headers: { 'X-CSRFToken': csrftoken },
-        });
-        const data = await resp.json();
-        if (data.success) {
-          location.reload();
-        } else {
-          alert(data.message || 'Erro ao excluir mapa.');
-        }
-      } catch (e) {
-        alert('Erro ao excluir mapa.');
-      }
-    });
-  });
-
-  // Exclusão via Company Admin
-  document.querySelectorAll('.js-delete-map-company').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const id = btn.getAttribute('data-map-id');
-      const companySlug = btn.getAttribute('data-company-slug');
-      const confirmed = confirm('Tem certeza que deseja excluir este arquivo?');
-      if (!confirmed) return;
-      try {
-        const base = `{% url 'company:map_delete' 'slug-placeholder' 0 %}`;
-        // Ajusta a URL substituindo slug e id
-        const url = base
-          .replace('slug-placeholder', companySlug)
-          .replace('/0/', `/${id}/`);
-        const resp = await fetch(url, {
-          method: 'POST',
-          headers: { 'X-CSRFToken': csrftoken },
+          headers: {
+            'X-CSRFToken': csrftoken,
+          },
         });
         const data = await resp.json();
         if (data.success) {

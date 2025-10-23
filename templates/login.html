@@ -56,8 +56,8 @@
                 <form method="post" class="form">
                     {% csrf_token %}
                     <div class="form-row">
-                        <label for="id_username">E-mail</label>
-                        <input type="text" name="username" id="id_username" value="castrox.dev@gmail.com" required>
+                        <label for="id_username">E-mail ou usuário</label>
+                        <input type="text" name="username" id="id_username" placeholder="email@exemplo.com ou usuário" required>
                     </div>
                     
                     <div class="form-row">

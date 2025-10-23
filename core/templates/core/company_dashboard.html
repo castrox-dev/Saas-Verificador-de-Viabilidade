@@ -109,7 +109,7 @@
                         {{ user.username }}
                     </a>
                     <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{% url 'company:logout' %}">
+                        <li><a class="dropdown-item" href="{% url 'company:logout' company_slug=company.slug %}">
                             <i class="fas fa-sign-out-alt me-2"></i>Sair
                         </a></li>
                     </ul>
@@ -124,23 +124,23 @@
             <div class="col-md-3 col-lg-2 px-0">
                 <div class="sidebar">
                     <nav class="nav flex-column">
-                        <a class="nav-link active" href="{% url 'company:dashboard' %}">
+                        <a class="nav-link active" href="{% url 'company:dashboard' company_slug=company.slug %}">
                             <i class="fas fa-tachometer-alt me-2"></i>Dashboard
                         </a>
                         {% if user.can_manage_users %}
-                            <a class="nav-link" href="{% url 'company:user_list' %}">
+                            <a class="nav-link" href="{% url 'company:user_list' company_slug=company.slug %}">
                                 <i class="fas fa-users me-2"></i>Usuários
                             </a>
                         {% endif %}
-                        <a class="nav-link" href="{% url 'company:map_list' %}">
+                        <a class="nav-link" href="{% url 'company:map_list' company_slug=company.slug %}">
                             <i class="fas fa-map me-2"></i>Mapas CTO
                         </a>
                         {% if user.can_upload_maps %}
-                            <a class="nav-link" href="{% url 'company:verificador' %}">
+                            <a class="nav-link" href="{% url 'company:verificador' company_slug=company.slug %}">
                                 <i class="fas fa-search me-2"></i>Verificador
                             </a>
                         {% endif %}
-                        <a class="nav-link" href="{% url 'company:map_history' %}">
+                        <a class="nav-link" href="{% url 'company:map_history' company_slug=company.slug %}">
                             <i class="fas fa-history me-2"></i>Histórico
                         </a>
                     </nav>
@@ -269,22 +269,22 @@
                                 </h5>
                                 <div class="d-grid gap-2">
                                     {% if user.can_upload_maps %}
-                                        <a href="{% url 'company:verificador' %}" class="btn btn-primary">
+                                        <a href="{% url 'company:verificador' company_slug=company.slug %}" class="btn btn-primary">
                                             <i class="fas fa-search me-2"></i>
                                             Verificador CTO
                                         </a>
                                     {% endif %}
                                     {% if user.can_manage_users %}
-                                        <a href="{% url 'company:user_create' %}" class="btn btn-outline-primary">
+                                        <a href="{% url 'company:user_create' company_slug=company.slug %}" class="btn btn-outline-primary">
                                             <i class="fas fa-user-plus me-2"></i>
                                             Novo Usuário
                                         </a>
                                     {% endif %}
-                                    <a href="{% url 'company:map_list' %}" class="btn btn-outline-primary">
+                                    <a href="{% url 'company:map_list' company_slug=company.slug %}" class="btn btn-outline-primary">
                                         <i class="fas fa-map me-2"></i>
                                         Ver Mapas
                                     </a>
-                                    <a href="{% url 'company:map_history' %}" class="btn btn-outline-primary">
+                                    <a href="{% url 'company:map_history' company_slug=company.slug %}" class="btn btn-outline-primary">
                                         <i class="fas fa-history me-2"></i>
                                         Histórico
                                     </a>

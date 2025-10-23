@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RM Systems - {{ action }} Empresa</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .navbar { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .sidebar { background: white; min-height: calc(100vh - 76px); box-shadow: 2px 0 10px rgba(0,0,0,0.1); }
+        .sidebar .nav-link { color: #495057; padding: 15px 20px; border-bottom: 1px solid #e9ecef; transition: all 0.3s; }
+        .sidebar .nav-link:hover { background-color: #f8f9fa; color: #667eea; transform: translateX(5px); }
+        .sidebar .nav-link.active { background-color: #667eea; color: white; }
+        .main-content { padding: 30px; }
+        .content-card { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 5px 15px rgba(0,0,0,0.08); }
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 10px; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4); }
+        .form-label { font-weight: 600; }
+        .required::after { content: ' *'; color: #dc3545; }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'rm:admin_dashboard' %}">
+                <img src="/static/img/RM_logo.png" alt="RM Systems" height="40">
+            </a>
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user-circle me-1"></i>
+                        {{ user.username }}
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'rm:logout' %}">
+                            <i class="fas fa-sign-out-alt me-2"></i>Sair
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 px-0">
+                <div class="sidebar">
+                    <nav class="nav flex-column">
+                        <a class="nav-link" href="{% url 'rm:admin_dashboard' %}">
+                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                        </a>
+                        <a class="nav-link active" href="{% url 'rm:company_list' %}">
+                            <i class="fas fa-building me-2"></i>Empresas
+                        </a>
+                        <a class="nav-link" href="{% url 'rm:user_list' %}">
+                            <i class="fas fa-users me-2"></i>Usuários
+                        </a>
+                        <a class="nav-link" href="{% url 'rm:map_list' %}">
+                            <i class="fas fa-map me-2"></i>Mapas
+                        </a>
+                        <a class="nav-link" href="{% url 'rm:reports' %}">
+                            <i class="fas fa-chart-bar me-2"></i>Relatórios
+                        </a>
+                    </nav>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10">
+                <div class="main-content">
+                    <div class="content-card">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h3>
+                                <i class="fas fa-building me-2"></i>
+                                {{ action }} Empresa
+                            </h3>
+                            <a href="{% url 'rm:company_list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>
+                                Voltar
+                            </a>
+                        </div>
+
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+
+                        <form method="post" novalidate>
+                            {% csrf_token %}
+                            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label required">Nome</label>
+                                    {{ form.name }}
+                                    {% for error in form.name.errors %}
+                                        <div class="text-danger small">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label required">CNPJ</label>
+                                    {{ form.cnpj }}
+                                    {% for error in form.cnpj.errors %}
+                                        <div class="text-danger small">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">E-mail</label>
+                                    {{ form.email }}
+                                    {% for error in form.email.errors %}
+                                        <div class="text-danger small">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Telefone</label>
+                                    {{ form.phone }}
+                                    {% for error in form.phone.errors %}
+                                        <div class="text-danger small">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Endereço</label>
+                                    {{ form.address }}
+                                    {% for error in form.address.errors %}
+                                        <div class="text-danger small">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                                <div class="col-12 form-check">
+                                    {{ form.is_active }}
+                                    <label class="form-check-label">Empresa ativa</label>
+                                </div>
+                            </div>
+
+                            <div class="mt-4 d-flex gap-2">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>
+                                    {{ action }}
+                                </button>
+                                <a href="{% url 'rm:company_list' %}" class="btn btn-outline-secondary">
+                                    Cancelar
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

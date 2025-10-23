@@ -27,7 +27,7 @@
       <div class="header-right">
         <div class="user-info">
           <span class="user-name" aria-label="Usuário logado">{{ user.username }}</span>
-          <a href="{% url 'rm:logout' %}" class="btn btn-outline" aria-label="Sair do sistema">Sair</a>
+          <a href="{% if user.is_rm_admin %}{% url 'rm:logout' %}{% else %}{% url 'company:logout' %}{% endif %}" class="btn btn-outline" aria-label="Sair do sistema">Sair</a>
         </div>
       </div>
     </div>
@@ -40,17 +40,26 @@
         <a href="{% url 'dashboard' %}" class="nav-link active">
           <i class="fas fa-tachometer-alt"></i> Dashboard
         </a>
-        <a href="{% url 'map_list' %}" class="nav-link">
+        {% if user.is_rm_admin %}
+        <a href="{% url 'rm:map_list' %}" class="nav-link">
           <i class="fas fa-map"></i> Mapas CTO
         </a>
-        {% if user.is_rm_admin or user.is_company_admin %}
-        <a href="{% url 'user_list' %}" class="nav-link">
+        <a href="{% url 'rm:user_list' %}" class="nav-link">
           <i class="fas fa-users"></i> Usuários
         </a>
-        {% endif %}
-        {% if user.is_rm_admin %}
-        <a href="{% url 'company_list' %}" class="nav-link">
+        <a href="{% url 'rm:company_list' %}" class="nav-link">
           <i class="fas fa-building"></i> Empresas
+        </a>
+        {% elif user.is_company_admin %}
+        <a href="{% url 'company:map_list' user.company.slug %}" class="nav-link">
+          <i class="fas fa-map"></i> Mapas CTO
+        </a>
+        <a href="{% url 'company:user_list' user.company.slug %}" class="nav-link">
+          <i class="fas fa-users"></i> Usuários
+        </a>
+        {% else %}
+        <a href="{% url 'company:verificador' user.company.slug %}" class="nav-link">
+          <i class="fas fa-map"></i> Mapas CTO
         </a>
         {% endif %}
       </div>

@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.utils.text import slugify
+import os
 
 class Company(models.Model):
     """Modelo para representar as empresas clientes"""
@@ -74,11 +75,11 @@ class CustomUser(AbstractUser):
             return
             
         # RM admins não precisam de empresa
-        if self.role == 'rm_admin' and self.company:
+        if self.role == 'RM' and self.company:
             raise ValidationError("Administradores RM não devem ter empresa associada.")
         
         # Outros roles precisam de empresa
-        if self.role in ['company_admin', 'company_user'] and not self.company:
+        if self.role in ['COMPANY_ADMIN', 'COMPANY_USER'] and not self.company:
             raise ValidationError("Usuários de empresa devem ter uma empresa associada.")
 
     def save(self, *args, **kwargs):
@@ -159,3 +160,7 @@ class CTOMapFile(models.Model):
 
     def __str__(self):
         return f"{self.file.name} - {self.company.name}"
+
+    @property
+    def file_name(self):
+        return os.path.basename(self.file.name)

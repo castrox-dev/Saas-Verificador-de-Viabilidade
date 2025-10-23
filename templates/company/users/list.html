@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+
+{% block title %}Usuários - {{ company.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+          <i class="fas fa-users me-2"></i>
+          Usuários da Empresa
+        </h2>
+        <a href="{% url 'company:user_create' company.slug %}" class="btn btn-primary">
+          <i class="fas fa-user-plus me-2"></i> Novo Usuário
+        </a>
+      </div>
+
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      {% if users %}
+      <div class="card">
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>E-mail</th>
+                  <th>Telefone</th>
+                  <th>Função</th>
+                  <th>Status</th>
+                  <th class="text-end">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for u in users %}
+                  <tr>
+                    <td><strong>{{ u.get_full_name|default:u.username }}</strong></td>
+                    <td>{{ u.email }}</td>
+                    <td>{{ u.phone|default:'-' }}</td>
+                    <td>{{ u.get_role_display }}</td>
+                    <td>
+                      {% if u.is_active %}
+                        <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Ativo</span>
+                      {% else %}
+                        <span class="badge bg-secondary"><i class="fas fa-times-circle me-1"></i>Inativo</span>
+                      {% endif %}
+                    </td>
+                    <td class="text-end">
+                      <div class="btn-group" role="group">
+                        <a href="{% url 'company:user_edit' company.slug u.id %}" class="btn btn-sm btn-outline-primary" title="Editar">
+                          <i class="fas fa-edit"></i>
+                        </a>
+                        {% if not u.is_superuser and u.id != user.id %}
+                          <button type="button"
+                                  class="btn btn-sm btn-outline-{% if u.is_active %}warning{% else %}success{% endif %} js-toggle-user"
+                                  data-user-id="{{ u.id }}"
+                                  title="{% if u.is_active %}Desativar{% else %}Ativar{% endif %}">
+                            <i class="fas fa-{% if u.is_active %}pause{% else %}play{% endif %}"></i>
+                          </button>
+                        {% endif %}
+                      </div>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      {% else %}
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle"></i> Nenhum usuário cadastrado para {{ company.name }}.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+  }
+  const csrftoken = getCookie('csrftoken');
+
+  document.querySelectorAll('.js-toggle-user').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-user-id');
+      const confirmed = confirm('Tem certeza que deseja alterar o status deste usuário?');
+      if (!confirmed) return;
+      try {
+        const base = `{% url 'company:user_toggle' company.slug 0 %}`;
+        const url = base.replace('/0/', `/${id}/`);
+        const resp = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': csrftoken,
+          },
+          credentials: 'same-origin',
+        });
+        const data = await resp.json();
+        if (data.success) {
+          location.reload();
+        } else {
+          alert(data.message || 'Erro ao alterar status do usuário');
+        }
+      } catch (e) {
+        alert('Erro ao alterar status do usuário');
+      }
+    });
+  });
+})();
+</script>
+{% endblock %}

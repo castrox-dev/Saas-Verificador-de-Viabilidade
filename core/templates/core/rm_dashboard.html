@@ -126,7 +126,7 @@
                         <a class="nav-link" href="{% url 'rm:user_list' %}">
                             <i class="fas fa-users me-2"></i>Usuários
                         </a>
-                        <a class="nav-link" href="{% url 'rm:map_list' %}">
+                        <a class="nav-link" href="{% url 'rm:map_by_company' %}">
                             <i class="fas fa-map me-2"></i>Mapas CTO
                         </a>
                         <a class="nav-link" href="{% url 'rm:reports' %}">
@@ -242,6 +242,13 @@
                                     Ações Rápidas
                                 </h5>
                                 <div class="d-grid gap-2">
+                                    <form class="input-group mb-2" action="{% url 'rm:user_quick_search' %}" method="get">
+                                        <input type="text" name="q" class="form-control" placeholder="Buscar por e-mail, nome ou usuário" aria-label="Buscar usuário">
+                                        <button class="btn btn-outline-primary" type="submit">
+                                            <i class="fas fa-user-edit me-2"></i>
+                                            Editar
+                                        </button>
+                                    </form>
                                     <a href="{% url 'rm:company_create' %}" class="btn btn-primary">
                                         <i class="fas fa-plus me-2"></i>
                                         Nova Empresa
@@ -249,6 +256,10 @@
                                     <a href="{% url 'rm:user_create' %}" class="btn btn-outline-primary">
                                         <i class="fas fa-user-plus me-2"></i>
                                         Novo Usuário
+                                    </a>
+                                    <a href="{% url 'rm:user_list' %}" class="btn btn-outline-primary">
+                                        <i class="fas fa-user-edit me-2"></i>
+                                        Editar Usuários
                                     </a>
                                     <a href="{% url 'rm:reports' %}" class="btn btn-outline-primary">
                                         <i class="fas fa-download me-2"></i>

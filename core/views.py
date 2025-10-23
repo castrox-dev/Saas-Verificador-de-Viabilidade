@@ -23,12 +23,28 @@ logger = logging.getLogger(__name__)
 def login_view(request):
     """View para login de usuários"""
     if request.method == 'POST':
-        username = request.POST.get('username')
+        input_id = request.POST.get('username')
         password = request.POST.get('password')
+        
+        # Permitir login usando e-mail ou username
+        username = input_id
+        if input_id and '@' in input_id:
+            try:
+                u = CustomUser.objects.get(email__iexact=input_id)
+                username = u.username
+            except CustomUser.DoesNotExist:
+                username = input_id
         
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
+            # Direciona conforme role/empresa
+            if user.is_rm_admin or user.is_superuser:
+                return redirect('rm:admin_dashboard')
+            if user.company:
+                if user.role == 'COMPANY_ADMIN':
+                    return redirect('company:dashboard', company_slug=user.company.slug)
+                return redirect('company:verificador', company_slug=user.company.slug)
             return redirect('rm:admin_dashboard')
         else:
             messages.error(request, 'Credenciais inválidas.')
@@ -350,7 +366,7 @@ def toggle_user_status(request, user_id):
     user = get_object_or_404(CustomUser, id=user_id)
     
     # Verifica permissões
-    if not request.user.can_manage_users():
+    if not request.user.can_manage_users:
         return JsonResponse({'error': 'Sem permissão'}, status=403)
     
     if request.user.is_company_admin and user.company != request.user.company:
@@ -395,8 +411,17 @@ def home_redirect(request):
 def rm_login_view(request):
     """View de login específica para RM Systems"""
     if request.method == 'POST':
-        username = request.POST.get('username')
+        input_id = request.POST.get('username')
         password = request.POST.get('password')
+        
+        # Permitir login usando e-mail ou username
+        username = input_id
+        if input_id and '@' in input_id:
+            try:
+                u = CustomUser.objects.get(email__iexact=input_id)
+                username = u.username
+            except CustomUser.DoesNotExist:
+                username = input_id
         
         user = authenticate(request, username=username, password=password)
         if user is not None and user.role == 'RM':
@@ -479,9 +504,67 @@ def rm_company_toggle(request, pk):
 
 @login_required
 @rm_admin_required
+@require_http_methods(["POST"])
+def rm_company_delete(request, pk):
+    """Deleta uma empresa (RM) e remove arquivos de mapas associados do disco"""
+    company = get_object_or_404(Company, pk=pk)
+
+    # Remover arquivos físicos dos mapas antes de deletar registros
+    maps = CTOMapFile.objects.filter(company=company)
+    for m in maps:
+        try:
+            if m.file and hasattr(m.file, 'path') and os.path.exists(m.file.path):
+                os.remove(m.file.path)
+        except Exception as e:
+            # Não bloquear a exclusão por erro de arquivo; apenas logar
+            logger.warning(f"Falha ao remover arquivo do mapa {m.id}: {e}")
+
+    company_name = company.name
+    company.delete()
+
+    return JsonResponse({
+        'success': True,
+        'message': f'Empresa {company_name} deletada com sucesso!'
+    })
+
+@login_required
+@rm_admin_required
+def rm_company_portal(request, company_slug):
+    company = get_object_or_404(Company, slug=company_slug)
+    users_qs = CustomUser.objects.filter(company=company)
+    maps_qs = CTOMapFile.objects.filter(company=company)
+    context = {
+        'company': company,
+        'total_users': users_qs.count(),
+        'active_users': users_qs.filter(is_active=True).count(),
+        'total_maps': maps_qs.count(),
+        'recent_maps': maps_qs.order_by('-uploaded_at')[:5],
+    }
+    return render(request, 'core/rm_company_portal.html', context)
+
+@login_required
+@rm_admin_required
+def rm_company_login_check(request, company_slug):
+    if request.user.is_authenticated and request.user.is_rm_admin:
+        return redirect('rm:company_portal', company_slug=company_slug)
+    return redirect('rm:login')
+
+@login_required
+@rm_admin_required
 def rm_user_list(request):
     """Lista global de usuários para RM"""
     users = CustomUser.objects.select_related('company').all()
+    company_slug = request.GET.get('company')
+    if company_slug:
+        users = users.filter(company__slug=company_slug)
+    q = request.GET.get('q', '').strip()
+    if q:
+        users = users.filter(
+            Q(email__icontains=q) |
+            Q(username__icontains=q) |
+            Q(first_name__icontains=q) |
+            Q(last_name__icontains=q)
+        )
     return render(request, 'rm/users/list.html', {'users': users})
 
 @login_required
@@ -533,9 +616,27 @@ def rm_user_toggle(request, pk):
 
 @login_required
 @rm_admin_required
+@require_http_methods(["POST"])
+def rm_user_delete(request, pk):
+    """Apagar usuário (RM view)"""
+    user = get_object_or_404(CustomUser, pk=pk)
+    # Não permitir apagar superusuário nem a si próprio
+    if user.is_superuser or user.pk == request.user.pk:
+        return JsonResponse({'success': False, 'message': 'Operação não permitida.'}, status=400)
+    try:
+        user.delete()
+        return JsonResponse({'success': True, 'message': 'Usuário excluído com sucesso!'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f'Erro ao excluir usuário: {str(e)}'})
+
+@login_required
+@rm_admin_required
 def rm_map_list(request):
     """Lista global de mapas para RM"""
     maps = CTOMapFile.objects.select_related('company', 'uploaded_by').all()
+    company_slug = request.GET.get('company')
+    if company_slug:
+        maps = maps.filter(company__slug=company_slug)
     return render(request, 'rm/maps/list.html', {'maps': maps})
 
 @login_required
@@ -600,18 +701,30 @@ def company_login_view(request, company_slug):
         return redirect('home_redirect')
     
     if request.method == 'POST':
-        username = request.POST.get('username')
+        input_id = request.POST.get('username')
         password = request.POST.get('password')
         
+        # Permitir login usando e-mail ou username
+        username = input_id
+        if input_id and '@' in input_id:
+            try:
+                u = CustomUser.objects.get(email__iexact=input_id)
+                username = u.username
+            except CustomUser.DoesNotExist:
+                username = input_id
+        
         user = authenticate(request, username=username, password=password)
-        if user is not None and user.company == company and user.is_active:
-            login(request, user)
-            
-            # Redireciona baseado no role
-            if user.role == 'COMPANY_ADMIN':
-                return redirect('company:dashboard', company_slug=company_slug)
+        if user is not None and user.is_active:
+            # Autorizar RM/superuser para qualquer empresa; demais precisam pertencer à empresa
+            if user.is_rm_admin or user.is_superuser or user.company == company:
+                login(request, user)
+                # Redireciona baseado no role
+                if user.is_rm_admin or user.is_superuser or user.role == 'COMPANY_ADMIN':
+                    return redirect('company:dashboard', company_slug=company_slug)
+                else:
+                    return redirect('company:verificador', company_slug=company_slug)
             else:
-                return redirect('company:verificador', company_slug=company_slug)
+                messages.error(request, 'Seu usuário não pertence a esta empresa.')
         else:
             messages.error(request, 'Credenciais inválidas.')
     
@@ -622,12 +735,11 @@ def company_login_view(request, company_slug):
 
 @login_required
 def company_dashboard(request, company_slug):
-    """Dashboard da empresa (apenas admins)"""
-    if request.user.role != 'COMPANY_ADMIN':
+    """Dashboard da empresa (admins; RM/superuser têm acesso)"""
+    if not (request.user.is_company_admin or request.user.is_rm_admin or request.user.is_superuser):
         return redirect('company:verificador', company_slug=company_slug)
-    
     company = get_object_or_404(Company, slug=company_slug)
-    if request.user.company != company:
+    if not (request.user.is_rm_admin or request.user.is_superuser) and request.user.company != company:
         return HttpResponseForbidden()
     
     users = CustomUser.objects.filter(company=company)
@@ -646,7 +758,7 @@ def company_dashboard(request, company_slug):
 def company_verificador(request, company_slug):
     """Verificador da empresa (todos os usuários)"""
     company = get_object_or_404(Company, slug=company_slug)
-    if request.user.company != company:
+    if not (request.user.is_rm_admin or request.user.is_superuser) and request.user.company != company:
         return HttpResponseForbidden()
     
     maps = CTOMapFile.objects.filter(company=company).order_by('-uploaded_at')
@@ -660,11 +772,10 @@ def company_verificador(request, company_slug):
 @login_required
 def company_user_list(request, company_slug):
     """Lista de usuários da empresa (apenas admins)"""
-    if request.user.role != 'COMPANY_ADMIN':
+    if not (request.user.is_company_admin or request.user.is_rm_admin or request.user.is_superuser):
         return HttpResponseForbidden()
-    
     company = get_object_or_404(Company, slug=company_slug)
-    if request.user.company != company:
+    if not (request.user.is_rm_admin or request.user.is_superuser) and request.user.company != company:
         return HttpResponseForbidden()
     
     users = CustomUser.objects.filter(company=company)
@@ -673,46 +784,45 @@ def company_user_list(request, company_slug):
 @login_required
 def company_user_create(request, company_slug):
     """Criar usuário da empresa (apenas admins)"""
-    if request.user.role != 'COMPANY_ADMIN':
+    if not (request.user.is_company_admin or request.user.is_rm_admin or request.user.is_superuser):
         return HttpResponseForbidden()
-    
     company = get_object_or_404(Company, slug=company_slug)
-    if request.user.company != company:
+    if not (request.user.is_rm_admin or request.user.is_superuser) and request.user.company != company:
         return HttpResponseForbidden()
     
     if request.method == 'POST':
-        form = CustomUserForm(request.POST)
+        form = CustomUserForm(request.POST, current_user=request.user)
         if form.is_valid():
             user = form.save(commit=False)
+            # força associação do usuário à empresa do slug
             user.company = company
             user.save()
             messages.success(request, 'Usuário criado com sucesso!')
             return redirect('company:user_list', company_slug=company_slug)
     else:
-        form = CustomUserForm()
+        form = CustomUserForm(current_user=request.user, initial={'company': company})
     
     return render(request, 'company/users/form.html', {'form': form, 'action': 'Criar', 'company': company})
 
 @login_required
 def company_user_edit(request, company_slug, pk):
     """Editar usuário da empresa (apenas admins)"""
-    if request.user.role != 'COMPANY_ADMIN':
+    if not (request.user.is_company_admin or request.user.is_rm_admin or request.user.is_superuser):
         return HttpResponseForbidden()
-    
     company = get_object_or_404(Company, slug=company_slug)
-    if request.user.company != company:
+    if not (request.user.is_rm_admin or request.user.is_superuser) and request.user.company != company:
         return HttpResponseForbidden()
     
     user = get_object_or_404(CustomUser, pk=pk, company=company)
     
     if request.method == 'POST':
-        form = CustomUserForm(request.POST, instance=user)
+        form = CustomUserForm(request.POST, instance=user, current_user=request.user)
         if form.is_valid():
             form.save()
             messages.success(request, 'Usuário atualizado com sucesso!')
             return redirect('company:user_list', company_slug=company_slug)
     else:
-        form = CustomUserForm(instance=user)
+        form = CustomUserForm(instance=user, current_user=request.user)
     
     return render(request, 'company/users/form.html', {'form': form, 'action': 'Editar', 'company': company})
 
@@ -720,11 +830,10 @@ def company_user_edit(request, company_slug, pk):
 @require_http_methods(["POST"])
 def company_user_toggle(request, company_slug, pk):
     """Toggle status do usuário da empresa"""
-    if request.user.role != 'COMPANY_ADMIN':
+    if not (request.user.is_company_admin or request.user.is_rm_admin or request.user.is_superuser):
         return JsonResponse({'error': 'Sem permissão'}, status=403)
-    
     company = get_object_or_404(Company, slug=company_slug)
-    if request.user.company != company:
+    if not (request.user.is_rm_admin or request.user.is_superuser) and request.user.company != company:
         return JsonResponse({'error': 'Sem permissão'}, status=403)
     
     user = get_object_or_404(CustomUser, pk=pk, company=company)
@@ -740,11 +849,10 @@ def company_user_toggle(request, company_slug, pk):
 @login_required
 def company_map_list(request, company_slug):
     """Lista de mapas da empresa (painel admin)"""
-    if request.user.role != 'COMPANY_ADMIN':
+    if not (request.user.is_company_admin or request.user.is_rm_admin or request.user.is_superuser):
         return HttpResponseForbidden()
-    
     company = get_object_or_404(Company, slug=company_slug)
-    if request.user.company != company:
+    if not (request.user.is_rm_admin or request.user.is_superuser) and request.user.company != company:
         return HttpResponseForbidden()
     
     maps = CTOMapFile.objects.filter(company=company)
@@ -753,10 +861,11 @@ def company_map_list(request, company_slug):
 @login_required
 def company_map_upload(request, company_slug):
     """Upload de mapa da empresa"""
-    company = get_object_or_404(Company, slug=company_slug)
-    if request.user.company != company:
+    if not (request.user.is_company_admin or request.user.is_rm_admin or request.user.is_superuser):
         return HttpResponseForbidden()
-    
+    company = get_object_or_404(Company, slug=company_slug)
+    if not (request.user.is_rm_admin or request.user.is_superuser) and request.user.company != company:
+        return HttpResponseForbidden()
     if request.method == 'POST':
         form = CTOMapFileForm(request.POST, request.FILES)
         if form.is_valid():
@@ -765,15 +874,30 @@ def company_map_upload(request, company_slug):
             map_file.uploaded_by = request.user
             map_file.save()
             messages.success(request, 'Mapa enviado com sucesso!')
-            
-            if request.user.role == 'COMPANY_ADMIN':
-                return redirect('company:map_list', company_slug=company_slug)
-            else:
-                return redirect('company:verificador', company_slug=company_slug)
+            return redirect('company:map_list', company_slug=company_slug)
     else:
         form = CTOMapFileForm()
-    
     return render(request, 'company/maps/upload.html', {'form': form, 'company': company})
+
+@login_required
+@rm_admin_required
+def rm_company_map_upload(request, company_slug):
+    """Upload de mapa para empresa (RM)"""
+    company = get_object_or_404(Company, slug=company_slug)
+    if request.method == 'POST':
+        form = CTOMapFileForm(request.POST, request.FILES)
+        if form.is_valid():
+            map_file = form.save(commit=False)
+            # Força associação à empresa do slug
+            map_file.company = company
+            map_file.uploaded_by = request.user
+            map_file.save()
+            messages.success(request, 'Mapa enviado com sucesso!')
+            return redirect('rm:map_by_company')
+    else:
+        # Pré-seleciona a empresa e opcionalmente poderíamos ocultar o campo no template
+        form = CTOMapFileForm(initial={'company': company})
+    return render(request, 'rm/maps/upload_company.html', {'form': form, 'company': company})
 
 @login_required
 def company_map_download(request, company_slug, pk):
@@ -796,7 +920,7 @@ def company_map_download(request, company_slug, pk):
 @require_http_methods(["POST"])
 def company_map_delete(request, company_slug, pk):
     """Deletar mapa da empresa"""
-    if request.user.role != 'COMPANY_ADMIN':
+    if not (request.user.is_company_admin or request.user.is_rm_admin or request.user.is_superuser):
         return JsonResponse({'error': 'Sem permissão'}, status=403)
     
     company = get_object_or_404(Company, slug=company_slug)
@@ -829,3 +953,62 @@ def company_map_history(request, company_slug):
     
     maps = CTOMapFile.objects.filter(company=company).order_by('-uploaded_at')
     return render(request, 'company/maps/history.html', {'maps': maps, 'company': company})
+
+@login_required
+@rm_admin_required
+def rm_user_quick_search(request):
+    q = request.GET.get('q', '').strip()
+    if not q:
+        messages.warning(request, 'Digite e-mail, nome ou usuário para buscar.')
+        return redirect('rm:user_list')
+    # Preferir correspondências exatas de e-mail ou username
+    exact_qs = CustomUser.objects.filter(Q(email__iexact=q) | Q(username__iexact=q))
+    if exact_qs.count() == 1:
+        return redirect('rm:user_edit', pk=exact_qs.first().pk)
+    # Fallback para busca parcial em nome, username ou e-mail
+    qs = CustomUser.objects.filter(
+        Q(email__icontains=q) |
+        Q(username__icontains=q) |
+        Q(first_name__icontains=q) |
+        Q(last_name__icontains=q)
+    ).order_by('username')
+    if qs.count() == 1:
+        return redirect('rm:user_edit', pk=qs.first().pk)
+    if qs.exists():
+        messages.info(request, f'{qs.count()} usuários encontrados para "{q}". Refine a busca.')
+        return redirect(f"{reverse('rm:user_list')}?q={q}")
+    messages.warning(request, f'Nenhum usuário encontrado para "{q}".')
+    return redirect(f"{reverse('rm:user_list')}?q={q}")
+
+@login_required
+@rm_admin_required
+def rm_maps_by_company(request):
+    """Visão RM: Mapas agrupados por empresa, com ações e gráficos"""
+    companies = Company.objects.all().order_by('name')
+    company_stats = []
+    for c in companies:
+        maps_qs = CTOMapFile.objects.filter(company=c)
+        stats = {
+            'company': c,
+            'maps': maps_qs.select_related('company', 'uploaded_by'),
+            'total_maps': maps_qs.count(),
+            'processed_maps': maps_qs.filter(is_processed=True).count(),
+            'pending_maps': maps_qs.filter(is_processed=False).count(),
+        }
+        company_stats.append(stats)
+
+    # Dados agregados para gráficos gerais (total de mapas por empresa)
+    labels = [s['company'].name for s in company_stats]
+    totals = [s['total_maps'] for s in company_stats]
+    processed = [s['processed_maps'] for s in company_stats]
+    pending = [s['pending_maps'] for s in company_stats]
+
+    context = {
+        'companies': companies,
+        'company_stats': company_stats,
+        'chart_labels': labels,
+        'chart_totals': totals,
+        'chart_processed': processed,
+        'chart_pending': pending,
+    }
+    return render(request, 'rm/maps/by_company.html', context)

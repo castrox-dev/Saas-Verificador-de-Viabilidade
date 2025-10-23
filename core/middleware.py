@@ -35,34 +35,19 @@ class CompanyMiddleware(MiddlewareMixin):
             request.is_rm_access = True
             return None
             
-        # Verificar se é acesso de empresa
-        # Buscar empresa pelo nome (slug)
+        # Verificar se é acesso de empresa via slug diretamente
         try:
-            # Converter nome da empresa para slug (remover espaços, caracteres especiais)
-            company_slug = first_segment.replace('-', ' ').replace('_', ' ')
-            
-            # Buscar empresa por nome (case insensitive)
             company = Company.objects.filter(
-                name__iexact=company_slug,
+                slug__iexact=first_segment,
                 is_active=True
             ).first()
             
-            if not company:
-                # Tentar buscar por slug mais flexível
-                companies = Company.objects.filter(is_active=True)
-                for comp in companies:
-                    comp_slug = self.create_slug(comp.name)
-                    if comp_slug == first_segment:
-                        company = comp
-                        break
-            
             if company:
                 request.company = company
-                request.company_slug = first_segment
+                request.company_slug = company.slug
                 return None
             else:
-                # Empresa não encontrada - pode ser uma URL normal
-                # Deixar passar para o Django resolver
+                # Empresa não encontrada - deixar o Django resolver outras rotas
                 return None
                 
         except Exception:
