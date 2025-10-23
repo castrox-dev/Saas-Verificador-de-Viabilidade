@@ -39,23 +39,23 @@
 .badge-secondary{background:#e5e7eb;color:#374151}
 
 /* Cards */
-.card{background:var(--card,#fff);border:1px solid var(--border,var(--rm-blue-100));border-radius:16px;box-shadow:var(--shadow)}
-.card-body{padding:1rem 1.25rem}
+.card{background:var(--rm-card-bg);border:1px solid var(--rm-card-border);border-radius:16px;box-shadow:var(--rm-card-shadow);color:var(--rm-text-primary)}
+.card-body{padding:1rem 1.25rem;color:var(--rm-text-primary)}
 
 /* Tables */
-.table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--border,var(--rm-blue-100));border-radius:12px;overflow:hidden}
-.table th,.table td{padding:.75rem 1rem;border-bottom:1px solid var(--white-dark,#E5E7EB);text-align:left;color:var(--text,var(--rm-slate-900))}
-.table thead th{background:#EFF6FF;color:#1E40AF;font-weight:700;border-bottom:1px solid var(--rm-blue-100)}
-.table-striped tbody tr:nth-child(odd){background:var(--rm-slate-50)}
+.table{width:100%;border-collapse:separate;border-spacing:0;background:var(--rm-card-bg);border:1px solid var(--rm-card-border);border-radius:12px;overflow:hidden;color:var(--rm-text-primary)}
+.table th,.table td{padding:.75rem 1rem;border-bottom:1px solid var(--rm-border-primary);text-align:left;color:var(--rm-text-primary)}
+.table thead th{background:var(--rm-bg-secondary);color:var(--rm-text-primary);font-weight:700;border-bottom:1px solid var(--rm-border-primary)}
+.table-striped tbody tr:nth-child(odd){background:var(--rm-bg-secondary)}
 .table-responsive{width:100%;overflow:auto}
 
 /* Alerts */
-.alert{border-radius:12px;padding:.8rem 1rem;border:1px solid var(--border,var(--rm-blue-100));background:#fff;color:var(--text,var(--rm-slate-900));box-shadow:var(--shadow)}
-.alert-info{background:#EFF6FF;border-color:var(--rm-blue-100);color:#1E40AF}
+.alert{border-radius:12px;padding:.8rem 1rem;border:1px solid var(--rm-card-border);background:var(--rm-card-bg);color:var(--rm-text-primary);box-shadow:var(--rm-card-shadow)}
+.alert-info{background:var(--rm-bg-accent);border-color:var(--rm-border-accent);color:var(--rm-primary)}
 
 /* Forms */
-.input, input[type="text"], input[type="email"], input[type="password"], select, textarea{width:100%;padding:.6rem .8rem;border-radius:10px;border:1px solid var(--border,var(--rm-blue-100));background:#fff;color:var(--text,var(--rm-slate-900));outline:none;transition:border-color .2s ease, box-shadow .2s ease}
-.input:focus, input:focus, select:focus, textarea:focus{border-color:var(--primary,var(--rm-blue-600));box-shadow:0 0 0 3px rgba(29,78,216,0.15)}
+.input, input[type="text"], input[type="email"], input[type="password"], select, textarea{width:100%;padding:.6rem .8rem;border-radius:10px;border:1px solid var(--rm-input-border);background:var(--rm-input-bg);color:var(--rm-text-primary);outline:none;transition:border-color .2s ease, box-shadow .2s ease}
+.input:focus, input:focus, select:focus, textarea:focus{border-color:var(--rm-input-focus);box-shadow:0 0 0 3px rgba(29,78,216,0.15)}
 
 /* Layout helpers */
 .container-fluid{max-width:1200px;margin:24px auto;padding:0 24px}
@@ -63,5 +63,38 @@
 .col-12{width:100%}
 
 /* Topbar subtle override */
-.topbar a{color:#334155}
-.topbar a:hover{color:#fff;background:var(--primary,var(--rm-blue-600))}
+.topbar a{color:var(--rm-text-primary);transition:all 0.3s ease}
+.topbar a:hover{color:var(--rm-white) !important;background:var(--rm-primary) !important;transform:translateY(-1px);box-shadow:var(--rm-shadow)}
+
+/* Navigation links hover fix */
+.nav-link{color:var(--rm-text-primary);transition:all 0.3s ease}
+.nav-link:hover{color:var(--rm-white) !important;background:var(--rm-primary) !important;transform:translateY(-1px);box-shadow:var(--rm-shadow)}
+
+/* Dropdown and form elements hover */
+.dropdown-toggle{color:var(--rm-text-primary);transition:all 0.3s ease}
+.dropdown-toggle:hover{color:var(--rm-white) !important;background:var(--rm-primary) !important}
+.dropdown-item{color:var(--rm-text-primary);transition:all 0.3s ease}
+.dropdown-item:hover{color:var(--rm-white) !important;background:var(--rm-primary) !important}
+
+/* Button hover improvements */
+.btn{transition:all 0.3s ease}
+.btn:hover{transform:translateY(-2px);box-shadow:var(--rm-shadow-lg)}
+.btn-primary:hover{color:var(--rm-white) !important;background:var(--rm-primary-dark) !important}
+.btn-outline:hover{color:var(--rm-white) !important;background:var(--rm-primary) !important}
+
+/* Table row hover effects */
+.table tbody tr{transition:all 0.3s ease}
+.table tbody tr:hover{background:var(--rm-bg-secondary) !important;transform:translateY(-1px);box-shadow:var(--rm-shadow)}
+.table tbody tr:hover td{color:var(--rm-text-primary) !important}
+
+/* Card hover effects */
+.card{transition:all 0.3s ease}
+.card:hover{transform:translateY(-2px);box-shadow:var(--rm-shadow-lg)}
+
+/* Badge hover effects */
+.badge{transition:all 0.3s ease}
+.badge:hover{transform:scale(1.05);box-shadow:var(--rm-shadow)}
+
+/* Icon hover effects */
+.fas, .fa{transition:all 0.3s ease}
+.fas:hover, .fa:hover{transform:scale(1.1);color:var(--rm-primary) !important}

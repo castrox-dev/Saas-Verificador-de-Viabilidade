@@ -1,0 +1,45 @@
+# Django e dependências principais
+Django==5.2.7
+python-dotenv==1.1.1
+
+# Banco de dados
+psycopg2-binary==2.9.9
+
+# Cache e Redis
+redis==5.0.1
+django-redis==5.4.0
+
+# Arquivos estáticos
+whitenoise==6.6.0
+
+# Validação de arquivos (opcional - apenas para validação avançada)
+# python-magic==0.4.27  # Requer libmagic no sistema
+# Pillow==10.1.0  # Apenas se precisar de processamento de imagem
+# pandas==2.1.4  # Apenas se precisar de análise de dados
+# openpyxl==3.1.2  # Apenas se precisar de leitura avançada de Excel
+# xlrd==2.0.1  # Apenas se precisar de leitura de Excel antigo
+
+# Segurança
+django-ratelimit==4.1.0
+django-cors-headers==4.3.1
+
+# Monitoramento
+sentry-sdk[django]==1.38.0
+
+# Compressão
+django-compressor==4.4
+
+# Email
+django-anymail==10.2
+
+# Backup
+django-dbbackup==3.3.0
+
+# Utilitários
+gunicorn==21.2.0
+supervisor==4.2.5
+
+# Desenvolvimento (opcional)
+django-debug-toolbar==4.2.0
+django-extensions==3.2.3
+

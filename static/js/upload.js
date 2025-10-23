@@ -73,14 +73,19 @@ document.addEventListener('DOMContentLoaded', function() {
             const allowedTypes = [
                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
                 'application/vnd.ms-excel', // .xls
-                'text/csv' // .csv
+                'text/csv', // .csv
+                'application/vnd.google-earth.kml+xml', // .kml
+                'application/vnd.google-earth.kmz', // .kmz
+                'text/xml', // .kml (alternativo)
+                'application/xml', // .kml (alternativo)
+                'application/zip' // .kmz (é um arquivo ZIP)
             ];
             
-            const allowedExtensions = ['.xlsx', '.xls', '.csv'];
+            const allowedExtensions = ['.xlsx', '.xls', '.csv', '.kml', '.kmz'];
             const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
             
             if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
-                showError('Tipo de arquivo não suportado. Por favor, envie arquivos nos formatos: .xlsx, .xls, .csv');
+                showError('Tipo de arquivo não suportado. Por favor, envie arquivos nos formatos: .xlsx, .xls, .csv, .kml, .kmz');
                 return;
             }
             

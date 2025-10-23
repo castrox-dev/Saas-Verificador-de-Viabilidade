@@ -3,6 +3,8 @@ from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from django.core.exceptions import ValidationError
 import os
 from .models import CTOMapFile, Company, CustomUser
+from .security_validators import SecureFileValidator
+from .rate_limiting import upload_rate_limit
 
 class CTOMapFileForm(forms.ModelForm):
     class Meta:
@@ -11,7 +13,7 @@ class CTOMapFileForm(forms.ModelForm):
         widgets = {
             'file': forms.FileInput(attrs={
                 'class': 'file-input-hidden',
-                'accept': '.xlsx,.xls,.csv',
+                'accept': '.xlsx,.xls,.csv,.kml,.kmz',
                 'id': 'id_file',
                 'style': 'display: none;'
             }),
@@ -33,39 +35,14 @@ class CTOMapFileForm(forms.ModelForm):
         if not file:
             raise ValidationError("Por favor, selecione um arquivo.")
         
-        # Validar extensão do arquivo
-        allowed_extensions = ['.xlsx', '.xls', '.csv']
-        file_extension = os.path.splitext(file.name)[1].lower()
-        
-        if file_extension not in allowed_extensions:
-            raise ValidationError(
-                f"Tipo de arquivo não suportado. "
-                f"Por favor, envie arquivos nos formatos: {', '.join(allowed_extensions)}"
-            )
-        
-        # Validar tamanho do arquivo (máximo 10MB)
-        max_size = 10 * 1024 * 1024  # 10MB em bytes
-        if file.size > max_size:
-            size_mb = round(file.size / (1024 * 1024), 2)
-            raise ValidationError(
-                f"Arquivo muito grande ({size_mb}MB). "
-                f"O tamanho máximo permitido é 10MB."
-            )
-        
-        # Validar nome do arquivo
-        if len(file.name) > 100:
-            raise ValidationError(
-                "Nome do arquivo muito longo. "
-                "Por favor, renomeie o arquivo para ter no máximo 100 caracteres."
-            )
-        
-        # Verificar se não contém caracteres especiais problemáticos
-        invalid_chars = ['<', '>', ':', '"', '|', '?', '*']
-        if any(char in file.name for char in invalid_chars):
-            raise ValidationError(
-                "Nome do arquivo contém caracteres inválidos. "
-                "Por favor, remova os seguintes caracteres: < > : \" | ? *"
-            )
+        # Usar validador seguro
+        validator = SecureFileValidator()
+        try:
+            validator.validate_file(file)
+        except ValidationError as e:
+            raise e
+        except Exception as e:
+            raise ValidationError("Erro na validação do arquivo. Tente novamente.")
         
         return file
     

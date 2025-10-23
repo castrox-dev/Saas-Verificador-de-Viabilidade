@@ -1,0 +1,173 @@
+/* ========================================
+   SISTEMA DE CORES BASEADO NA LOGO RM SYSTEMS
+   ======================================== */
+
+:root {
+  /* === CORES PRINCIPAIS DA LOGO === */
+  /* Azul principal da marca RM Systems */
+  --rm-primary: #1D4ED8;        /* Azul principal */
+  --rm-primary-dark: #1E40AF;   /* Azul escuro */
+  --rm-primary-light: #3B82F6;  /* Azul claro */
+  --rm-primary-50: #EFF6FF;     /* Azul muito claro */
+  --rm-primary-100: #DBEAFE;    /* Azul claro de fundo */
+  
+  /* Tons de cinza da logo */
+  --rm-gray-900: #0F172A;       /* Cinza escuro (texto principal) */
+  --rm-gray-800: #1E293B;       /* Cinza escuro secundário */
+  --rm-gray-700: #334155;       /* Cinza médio escuro */
+  --rm-gray-600: #475569;       /* Cinza médio */
+  --rm-gray-500: #64748B;       /* Cinza médio claro */
+  --rm-gray-400: #94A3B8;       /* Cinza claro */
+  --rm-gray-300: #CBD5E1;       /* Cinza muito claro */
+  --rm-gray-200: #E2E8F0;       /* Cinza de borda */
+  --rm-gray-100: #F1F5F9;       /* Cinza de fundo */
+  --rm-gray-50: #F8FAFC;        /* Cinza muito claro de fundo */
+  
+  /* Branco e preto */
+  --rm-white: #FFFFFF;
+  --rm-black: #000000;
+  
+  /* === CORES FUNCIONAIS === */
+  --rm-success: #10B981;        /* Verde sucesso */
+  --rm-success-dark: #059669;   /* Verde escuro */
+  --rm-warning: #F59E0B;        /* Amarelo aviso */
+  --rm-warning-dark: #D97706;  /* Amarelo escuro */
+  --rm-error: #EF4444;          /* Vermelho erro */
+  --rm-error-dark: #DC2626;     /* Vermelho escuro */
+  --rm-info: #3B82F6;           /* Azul informação */
+  
+  /* === GRADIENTES === */
+  --rm-gradient-primary: linear-gradient(135deg, #1D4ED8 0%, #3B82F6 100%);
+  --rm-gradient-secondary: linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 100%);
+  --rm-gradient-dark: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+  
+  /* === SOMBRAS === */
+  --rm-shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+  --rm-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.1), 0 2px 4px -1px rgba(15, 23, 42, 0.06);
+  --rm-shadow-md: 0 10px 15px -3px rgba(15, 23, 42, 0.1), 0 4px 6px -2px rgba(15, 23, 42, 0.05);
+  --rm-shadow-lg: 0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 10px 10px -5px rgba(15, 23, 42, 0.04);
+  --rm-shadow-xl: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+  
+  /* === MODO CLARO (PADRÃO) === */
+  --rm-bg-primary: var(--rm-white);
+  --rm-bg-secondary: var(--rm-gray-50);
+  --rm-bg-tertiary: var(--rm-gray-100);
+  --rm-bg-accent: var(--rm-primary-50);
+  
+  --rm-text-primary: var(--rm-gray-900);
+  --rm-text-secondary: var(--rm-gray-600);
+  --rm-text-tertiary: var(--rm-gray-500);
+  --rm-text-inverse: var(--rm-white);
+  
+  --rm-border-primary: var(--rm-gray-200);
+  --rm-border-secondary: var(--rm-gray-300);
+  --rm-border-accent: var(--rm-primary-100);
+  
+  --rm-card-bg: var(--rm-white);
+  --rm-card-border: var(--rm-gray-200);
+  --rm-card-shadow: var(--rm-shadow);
+  
+  --rm-input-bg: var(--rm-white);
+  --rm-input-border: var(--rm-gray-300);
+  --rm-input-focus: var(--rm-primary);
+  
+  --rm-button-primary: var(--rm-primary);
+  --rm-button-primary-hover: var(--rm-primary-dark);
+  --rm-button-secondary: var(--rm-gray-100);
+  --rm-button-secondary-hover: var(--rm-gray-200);
+  
+  --rm-nav-bg: var(--rm-white);
+  --rm-nav-border: var(--rm-gray-200);
+  --rm-nav-shadow: var(--rm-shadow-sm);
+  
+  --rm-sidebar-bg: var(--rm-gray-50);
+  --rm-sidebar-border: var(--rm-gray-200);
+  
+  --rm-header-bg: var(--rm-white);
+  --rm-header-border: var(--rm-gray-200);
+  --rm-header-shadow: var(--rm-shadow-sm);
+  
+  --rm-footer-bg: var(--rm-gray-50);
+  --rm-footer-border: var(--rm-gray-200);
+  --rm-footer-text: var(--rm-gray-600);
+}
+
+/* === MODO ESCURO === */
+[data-theme="dark"] {
+  --rm-bg-primary: var(--rm-gray-900);
+  --rm-bg-secondary: var(--rm-gray-800);
+  --rm-bg-tertiary: var(--rm-gray-700);
+  --rm-bg-accent: var(--rm-gray-800);
+  
+  --rm-text-primary: var(--rm-white);
+  --rm-text-secondary: var(--rm-gray-300);
+  --rm-text-tertiary: var(--rm-gray-400);
+  --rm-text-inverse: var(--rm-gray-900);
+  
+  --rm-border-primary: var(--rm-gray-700);
+  --rm-border-secondary: var(--rm-gray-600);
+  --rm-border-accent: var(--rm-gray-600);
+  
+  --rm-card-bg: var(--rm-gray-800);
+  --rm-card-border: var(--rm-gray-700);
+  --rm-card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  
+  --rm-input-bg: var(--rm-gray-800);
+  --rm-input-border: var(--rm-gray-600);
+  --rm-input-focus: var(--rm-primary-light);
+  
+  --rm-button-primary: var(--rm-primary);
+  --rm-button-primary-hover: var(--rm-primary-light);
+  --rm-button-secondary: var(--rm-gray-700);
+  --rm-button-secondary-hover: var(--rm-gray-600);
+  
+  --rm-nav-bg: var(--rm-gray-800);
+  --rm-nav-border: var(--rm-gray-700);
+  --rm-nav-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  
+  --rm-sidebar-bg: var(--rm-gray-800);
+  --rm-sidebar-border: var(--rm-gray-700);
+  
+  --rm-header-bg: var(--rm-gray-800);
+  --rm-header-border: var(--rm-gray-700);
+  --rm-header-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  
+  --rm-footer-bg: var(--rm-gray-900);
+  --rm-footer-border: var(--rm-gray-700);
+  --rm-footer-text: var(--rm-gray-400);
+}
+
+/* === TRANSIÇÕES SUAVES === */
+* {
+  transition: background-color 0.3s ease, 
+              border-color 0.3s ease, 
+              color 0.3s ease,
+              box-shadow 0.3s ease;
+}
+
+/* === UTILITÁRIOS DE CORES === */
+.text-primary { color: var(--rm-text-primary) !important; }
+.text-secondary { color: var(--rm-text-secondary) !important; }
+.text-tertiary { color: var(--rm-text-tertiary) !important; }
+.text-inverse { color: var(--rm-text-inverse) !important; }
+
+.bg-primary { background-color: var(--rm-bg-primary) !important; }
+.bg-secondary { background-color: var(--rm-bg-secondary) !important; }
+.bg-tertiary { background-color: var(--rm-bg-tertiary) !important; }
+.bg-accent { background-color: var(--rm-bg-accent) !important; }
+
+.border-primary { border-color: var(--rm-border-primary) !important; }
+.border-secondary { border-color: var(--rm-border-secondary) !important; }
+.border-accent { border-color: var(--rm-border-accent) !important; }
+
+/* === GRADIENTES === */
+.gradient-primary { background: var(--rm-gradient-primary) !important; }
+.gradient-secondary { background: var(--rm-gradient-secondary) !important; }
+.gradient-dark { background: var(--rm-gradient-dark) !important; }
+
+/* === SOMBRAS === */
+.shadow-sm { box-shadow: var(--rm-shadow-sm) !important; }
+.shadow { box-shadow: var(--rm-shadow) !important; }
+.shadow-md { box-shadow: var(--rm-shadow-md) !important; }
+.shadow-lg { box-shadow: var(--rm-shadow-lg) !important; }
+.shadow-xl { box-shadow: var(--rm-shadow-xl) !important; }

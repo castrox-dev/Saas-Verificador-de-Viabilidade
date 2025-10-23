@@ -1,57 +1,60 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-/* Nova paleta de cores conforme especificação */
-:root{
-  /* Paleta RM Systems (azul profissional, alto contraste) */
-  --white-light: #FFFFFF;
-  --white-std: #F8FAFC;        /* slate-50 */
-  --white-dark: #E5E7EB;       /* gray-200 */
 
-  --gray-light: #E2E8F0;       /* slate-200 */
-  --gray: #475569;             /* slate-600 */
-  --gray-dark: #0F172A;        /* slate-900 */
+/* === SISTEMA DE CORES RM SYSTEMS === */
+/* Importa o sistema de cores baseado na logo */
+@import url('theme_colors.css');
 
-  /* Fundo claro com nuance azul */
-  --bg: linear-gradient(135deg, #E8F1FB 0%, #F5F9FF 100%);
-  --bg2: #EEF5FF;
-
-  /* Mapeamento de variáveis para a paleta */
-  --white: var(--white-light);
-  --card: var(--white-light);
-  --text: var(--gray-dark);
-  --muted: var(--gray);
-  --border: #DBEAFE;           /* blue-100 */
-
-  /* Cores funcionais (primária azul RM) */
-  --primary: #1D4ED8;          /* blue-600 */
-  --primary-hover: #1E40AF;    /* blue-700 */
-  --primary-700: #1E40AF;
-
-  --success: #10b981;          /* emerald-500 */
-  --warning: #f59e0b;          /* amber-500 */
-  --error: #ef4444;            /* red-500 */
-
-  /* Sombras sutilmente azuladas */
-  --shadow: 0 10px 25px -5px rgba(30, 64, 175, 0.08), 0 10px 10px -5px rgba(30, 64, 175, 0.04);
-  --shadow-lg: 0 25px 50px -12px rgba(30, 64, 175, 0.12);
+/* === VARIÁVEIS COMPATIBILIDADE === */
+:root {
+  /* Mapeamento para compatibilidade com código existente */
+  --white-light: var(--rm-white);
+  --white-std: var(--rm-gray-50);
+  --white-dark: var(--rm-gray-200);
+  
+  --gray-light: var(--rm-gray-200);
+  --gray: var(--rm-gray-600);
+  --gray-dark: var(--rm-gray-900);
+  
+  --bg: var(--rm-gradient-secondary);
+  --bg2: var(--rm-primary-50);
+  
+  --white: var(--rm-white);
+  --card: var(--rm-card-bg);
+  --text: var(--rm-text-primary);
+  --muted: var(--rm-text-secondary);
+  --border: var(--rm-border-primary);
+  
+  --primary: var(--rm-primary);
+  --primary-hover: var(--rm-primary-dark);
+  --primary-700: var(--rm-primary-dark);
+  
+  --success: var(--rm-success);
+  --warning: var(--rm-warning);
+  --error: var(--rm-error);
+  
+  --shadow: var(--rm-shadow);
+  --shadow-lg: var(--rm-shadow-lg);
 }
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
   font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial,sans-serif;
   margin:0;
-  background:var(--bg);
-  color:var(--text);
+  background:var(--rm-bg-primary);
+  color:var(--rm-text-primary);
   line-height:1.6;
   font-weight:400;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 
 /* Menu de Navegação do Dashboard */
 .dashboard-nav {
-  background: var(--white-light);
-  border-bottom: 1px solid var(--border);
+  background: var(--rm-nav-bg);
+  border-bottom: 1px solid var(--rm-nav-border);
   margin-bottom: 2rem;
-  box-shadow: 0 2px 4px rgba(51, 51, 51, 0.05);
+  box-shadow: var(--rm-nav-shadow);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .nav-container {
@@ -166,12 +169,12 @@ body{
 .container{max-width:1200px;margin:32px auto;padding:0 24px}
 .login-page .container{max-width:100%;padding:0;margin:0}
 .card{
-  background:var(--card);
-  border:1px solid var(--border);
+  background:var(--rm-card-bg);
+  border:1px solid var(--rm-card-border);
   border-radius:16px;
   padding:24px;
   margin-bottom:24px;
-  box-shadow:var(--shadow);
+  box-shadow:var(--rm-card-shadow);
   transition:all 0.3s ease;
 }
 .card:hover{

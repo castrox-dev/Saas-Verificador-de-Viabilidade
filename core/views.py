@@ -20,6 +20,7 @@ from .permissions import (
     is_rm_admin, is_company_admin, can_manage_users,
     rm_admin_required, user_management_required, map_upload_required, company_access_required, company_access_required_json
 )
+from .rate_limiting import login_rate_limit, upload_rate_limit, general_rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +47,7 @@ def home_redirect(request):
 
 
 @ensure_csrf_cookie
+@login_rate_limit
 def rm_login_view(request):
     if request.method == 'POST':
         input_id = (request.POST.get('username', '') or '').strip()
@@ -147,6 +149,47 @@ def rm_user_create(request):
 
 @login_required
 @rm_admin_required
+def rm_user_delete(request, user_id):
+    if request.method == 'POST':
+        try:
+            user = get_object_or_404(CustomUser, id=user_id)
+            
+            # Não permitir deletar superusuários
+            if user.is_superuser:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Não é possível deletar superusuários.'
+                }, status=400)
+            
+            # Não permitir deletar o próprio usuário
+            if user == request.user:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Não é possível deletar seu próprio usuário.'
+                }, status=400)
+            
+            username = user.username
+            user.delete()
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Usuário {username} deletado com sucesso!'
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Erro ao deletar usuário: {str(e)}'
+            }, status=500)
+    
+    return JsonResponse({
+        'success': False,
+        'message': 'Método não permitido.'
+    }, status=405)
+
+
+@login_required
+@rm_admin_required
 def rm_user_edit(request, user_id):
     user_obj = get_object_or_404(CustomUser, id=user_id)
     if request.method == 'POST':
@@ -228,6 +271,7 @@ def company_map_list(request, company_slug):
 
 @login_required
 @company_access_required(require_admin=True)
+@upload_rate_limit
 def company_map_upload(request, company_slug):
     """Upload de mapa da empresa"""
     if not (request.user.is_company_admin or request.user.is_rm_admin or request.user.is_superuser):

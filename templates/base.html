@@ -10,6 +10,8 @@
     <link rel="icon" href="{% static 'img/RM_logo.ico' %}">
     <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
     <link rel="stylesheet" href="{% static 'css/theme_rm.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/theme_colors.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     {% block extra_head %}{% endblock %}
   </head>
@@ -20,7 +22,7 @@
     <header class="topbar" role="banner">
       <div style="display:flex;align-items:center;gap:10px;">
         <img class="brand-logo" src="{% static 'img/logo_letreiro.png' %}" alt="Logo da RM Systems" style="height: 32px; width: auto;" />
-        <h1 style="margin:0;color:var(--gray-dark);font-size:18px;">Verificador de Viabilidade (SaaS)</h1>
+        <h1 style="margin:0;color:var(--rm-text-primary);font-size:18px;">Verificador de Viabilidade (SaaS)</h1>
       </div>
       <nav role="navigation" aria-label="Navegação principal">
         {% if user.is_authenticated %}
@@ -56,6 +58,8 @@
     
     <!-- Sistema de Toast -->
     <script src="{% static 'js/toast.js' %}"></script>
+    <!-- Sistema de Dark Mode -->
+    <script src="{% static 'js/dark-mode.js' %}"></script>
     {% block extra_scripts %}{% endblock %}
   </body>
 </html>

@@ -1,0 +1,19 @@
+# Dependências mínimas para desenvolvimento
+Django==5.2.7
+python-dotenv==1.1.1
+
+# Banco de dados (opcional - usar SQLite para desenvolvimento)
+# psycopg2-binary==2.9.9
+
+# Cache (opcional - usar cache em memória para desenvolvimento)
+# redis==5.0.1
+# django-redis==5.4.0
+
+# Arquivos estáticos
+whitenoise==6.6.0
+
+# Segurança básica
+django-ratelimit==4.1.0
+
+# Desenvolvimento
+django-debug-toolbar==4.2.0
