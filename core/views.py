@@ -5,6 +5,8 @@ from django.contrib.auth import authenticate, login, logout
 from django.http import HttpResponseForbidden, HttpResponse, Http404, JsonResponse
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.cache import cache_page
+from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Count, Q
 from django.core.paginator import Paginator
@@ -20,6 +22,8 @@ from .permissions import (
     is_rm_admin, is_company_admin, can_manage_users,
     rm_admin_required, user_management_required, company_access_required, company_access_required_json
 )
+from .reports import ReportGenerator, ExportManager
+from .audit_logger import log_user_action, log_data_access
 from .rate_limiting import login_rate_limit, upload_rate_limit, general_rate_limit
 
 logger = logging.getLogger(__name__)
@@ -83,8 +87,15 @@ def company_list(request):
 
 @login_required
 @rm_admin_required
+@cache_page(60 * 15)  # Cache por 15 minutos
 def rm_admin_dashboard(request):
-    """Dashboard administrativo RM"""
+    """Dashboard administrativo RM com cache"""
+    cache_key = f"rm_dashboard_{request.user.id}"
+    cached_data = cache.get(cache_key)
+    
+    if cached_data:
+        return render(request, 'core/rm_dashboard.html', cached_data)
+    
     companies = Company.objects.all()
     total_users = CustomUser.objects.count()
     total_maps = CTOMapFile.objects.count()
@@ -95,6 +106,9 @@ def rm_admin_dashboard(request):
         'total_users': total_users,
         'total_maps': total_maps,
     }
+    
+    # Cache por 15 minutos
+    cache.set(cache_key, context, 60 * 15)
     return render(request, 'core/rm_dashboard.html', context)
 
 
@@ -680,3 +694,156 @@ def rm_company_delete(request, company_id):
         return JsonResponse({'success': True})
     except Exception:
         return JsonResponse({'success': False, 'message': 'Falha ao excluir empresa'}, status=500)
+
+
+# === RELATÓRIOS E EXPORTAÇÃO ===
+
+@login_required
+@rm_admin_required
+def rm_reports_dashboard(request):
+    """Dashboard de relatórios para RM"""
+    metrics = ReportGenerator.get_system_wide_metrics()
+    
+    context = {
+        'metrics': metrics,
+        'title': 'Relatórios do Sistema'
+    }
+    return render(request, 'rm/reports/dashboard.html', context)
+
+@login_required
+@company_access_required
+def company_reports_dashboard(request, company_slug):
+    """Dashboard de relatórios da empresa"""
+    company = get_object_or_404(Company, slug=company_slug)
+    metrics = ReportGenerator.get_company_metrics(company)
+    
+    context = {
+        'company': company,
+        'metrics': metrics,
+        'title': 'Relatórios da Empresa'
+    }
+    return render(request, 'company/reports/dashboard.html', context)
+
+@login_required
+@rm_admin_required
+def export_system_report(request, format='csv'):
+    """Exportar relatório do sistema"""
+    metrics = ReportGenerator.get_system_wide_metrics()
+    
+    # Preparar dados para exportação
+    export_data = []
+    
+    # Dados de empresas
+    for company_data in metrics['company_rankings']:
+        export_data.append({
+            'Tipo': 'Empresa',
+            'Nome': company_data.name,
+            'Usuários': company_data.user_count,
+            'Mapas': company_data.map_count,
+            'Criada em': company_data.created_at
+        })
+    
+    # Dados de uso
+    for usage_data in metrics['usage_statistics']['maps_by_company']:
+        export_data.append({
+            'Tipo': 'Uso de Mapas',
+            'Empresa': usage_data.name,
+            'Total de Mapas': usage_data.map_count,
+            'Data': timezone.now().strftime('%Y-%m-%d')
+        })
+    
+    filename = f'relatorio_sistema_{timezone.now().strftime("%Y%m%d")}.{format}'
+    
+    if format == 'csv':
+        return ExportManager.export_to_csv(export_data, filename)
+    else:
+        return ExportManager.export_to_json(export_data, filename)
+
+@login_required
+@company_access_required
+def export_company_report(request, company_slug, format='csv'):
+    """Exportar relatório da empresa"""
+    company = get_object_or_404(Company, slug=company_slug)
+    metrics = ReportGenerator.get_company_metrics(company)
+    
+    # Preparar dados para exportação
+    export_data = []
+    
+    # Informações da empresa
+    export_data.append({
+        'Tipo': 'Informações da Empresa',
+        'Nome': company.name,
+        'Email': company.email,
+        'Telefone': company.phone,
+        'Total de Usuários': metrics['company_info']['total_users'],
+        'Usuários Ativos': metrics['company_info']['active_users'],
+        'Total de Mapas': metrics['map_statistics']['total_maps']
+    })
+    
+    # Estatísticas de mapas
+    for file_type in metrics['map_statistics']['by_file_type']:
+        export_data.append({
+            'Tipo': 'Estatísticas de Mapas',
+            'Tipo de Arquivo': file_type['file_type'],
+            'Quantidade': file_type['count'],
+            'Empresa': company.name
+        })
+    
+    filename = f'relatorio_{company.slug}_{timezone.now().strftime("%Y%m%d")}.{format}'
+    
+    if format == 'csv':
+        return ExportManager.export_to_csv(export_data, filename)
+    else:
+        return ExportManager.export_to_json(export_data, filename)
+
+@login_required
+@company_access_required
+def export_user_list(request, company_slug, format='csv'):
+    """Exportar lista de usuários da empresa"""
+    company = get_object_or_404(Company, slug=company_slug)
+    users = CustomUser.objects.filter(company=company)
+    
+    export_data = []
+    for user in users:
+        export_data.append({
+            'Username': user.username,
+            'Email': user.email,
+            'Nome Completo': f"{user.first_name} {user.last_name}".strip(),
+            'Telefone': user.phone or '',
+            'Role': user.get_role_display(),
+            'Ativo': 'Sim' if user.is_active else 'Não',
+            'Último Login': user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else 'Nunca',
+            'Data de Criação': user.date_joined.strftime('%Y-%m-%d %H:%M')
+        })
+    
+    filename = f'usuarios_{company.slug}_{timezone.now().strftime("%Y%m%d")}.{format}'
+    
+    if format == 'csv':
+        return ExportManager.export_to_csv(export_data, filename)
+    else:
+        return ExportManager.export_to_json(export_data, filename)
+
+@login_required
+@company_access_required
+def export_map_list(request, company_slug, format='csv'):
+    """Exportar lista de mapas da empresa"""
+    company = get_object_or_404(Company, slug=company_slug)
+    maps = CTOMapFile.objects.filter(company=company)
+    
+    export_data = []
+    for map_file in maps:
+        export_data.append({
+            'Nome do Arquivo': map_file.original_filename,
+            'Tipo': map_file.file_type,
+            'Tamanho (MB)': round(map_file.file_size / (1024 * 1024), 2) if map_file.file_size else 0,
+            'Status': map_file.status,
+            'Uploadado por': map_file.uploaded_by.get_full_name() if map_file.uploaded_by else 'Sistema',
+            'Data de Upload': map_file.uploaded_at.strftime('%Y-%m-%d %H:%M')
+        })
+    
+    filename = f'mapas_{company.slug}_{timezone.now().strftime("%Y%m%d")}.{format}'
+    
+    if format == 'csv':
+        return ExportManager.export_to_csv(export_data, filename)
+    else:
+        return ExportManager.export_to_json(export_data, filename)

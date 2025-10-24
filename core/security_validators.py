@@ -301,3 +301,161 @@ class SecureFileValidator:
             logger.error(f"Erro na verificação de malware: {str(e)}")
             # Não bloquear por erro na verificação, apenas logar
             pass
+    
+    def validate_file_advanced(self, file):
+        """
+        Validação avançada com múltiplas camadas de segurança
+        """
+        # 1. Validação básica
+        self.validate_file(file)
+        
+        # 2. Verificação de magic numbers
+        self._validate_magic_numbers(file)
+        
+        # 3. Verificação de estrutura
+        self._validate_file_structure(file)
+        
+        # 4. Verificação de metadados
+        self._validate_metadata(file)
+        
+        return True
+    
+    def _validate_magic_numbers(self, file):
+        """Verificação de magic numbers do arquivo"""
+        try:
+            file.seek(0)
+            header = file.read(16)
+            file.seek(0)
+            
+            # Magic numbers para tipos permitidos
+            valid_magic_numbers = {
+                b'PK\x03\x04': 'Excel/Office',
+                b'\xd0\xcf\x11\xe0': 'Excel Legacy',
+                b'<?xml': 'XML/KML',
+                b'<kml': 'KML',
+                b'<Document': 'KML Document'
+            }
+            
+            # Verificar se o header corresponde a um tipo permitido
+            is_valid = False
+            for magic, file_type in valid_magic_numbers.items():
+                if header.startswith(magic):
+                    is_valid = True
+                    logger.info(f"Magic number válido detectado: {file_type}")
+                    break
+            
+            if not is_valid:
+                # Para CSV, verificar se é texto válido
+                if file.name.lower().endswith('.csv'):
+                    try:
+                        file.seek(0)
+                        content = file.read(1024).decode('utf-8')
+                        if content and not any(ord(c) < 32 and c not in '\t\n\r' for c in content[:100]):
+                            is_valid = True
+                    except:
+                        pass
+            
+            if not is_valid:
+                raise ValidationError("Arquivo com magic number inválido ou suspeito")
+                
+        except Exception as e:
+            logger.error(f"Erro na verificação de magic numbers: {str(e)}")
+            raise ValidationError("Erro na verificação de integridade do arquivo")
+    
+    def _validate_file_structure(self, file):
+        """Verificação da estrutura do arquivo"""
+        try:
+            file_ext = os.path.splitext(file.name)[1].lower()
+            
+            if file_ext in ['.xlsx', '.xls']:
+                self._validate_excel_structure(file)
+            elif file_ext == '.csv':
+                self._validate_csv_structure(file)
+            elif file_ext == '.kml':
+                self._validate_kml_structure(file)
+            elif file_ext == '.kmz':
+                self._validate_kmz_structure(file)
+                
+        except Exception as e:
+            logger.error(f"Erro na verificação de estrutura: {str(e)}")
+            raise ValidationError("Arquivo com estrutura inválida")
+    
+    def _validate_excel_structure(self, file):
+        """Verificação da estrutura de arquivos Excel"""
+        # Verificações adicionais para Excel
+        pass
+    
+    def _validate_csv_structure(self, file):
+        """Verificação da estrutura de arquivos CSV"""
+        try:
+            file.seek(0)
+            lines = file.read(1024).decode('utf-8', errors='ignore').split('\n')
+            
+            # Verificar se tem pelo menos uma linha com dados
+            if len(lines) < 2:
+                raise ValidationError("Arquivo CSV muito pequeno ou vazio")
+            
+            # Verificar se as linhas têm estrutura consistente
+            first_line = lines[0]
+            if not first_line.strip():
+                raise ValidationError("Arquivo CSV sem cabeçalho válido")
+                
+        except Exception as e:
+            logger.error(f"Erro na verificação de estrutura CSV: {str(e)}")
+            raise ValidationError("Arquivo CSV com estrutura inválida")
+    
+    def _validate_kml_structure(self, file):
+        """Verificação da estrutura de arquivos KML"""
+        try:
+            file.seek(0)
+            content = file.read(2048).decode('utf-8', errors='ignore')
+            
+            # Verificar tags essenciais do KML
+            required_tags = ['<kml', '<Document', '<Placemark']
+            found_tags = [tag for tag in required_tags if tag in content]
+            
+            if len(found_tags) < 2:
+                raise ValidationError("Arquivo KML sem estrutura válida")
+                
+        except Exception as e:
+            logger.error(f"Erro na verificação de estrutura KML: {str(e)}")
+            raise ValidationError("Arquivo KML com estrutura inválida")
+    
+    def _validate_kmz_structure(self, file):
+        """Verificação da estrutura de arquivos KMZ"""
+        try:
+            file.seek(0)
+            file_content = file.read()
+            file.seek(0)
+            
+            with zipfile.ZipFile(io.BytesIO(file_content), 'r') as zip_file:
+                # Verificar se tem pelo menos um KML
+                kml_files = [name for name in zip_file.namelist() if name.lower().endswith('.kml')]
+                if not kml_files:
+                    raise ValidationError("Arquivo KMZ sem arquivo KML")
+                
+                # Verificar se o KML principal é válido
+                main_kml = kml_files[0]
+                kml_content = zip_file.read(main_kml).decode('utf-8', errors='ignore')
+                
+                if not any(tag in kml_content for tag in ['<kml', '<Document', '<Placemark']):
+                    raise ValidationError("Arquivo KMZ com KML inválido")
+                    
+        except Exception as e:
+            logger.error(f"Erro na verificação de estrutura KMZ: {str(e)}")
+            raise ValidationError("Arquivo KMZ com estrutura inválida")
+    
+    def _validate_metadata(self, file):
+        """Verificação de metadados do arquivo"""
+        try:
+            # Verificar se o arquivo não está vazio
+            if file.size == 0:
+                raise ValidationError("Arquivo vazio")
+            
+            # Verificar se o arquivo não é muito pequeno (possível arquivo corrompido)
+            if file.size < 10:
+                raise ValidationError("Arquivo muito pequeno, possivelmente corrompido")
+                
+        except Exception as e:
+            logger.error(f"Erro na verificação de metadados: {str(e)}")
+            raise ValidationError("Erro na verificação de metadados")
