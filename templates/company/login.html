@@ -1,11 +1,14 @@
-{% extends 'base.html' %}
 {% load static %}
-
-{% block title %}Login da Empresa - {{ company_slug|title }}{% endblock %}
-
-{% block body_class %}login-page{% endblock %}
-
-{% block content %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login da Empresa - {{ company_slug|title }}</title>
+    <link rel="stylesheet" href="{% static 'css/login.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body data-theme="light">
     <div class="side-by-side-layout">
         <!-- Lado esquerdo - Informações -->
         <div class="info-side">
@@ -81,13 +84,8 @@
             </div>
         </div>
     </div>
-
-{% endblock %}
-
-{% block extra_head %}
-<link rel="stylesheet" href="{% static 'css/login-pages.css' %}">
-{% endblock %}
-
-{% block extra_scripts %}
-<script src="{% static 'js/login.js' %}"></script>
-{% endblock %}
+    
+    <script src="{% static 'js/login.js' %}"></script>
+    <script src="{% static 'js/dark-mode.js' %}"></script>
+</body>
+</html>

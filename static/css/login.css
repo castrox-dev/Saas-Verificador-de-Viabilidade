@@ -1,29 +1,377 @@
-/* Estilos específicos da página de login de empresa */
-.login-page { min-height: 100vh; }
+/* ========================================
+   ESTILOS PARA PÁGINAS DE LOGIN - DESIGN DA IMAGEM
+   ======================================== */
 
-.login-container {
+/* === VARIÁVEIS DE CORES BASEADAS NA IMAGEM === */
+:root {
+  /* Cores da imagem */
+  --img-bg-left: #f8f9fa;           /* Cinza muito claro do lado esquerdo */
+  --img-bg-right: #ffffff;          /* Branco do lado direito */
+  --img-text-primary: #2d3748;     /* Cinza escuro para títulos */
+  --img-text-secondary: #718096;   /* Cinza médio para subtítulos */
+  --img-text-light: #a0aec0;       /* Cinza claro para descrições */
+  --img-card-bg: #ffffff;          /* Fundo branco dos cards */
+  --img-card-border: #e2e8f0;      /* Borda cinza clara dos cards */
+  --img-input-bg: #f7fafc;         /* Fundo cinza claro dos inputs */
+  --img-input-bg-blue: #ebf8ff;    /* Fundo azul claro do input senha */
+  --img-button-bg: #4a5568;        /* Cinza escuro do botão */
+  --img-button-text: #ffffff;     /* Texto branco do botão */
+  --img-accent: #3182ce;           /* Azul para links e destaques */
+}
+
+/* Dark mode colors */
+[data-theme="dark"] {
+  --img-bg-left: #1a202c;
+  --img-bg-right: #2d3748;
+  --img-text-primary: #f7fafc;
+  --img-text-secondary: #cbd5e0;
+  --img-text-light: #a0aec0;
+  --img-card-bg: #2d3748;
+  --img-card-border: #4a5568;
+  --img-input-bg: #4a5568;
+  --img-input-bg-blue: #2b6cb0;
+  --img-button-bg: #4a5568;
+  --img-button-text: #f7fafc;
+  --img-accent: #63b3ed;
+}
+
+/* === LAYOUT BASE === */
+body {
+  background: var(--img-bg-right);
   min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  transition: all 0.3s ease;
+}
+
+.side-by-side-layout {
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* === LADO ESQUERDO - INFORMAÇÕES === */
+.info-side {
+  flex: 2; /* 2/3 da tela como na imagem */
+  background: var(--img-bg-left);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: 3rem 2rem;
+  position: relative;
 }
 
-.logo-container img { height: 40px; width: auto; }
+.info-content {
+  max-width: 500px;
+  width: 100%;
+}
 
-.text-muted { color: var(--muted); }
-.mb-2 { margin-bottom: 12px; }
-.mb-3 { margin-bottom: 16px; }
+.main-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 1rem;
+  color: var(--img-text-primary);
+  text-align: left;
+}
 
-.form-group { margin-bottom: 14px; }
-.form-group label { display: block; font-weight: 600; color: var(--gray); margin-bottom: 6px; }
-.form-group input { width: 100%; }
+.title-highlight {
+  color: var(--img-text-primary);
+  font-weight: 700;
+}
 
-.footer-links { text-align: center; margin-top: 16px; }
-.footer-links a { color: var(--primary); text-decoration: none; font-weight: 600; }
-.footer-links a:hover { color: var(--primary-hover); text-decoration: underline; }
+.main-subtitle {
+  font-size: 1.125rem;
+  color: var(--img-text-secondary);
+  margin-bottom: 2.5rem;
+  text-align: left;
+  line-height: 1.5;
+}
 
-/* Ajustes responsivos */
+.compact-features {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.compact-feature {
+  background: var(--img-card-bg);
+  border: 1px solid var(--img-card-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.compact-feature:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.compact-feature h4 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--img-text-primary);
+}
+
+.compact-feature p {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--img-text-light);
+  margin: 0;
+}
+
+/* === LADO DIREITO - FORMULÁRIO === */
+.login-side {
+  flex: 1; /* 1/3 da tela como na imagem */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: var(--img-bg-right);
+}
+
+.login-card {
+  background: var(--img-card-bg);
+  border: 1px solid var(--img-card-border);
+  border-radius: 16px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.logo-container {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.dashboard-logo {
+  height: 32px;
+  width: auto;
+  max-width: 200px;
+}
+
+.card-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--img-text-primary);
+  text-align: left;
+  margin-bottom: 1.5rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-row label {
+  font-weight: 500;
+  color: var(--img-text-primary);
+  font-size: 0.875rem;
+}
+
+.form-row input {
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--img-card-border);
+  border-radius: 8px;
+  background: var(--img-input-bg);
+  color: var(--img-text-primary);
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+/* Input específico para senha com fundo azul claro */
+.form-row input[type="password"] {
+  background: var(--img-input-bg-blue);
+}
+
+.form-row input:focus {
+  outline: none;
+  border-color: var(--img-accent);
+  box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
+}
+
+.remember {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--img-text-secondary);
+}
+
+.remember input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--img-accent);
+}
+
+.btn {
+  padding: 0.875rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn.primary {
+  background: var(--img-button-bg);
+  color: var(--img-button-text);
+}
+
+.btn.primary:hover {
+  background: #2d3748;
+  transform: translateY(-1px);
+}
+
+.btn.full-width {
+  width: 100%;
+}
+
+.footer-links {
+  text-align: center;
+  margin-top: 1.5rem;
+}
+
+.footer-links a {
+  color: var(--img-text-secondary);
+  text-decoration: none;
+  font-size: 0.875rem;
+  transition: color 0.2s ease;
+}
+
+.footer-links a:hover {
+  color: var(--img-accent);
+}
+
+.messages {
+  margin-bottom: 1rem;
+}
+
+.messages li {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.messages .error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid #e53e3e;
+  color: #e53e3e;
+}
+
+.messages .success {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid #38a169;
+  color: #38a169;
+}
+
+/* === RESPONSIVIDADE === */
+@media (max-width: 1024px) {
+  .info-side {
+    flex: 1.5;
+  }
+  
+  .login-side {
+    flex: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .side-by-side-layout {
+    flex-direction: column;
+  }
+
+  .info-side {
+    flex: none;
+    padding: 2rem 1.5rem;
+    min-height: 50vh;
+  }
+
+  .main-title {
+    font-size: 2rem;
+    text-align: center;
+  }
+
+  .main-subtitle {
+    font-size: 1rem;
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+
+  .compact-features {
+    gap: 1rem;
+  }
+
+  .compact-feature {
+    padding: 1.25rem;
+  }
+
+  .login-side {
+    flex: none;
+    padding: 1.5rem;
+  }
+
+  .login-card {
+    padding: 1.5rem;
+    max-width: 100%;
+  }
+}
+
 @media (max-width: 480px) {
-  .login-container { padding: 12px; }
+  .info-side {
+    padding: 1.5rem 1rem;
+    min-height: 40vh;
+  }
+
+  .main-title {
+    font-size: 1.75rem;
+  }
+
+  .main-subtitle {
+    font-size: 0.9rem;
+  }
+
+  .compact-feature {
+    padding: 1rem;
+  }
+
+  .compact-feature h4 {
+    font-size: 1rem;
+  }
+
+  .compact-feature p {
+    font-size: 0.8rem;
+  }
+
+  .login-side {
+    padding: 1rem;
+  }
+
+  .login-card {
+    padding: 1.25rem;
+  }
+
+  .card-title {
+    font-size: 1.25rem;
+  }
+
+  .form {
+    gap: 1rem;
+  }
 }

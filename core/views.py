@@ -204,6 +204,7 @@ def rm_user_edit(request, user_id):
     return render(request, 'rm/users/form.html', {'form': form, 'user_obj': user_obj})
 
 
+@login_rate_limit
 def company_login_view(request, company_slug):
     context = {'company_slug': company_slug}
     if request.method == 'POST':

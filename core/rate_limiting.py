@@ -76,10 +76,10 @@ class RateLimiter:
         return max(0, self.requests - valid_requests)
 
 # Instâncias de rate limiter para diferentes ações
-login_limiter = RateLimiter(requests=5, window=900)  # 5 tentativas em 15 minutos
-upload_limiter = RateLimiter(requests=10, window=3600)  # 10 uploads por hora
-api_limiter = RateLimiter(requests=100, window=3600)  # 100 requisições por hora
-general_limiter = RateLimiter(requests=200, window=3600)  # 200 requisições por hora
+login_limiter = RateLimiter(requests=20, window=900)  # 20 tentativas em 15 minutos (mais permissivo)
+upload_limiter = RateLimiter(requests=50, window=3600)  # 50 uploads por hora
+api_limiter = RateLimiter(requests=500, window=3600)  # 500 requisições por hora
+general_limiter = RateLimiter(requests=1000, window=3600)  # 1000 requisições por hora
 
 def rate_limit(limiter, action=''):
     """
@@ -88,6 +88,11 @@ def rate_limit(limiter, action=''):
     def decorator(view_func):
         @wraps(view_func)
         def _wrapped(request, *args, **kwargs):
+            # Em desenvolvimento, pular rate limiting
+            from django.conf import settings
+            if settings.DEBUG:
+                return view_func(request, *args, **kwargs)
+            
             if not limiter.is_allowed(request, action):
                 if request.headers.get('Accept') == 'application/json':
                     return JsonResponse({
@@ -129,4 +134,16 @@ def api_rate_limit(view_func):
 def general_rate_limit(view_func):
     """Rate limiting geral"""
     return rate_limit(general_limiter, 'general')(view_func)
+
+def clear_rate_limit(request, action=''):
+    """Limpar rate limit para um IP/usuário específico"""
+    limiter = RateLimiter()
+    cache_key = limiter.get_cache_key(request, action)
+    cache.delete(cache_key)
+    return True
+
+def clear_all_rate_limits():
+    """Limpar todos os rate limits (usar com cuidado)"""
+    cache.clear()
+    return True
 
