@@ -12,10 +12,11 @@
     <link rel="stylesheet" href="{% static 'css/theme_rm.css' %}" />
     <link rel="stylesheet" href="{% static 'css/theme_colors.css' %}" />
     <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/global.css' %}" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     {% block extra_head %}{% endblock %}
   </head>
-  <body class="{% block body_class %}{% endblock %}">
+  <body class="{% block body_class %}{% endblock %}" data-theme="light">
     <!-- Skip to main content link for screen readers -->
     <a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
     
@@ -34,7 +35,6 @@
             <a href="{% url 'company:dashboard' company_slug=user.company.slug %}" aria-current="{% if request.resolver_match.url_name == 'dashboard' %}page{% endif %}">Dashboard</a>
             <a href="{% url 'company:logout' company_slug=user.company.slug %}">Sair</a>
           {% elif user.company %}
-            <a href="{% url 'company:verificador' company_slug=user.company.slug %}" aria-current="{% if request.resolver_match.url_name == 'verificador' %}page{% endif %}">Verificador</a>
             <a href="{% url 'company:logout' company_slug=user.company.slug %}">Sair</a>
           {% endif %}
         {% else %}
@@ -42,7 +42,7 @@
         {% endif %}
       </nav>
     </header>
-    <main id="main-content" class="container" role="main">
+    <main id="main-content" class="main-container" role="main">
       {% if messages %}
         <div class="messages" role="alert" aria-live="polite">
           {% for message in messages %}
@@ -60,6 +60,7 @@
     <script src="{% static 'js/toast.js' %}"></script>
     <!-- Sistema de Dark Mode -->
     <script src="{% static 'js/dark-mode.js' %}"></script>
+    
     {% block extra_scripts %}{% endblock %}
   </body>
 </html>

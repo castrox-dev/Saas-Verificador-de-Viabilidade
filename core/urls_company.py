@@ -16,6 +16,9 @@ urlpatterns = [
     # Verificador (para todos os usuários)
     path('verificador/', views.company_verificador, name='verificador'),
     
+    # Mapa CTO (para usuários comuns)
+    path('mapa-cto/', views.company_mapa_cto, name='mapa_cto'),
+    
     # Gestão de usuários da empresa (apenas admins)
     path('painel/usuarios/', views.company_user_list, name='user_list'),
     path('painel/usuarios/criar/', views.company_user_create, name='user_create'),

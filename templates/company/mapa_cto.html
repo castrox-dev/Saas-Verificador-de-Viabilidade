@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Mapa CTO - {{ company.name }}{% endblock %}
+
+{% block body_class %}mapa-cto-page{% endblock %}
+
+{% block content %}
+<div class="main-content">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3>
+                        <i class="fas fa-map me-2"></i>
+                        Mapa CTO - {{ company.name }}
+                    </h3>
+                    <a href="{% url 'company:logout' company_slug=company.slug %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-sign-out-alt me-2"></i>Sair
+                    </a>
+                </div>
+
+                <!-- EM BREVE Section -->
+                <div class="coming-soon-container">
+                    <div class="coming-soon-card">
+                        <div class="coming-soon-icon">
+                            <i class="fas fa-tools"></i>
+                        </div>
+                        <h2 class="coming-soon-title">EM BREVE</h2>
+                        <p class="coming-soon-subtitle">
+                            Estamos trabalhando para trazer a funcionalidade de Mapa CTO
+                        </p>
+                        <p class="coming-soon-description">
+                            Em breve você poderá visualizar e interagir com os mapas CTO da sua empresa.
+                            Esta funcionalidade está sendo desenvolvida e estará disponível em breve.
+                        </p>
+                        
+                        <div class="features-preview">
+                            <h5>O que está por vir:</h5>
+                            <div class="feature-list">
+                                <div class="feature-item">
+                                    <i class="fas fa-eye text-primary"></i>
+                                    <span>Visualização de mapas CTO</span>
+                                </div>
+                                <div class="feature-item">
+                                    <i class="fas fa-search text-primary"></i>
+                                    <span>Análise de viabilidade</span>
+                                </div>
+                                <div class="feature-item">
+                                    <i class="fas fa-download text-primary"></i>
+                                    <span>Download de relatórios</span>
+                                </div>
+                                <div class="feature-item">
+                                    <i class="fas fa-chart-line text-primary"></i>
+                                    <span>Gráficos e estatísticas</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="contact-info">
+                            <p class="text-muted">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Para mais informações, entre em contato com o administrador da empresa.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+</div>
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/mapa-cto.css' %}">
+{% endblock %}

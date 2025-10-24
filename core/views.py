@@ -204,16 +204,24 @@ def rm_user_edit(request, user_id):
     return render(request, 'rm/users/form.html', {'form': form, 'user_obj': user_obj})
 
 
-@ensure_csrf_cookie
 def company_login_view(request, company_slug):
     context = {'company_slug': company_slug}
     if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
+        input_id = (request.POST.get('username', '') or '').strip()
+        password = (request.POST.get('password', '') or '').strip()
+        # aceitar e-mail ou username
+        username = input_id
+        if input_id and '@' in input_id:
+            try:
+                u = CustomUser.objects.get(email__iexact=input_id)
+                username = u.username
+            except CustomUser.DoesNotExist:
+                username = input_id
+        
         user = authenticate(request, username=username, password=password)
         
         # Debug logging
-        logger.info(f"Login attempt for company: {company_slug}, username: {username}")
+        logger.info(f"Login attempt for company: {company_slug}, input: {input_id}, resolved username: {username}")
         if user:
             logger.info(f"User found: {user.username}, company: {user.company}, is_active: {user.is_active}")
             if user.company:
@@ -242,6 +250,10 @@ def company_dashboard(request, company_slug):
     logger.info(f"Dashboard access for company: {company_slug}")
     logger.info(f"User: {request.user.username}, Company: {request.user.company}, Role: {request.user.role}")
     
+    # Redirecionar usuários comuns para o mapa CTO
+    if request.user.role == 'COMPANY_USER':
+        return redirect('company:mapa_cto', company_slug=company_slug)
+    
     users_qs = CustomUser.objects.filter(company=company)
     maps_qs = CTOMapFile.objects.filter(company=company)
     context = {
@@ -265,6 +277,17 @@ def company_verificador(request, company_slug):
         'maps': maps,
     }
     return render(request, 'core/company_verifier.html', context)
+
+
+@login_required
+@company_access_required(require_admin=False)
+def company_mapa_cto(request, company_slug):
+    """Página do mapa CTO para usuários comuns da empresa"""
+    company = get_object_or_404(Company, slug=company_slug)
+    context = {
+        'company': company,
+    }
+    return render(request, 'company/mapa_cto.html', context)
 
 
 @login_required
@@ -293,7 +316,7 @@ def company_map_list(request, company_slug):
 @company_access_required(require_admin=True)
 @upload_rate_limit
 def company_map_upload(request, company_slug):
-    """Upload de mapa da empresa"""
+    """Upload de mapa da empresa (apenas admins)"""
     if not (request.user.is_company_admin or request.user.is_rm_admin or request.user.is_superuser):
         return HttpResponseForbidden()
     company = get_object_or_404(Company, slug=company_slug)
@@ -584,7 +607,7 @@ def dashboard_redirect(request):
     if user.company:
         if user.role == 'COMPANY_ADMIN':
             return redirect('company:dashboard', company_slug=user.company.slug)
-        return redirect('company:verificador', company_slug=user.company.slug)
+        return redirect('company:mapa_cto', company_slug=user.company.slug)
 
     # Fallback: se não houver empresa associada, enviar para RM dashboard
     return redirect('rm:admin_dashboard')
