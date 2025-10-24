@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', function(){
   const emailInput = document.getElementById('id_username');
   const pwdInput = document.getElementById('id_password');
   const remember = document.getElementById('rememberEmail');
+  const passwordToggle = document.getElementById('passwordToggle');
 
   // Prefill pelo localStorage
   try{
@@ -44,4 +45,20 @@ document.addEventListener('DOMContentLoaded', function(){
       // Submete normalmente
     }
   });
+
+  // Toggle de senha
+  if (passwordToggle && pwdInput) {
+    passwordToggle.addEventListener('click', function() {
+      const icon = passwordToggle.querySelector('i');
+      if (pwdInput.type === 'password') {
+        pwdInput.type = 'text';
+        icon.className = 'fas fa-eye-slash';
+        passwordToggle.setAttribute('aria-label', 'Ocultar senha');
+      } else {
+        pwdInput.type = 'password';
+        icon.className = 'fas fa-eye';
+        passwordToggle.setAttribute('aria-label', 'Mostrar senha');
+      }
+    });
+  }
 });

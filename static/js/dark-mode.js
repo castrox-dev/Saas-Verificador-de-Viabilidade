@@ -122,14 +122,14 @@ class DarkModeManager {
         style.textContent = `
             .theme-toggle {
                 position: fixed;
-                z-index: 1000;
+                z-index: 9999;
                 width: 50px;
                 height: 50px;
                 border-radius: 50%;
                 border: none;
-                background: var(--rm-card-bg);
-                color: var(--rm-text-primary);
-                box-shadow: var(--rm-shadow-lg);
+                background: var(--rm-card-bg, #ffffff);
+                color: var(--rm-text-primary, #333333);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
                 cursor: pointer;
                 display: flex;
                 align-items: center;
@@ -137,7 +137,7 @@ class DarkModeManager {
                 font-size: 18px;
                 transition: all 0.3s ease;
                 backdrop-filter: blur(10px);
-                border: 1px solid var(--rm-border-primary);
+                border: 1px solid var(--rm-border-primary, #e2e8f0);
             }
             
             .theme-toggle i {
@@ -149,6 +149,7 @@ class DarkModeManager {
             .theme-toggle-bottom-left {
                 bottom: 20px;
                 left: 20px;
+                position: fixed;
             }
             
             .theme-toggle:hover {
@@ -181,6 +182,16 @@ class DarkModeManager {
                     width: 45px;
                     height: 45px;
                     font-size: 16px;
+                }
+            }
+            
+            @media (max-width: 480px) {
+                .theme-toggle {
+                    bottom: 10px;
+                    left: 10px;
+                    width: 40px;
+                    height: 40px;
+                    font-size: 14px;
                 }
             }
             

@@ -29,7 +29,7 @@
           <div class="card-body">
             <h5 class="card-title">Gerir Membros</h5>
             <p class="card-text mb-3">Adicionar, editar e ativar/desativar usuários desta empresa.</p>
-            <a class="btn btn-primary" href="{% url 'rm:user_list' %}?company={{ company.slug }}">Abrir gestão de membros</a>
+            <a class="btn btn-primary" href="{% url 'company:user_list' company_slug=company.slug %}">Abrir gestão de membros</a>
           </div>
         </div>
       </div>
@@ -47,7 +47,7 @@
           <div class="card-body">
             <h5 class="card-title">Verificador</h5>
             <p class="card-text mb-3">Fazer upload de novos mapas para verificação.</p>
-            <a class="btn btn-success" href="{% url 'company:map_upload' company_slug=company.slug %}">Abrir verificador / upload</a>
+            <a class="btn btn-success" href="{% url 'company:verificador' company_slug=company.slug %}">Abrir verificador</a>
           </div>
         </div>
       </div>

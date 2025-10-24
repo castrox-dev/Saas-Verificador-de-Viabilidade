@@ -2,7 +2,7 @@
 <html lang="pt-br">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
     <meta name="description" content="Sistema de verificação de viabilidade para mapas CTO - RM Systems">
     <meta name="theme-color" content="#1D4ED8">
     <title>{% block title %}Verificador de Viabilidade{% endblock %}</title>
@@ -11,9 +11,114 @@
     <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
     <link rel="stylesheet" href="{% static 'css/theme_rm.css' %}" />
     <link rel="stylesheet" href="{% static 'css/theme_colors.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/optimized.css' %}" />
     <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}" />
     <link rel="stylesheet" href="{% static 'css/global.css' %}" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+      /* Hamburger Menu Styles */
+      .navbar-toggler {
+        border: none;
+        padding: 12px 16px;
+        background: transparent;
+        color: var(--rm-text-primary);
+        display: block;
+        font-size: 24px;
+        margin-right: 15px;
+        position: relative;
+        z-index: 1001;
+        min-width: 50px;
+        min-height: 50px;
+        text-shadow: none;
+        box-shadow: none;
+        outline: none;
+      }
+      
+      
+      .navbar-toggler:focus {
+        box-shadow: none;
+      }
+      
+      .navbar-toggler-icon {
+        background-image: none;
+        display: inline-block;
+        width: 30px;
+        height: 30px;
+        font-size: 24px;
+        color: var(--rm-text-primary);
+        text-align: center;
+        line-height: 1;
+        font-weight: bold;
+      }
+      
+      .app-title {
+        margin: 0;
+        color: var(--rm-text-primary);
+        font-size: 18px;
+      }
+      
+      /* Sidebar sempre oculto por padrão - formato L */
+      .sidebar {
+        position: fixed;
+        top: 76px; /* Ajustado para começar exatamente na linha da navbar */
+        left: -100%;
+        width: 280px;
+        height: calc(100vh - 76px); /* Altura total menos a altura da navbar */
+        z-index: 1000;
+        transition: left 0.3s ease;
+        overflow-y: auto;
+        background: var(--rm-sidebar-bg);
+        box-shadow: var(--rm-header-shadow);
+        border-right: 1px solid var(--rm-sidebar-border);
+        border-top: 1px solid var(--rm-header-border);
+        display: none;
+        padding-top: 10px; /* Padding mínimo */
+      }
+      
+      .sidebar.show {
+        left: 0;
+        display: block;
+      }
+      
+      
+      .sidebar .nav-link {
+        color: var(--rm-text-primary);
+        padding: 15px 20px;
+        border-bottom: 1px solid var(--rm-border-primary);
+        transition: all 0.3s;
+      }
+      
+      .sidebar .nav-link:hover {
+        background-color: var(--rm-bg-secondary);
+        color: var(--rm-primary);
+        transform: translateX(5px);
+      }
+      
+      .sidebar .nav-link.active {
+        background-color: var(--rm-primary);
+        color: var(--rm-white);
+      }
+      
+      .sidebar-overlay {
+        position: fixed;
+        top: 76px; /* Ajustado para começar exatamente na linha da navbar */
+        left: 0;
+        width: 100%;
+        height: calc(100vh - 76px); /* Altura total menos a altura da navbar */
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+        display: none;
+      }
+      
+      .sidebar-overlay.show {
+        display: block;
+      }
+      
+      .main-container {
+        margin-left: 0;
+        width: 100%;
+      }
+    </style>
     {% block extra_head %}{% endblock %}
   </head>
   <body class="{% block body_class %}{% endblock %}" data-theme="light">
@@ -22,8 +127,13 @@
     
     <header class="topbar" role="banner">
       <div style="display:flex;align-items:center;gap:10px;">
-        <img class="brand-logo" src="{% static 'img/logo_letreiro.png' %}" alt="Logo da RM Systems" style="height: 32px; width: auto;" />
-        <h1 style="margin:0;color:var(--rm-text-primary);font-size:18px;">Verificador de Viabilidade (SaaS)</h1>
+        <!-- Hamburger Menu Button na navbar - para admins -->
+        {% if user.is_authenticated and user.is_company_admin or user.is_rm_admin %}
+        <button class="navbar-toggler" type="button" id="sidebarToggle">
+          <span class="navbar-toggler-icon">≡</span>
+        </button>
+        {% endif %}
+        <h1 class="app-title">Verificador de Viabilidade (SaaS)</h1>
       </div>
       <nav role="navigation" aria-label="Navegação principal">
         {% if user.is_authenticated %}
@@ -32,7 +142,6 @@
             <a href="/admin/">Admin</a>
             <a href="{% url 'rm:logout' %}">Sair</a>
           {% elif user.company and user.is_company_admin %}
-            <a href="{% url 'company:dashboard' company_slug=user.company.slug %}" aria-current="{% if request.resolver_match.url_name == 'dashboard' %}page{% endif %}">Dashboard</a>
             <a href="{% url 'company:logout' company_slug=user.company.slug %}">Sair</a>
           {% elif user.company %}
             <a href="{% url 'company:logout' company_slug=user.company.slug %}">Sair</a>
@@ -42,6 +151,53 @@
         {% endif %}
       </nav>
     </header>
+    
+    <!-- Sidebar Overlay (Mobile) - para admins -->
+    {% if user.is_authenticated and user.is_company_admin or user.is_rm_admin %}
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+      <nav class="nav flex-column">
+        {% if user.is_rm_admin %}
+          <a class="nav-link {% if 'company' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'rm:company_list' %}">
+            <i class="fas fa-building me-2"></i>Empresas
+          </a>
+          <a class="nav-link {% if 'user' in request.resolver_match.url_name and 'rm' in request.resolver_match.namespace %}active{% endif %}" href="{% url 'rm:user_list' %}">
+            <i class="fas fa-users me-2"></i>Usuários RM
+          </a>
+          <a class="nav-link {% if 'map' in request.resolver_match.url_name and 'rm' in request.resolver_match.namespace %}active{% endif %}" href="{% url 'rm:map_list' %}">
+            <i class="fas fa-map me-2"></i>Mapas
+          </a>
+          <a class="nav-link" href="/admin/">
+            <i class="fas fa-cog me-2"></i>Admin Django
+          </a>
+        {% elif user.company %}
+          <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'company:dashboard' company_slug=user.company.slug %}">
+            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+          </a>
+          {% if user.is_company_admin %}
+          <a class="nav-link {% if 'user' in request.resolver_match.url_name and 'company' in request.resolver_match.namespace %}active{% endif %}" href="{% url 'company:user_list' company_slug=user.company.slug %}">
+            <i class="fas fa-users me-2"></i>Usuários
+          </a>
+          {% endif %}
+          <a class="nav-link {% if 'mapa_cto' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'company:mapa_cto' company_slug=user.company.slug %}">
+            <i class="fas fa-map me-2"></i>Mapas CTO
+          </a>
+          <a class="nav-link {% if 'verificador' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'company:verificador' company_slug=user.company.slug %}">
+            <i class="fas fa-search me-2"></i>Verificador
+          </a>
+          <a class="nav-link {% if 'map_history' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'company:map_history' company_slug=user.company.slug %}">
+            <i class="fas fa-history me-2"></i>Histórico
+          </a>
+          <a class="nav-link" href="#">
+            <i class="fas fa-chart-bar me-2"></i>Relatórios
+          </a>
+        {% endif %}
+      </nav>
+    </div>
+    {% endif %}
+    
     <main id="main-content" class="main-container" role="main">
       {% if messages %}
         <div class="messages" role="alert" aria-live="polite">
@@ -60,6 +216,103 @@
     <script src="{% static 'js/toast.js' %}"></script>
     <!-- Sistema de Dark Mode -->
     <script src="{% static 'js/dark-mode.js' %}"></script>
+    
+    <!-- CSS Responsivo -->
+    <style>
+      /* Base responsiva */
+      .main-container, .main-content, .container, .form-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      
+      .form-container { max-width: 600px; }
+      .card, .upload-area { margin: 0 auto; }
+      
+      /* Header responsivo */
+      .topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      
+      .topbar > div {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      
+      /* Sidebar responsivo */
+      @media (max-width: 768px) {
+        .sidebar {
+          width: 100%;
+          max-width: 280px;
+        }
+      }
+      
+      /* Grid responsivo */
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        margin: 0 -15px;
+      }
+      
+      .row > [class*="col-"] {
+        padding: 0 15px;
+        box-sizing: border-box;
+      }
+      
+      @media (max-width: 768px) {
+        .row {
+          margin: 0;
+        }
+        
+        .row > [class*="col-"] {
+          flex: 0 0 100%;
+          max-width: 100%;
+          padding: 0 10px;
+          margin-bottom: 1rem;
+        }
+      }
+    </style>
+    
+    <!-- Hamburger Menu JavaScript -->
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        
+        // Hamburger menu functionality
+        
+        if (sidebarToggle && sidebar && sidebarOverlay) {
+          // Toggle sidebar
+          sidebarToggle.addEventListener('click', function() {
+            sidebar.classList.toggle('show');
+            sidebarOverlay.classList.toggle('show');
+          });
+          
+          // Close sidebar when clicking overlay
+          sidebarOverlay.addEventListener('click', function() {
+            sidebar.classList.remove('show');
+            sidebarOverlay.classList.remove('show');
+          });
+          
+          // Close sidebar when clicking on a nav link
+          document.querySelectorAll('.sidebar .nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+              sidebar.classList.remove('show');
+              sidebarOverlay.classList.remove('show');
+            });
+          });
+        }
+      });
+    </script>
     
     {% block extra_scripts %}{% endblock %}
   </body>

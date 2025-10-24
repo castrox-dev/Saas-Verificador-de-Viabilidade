@@ -47,7 +47,7 @@ company_admin_required = user_passes_test(
 )
 
 user_management_required = user_passes_test(lambda u: can_manage_users(u) or u.is_superuser, login_url='/rm/login/')
-map_upload_required = user_passes_test(lambda u: can_upload_maps(u) or u.is_superuser, login_url='/rm/login/')
+# map_upload_required removido - funcionalidade de upload foi consolidada
 
 
 def company_access_required(require_admin=False):

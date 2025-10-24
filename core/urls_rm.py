@@ -33,7 +33,6 @@ urlpatterns = [
     # Gestão de mapas (visão global)
     path('mapas/', views.rm_map_list, name='map_list'),
     path('mapas/por-empresa/', views.rm_maps_by_company, name='map_by_company'),
-    path('mapas/<slug:company_slug>/upload/', views.rm_company_map_upload, name='company_map_upload'),
     path('mapas/download/<int:pk>/', views.rm_map_download, name='map_download'),
     path('mapas/delete/<int:pk>/', views.rm_map_delete, name='map_delete'),
 

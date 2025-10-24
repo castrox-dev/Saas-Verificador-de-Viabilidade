@@ -199,6 +199,9 @@ class CustomUserForm(UserCreationForm):
         if self.current_user and self.current_user.is_company_admin:
             if company != self.current_user.company:
                 raise ValidationError('Você só pode criar usuários para sua empresa.')
+            # Garantir que role seja válido para empresa
+            if role not in ['COMPANY_ADMIN', 'COMPANY_USER']:
+                raise ValidationError('Role inválido para usuários de empresa.')
         
         return cleaned_data
 
@@ -271,6 +274,9 @@ class CustomUserChangeForm(forms.ModelForm):
         if self.current_user and self.current_user.is_company_admin:
             if company != self.current_user.company:
                 raise ValidationError('Você só pode editar usuários da sua empresa.')
+            # Garantir que role seja válido para empresa
+            if role not in ['COMPANY_ADMIN', 'COMPANY_USER']:
+                raise ValidationError('Role inválido para usuários de empresa.')
         
         return cleaned_data
 

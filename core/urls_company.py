@@ -28,12 +28,8 @@ urlpatterns = [
     # Gestão de mapas da empresa
     path('painel/mapas/', views.company_map_list, name='map_list'),
     path('painel/mapas/admin/', views.company_map_admin, name='map_admin'),
-    path('painel/mapas/upload/', views.company_map_upload, name='map_upload'),
     path('mapas/<int:pk>/download/', views.company_map_download, name='map_download'),
     path('mapas/<int:pk>/delete/', views.company_map_delete, name='map_delete'),
-    
-    # Upload de mapas no verificador
-    path('verificador/upload/', views.company_map_upload, name='verificador_upload'),
     
     # Histórico de análises
     path('verificador/historico/', views.company_map_history, name='map_history'),

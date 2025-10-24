@@ -18,7 +18,7 @@ from .forms import CTOMapFileForm, CompanyForm, CustomUserForm, CustomUserChange
 from .models import CTOMapFile, Company, CustomUser
 from .permissions import (
     is_rm_admin, is_company_admin, can_manage_users,
-    rm_admin_required, user_management_required, map_upload_required, company_access_required, company_access_required_json
+    rm_admin_required, user_management_required, company_access_required, company_access_required_json
 )
 from .rate_limiting import login_rate_limit, upload_rate_limit, general_rate_limit
 
@@ -313,49 +313,8 @@ def company_map_list(request, company_slug):
     return render(request, 'company/maps/list.html', {'maps': maps, 'company': company})
 
 
-@login_required
-@company_access_required(require_admin=True)
-@upload_rate_limit
-def company_map_upload(request, company_slug):
-    """Upload de mapa da empresa (apenas admins)"""
-    if not (request.user.is_company_admin or request.user.is_rm_admin or request.user.is_superuser):
-        return HttpResponseForbidden()
-    company = get_object_or_404(Company, slug=company_slug)
-    if not (request.user.is_rm_admin or request.user.is_superuser) and request.user.company != company:
-        return HttpResponseForbidden()
-    if request.method == 'POST':
-        form = CTOMapFileForm(request.POST, request.FILES)
-        if form.is_valid():
-            map_file = form.save(commit=False)
-            map_file.company = company
-            map_file.uploaded_by = request.user
-            map_file.save()
-            messages.success(request, 'Mapa enviado com sucesso!')
-            return redirect('company:map_list', company_slug=company_slug)
-    else:
-        form = CTOMapFileForm()
-    return render(request, 'company/maps/upload.html', {'form': form, 'company': company})
 
 
-@login_required
-@rm_admin_required
-def rm_company_map_upload(request, company_slug):
-    """Upload de mapa para empresa (RM)"""
-    company = get_object_or_404(Company, slug=company_slug)
-    if request.method == 'POST':
-        form = CTOMapFileForm(request.POST, request.FILES)
-        if form.is_valid():
-            map_file = form.save(commit=False)
-            # Força associação à empresa do slug
-            map_file.company = company
-            map_file.uploaded_by = request.user
-            map_file.save()
-            messages.success(request, 'Mapa enviado com sucesso!')
-            return redirect('rm:map_by_company')
-    else:
-        # Pré-seleciona a empresa e opcionalmente poderíamos ocultar o campo no template
-        form = CTOMapFileForm(initial={'company': company})
-    return render(request, 'rm/maps/upload_company.html', {'form': form, 'company': company})
 
 
 @login_required
@@ -648,7 +607,7 @@ def rm_company_edit(request, company_id):
 def company_user_create(request, company_slug):
     company = get_object_or_404(Company, slug=company_slug)
     if request.method == 'POST':
-        form = CustomUserForm(request.POST)
+        form = CustomUserForm(request.POST, current_user=request.user)
         if form.is_valid():
             with transaction.atomic():
                 user = form.save(commit=False)
@@ -663,7 +622,7 @@ def company_user_create(request, company_slug):
                     messages.success(request, 'Usuário criado com sucesso!')
                     return redirect('company:user_list', company_slug=company_slug)
     else:
-        form = CustomUserForm()
+        form = CustomUserForm(current_user=request.user)
     return render(request, 'company/users/form.html', {'form': form, 'company': company})
 
 
@@ -673,7 +632,7 @@ def company_user_edit(request, company_slug, user_id):
     company = get_object_or_404(Company, slug=company_slug)
     user_obj = get_object_or_404(CustomUser, id=user_id, company=company)
     if request.method == 'POST':
-        form = CustomUserChangeForm(request.POST, instance=user_obj)
+        form = CustomUserChangeForm(request.POST, instance=user_obj, current_user=request.user)
         if form.is_valid():
             with transaction.atomic():
                 user = form.save(commit=False)
@@ -685,7 +644,7 @@ def company_user_edit(request, company_slug, user_id):
                     messages.success(request, 'Usuário atualizado com sucesso!')
                     return redirect('company:user_list', company_slug=company_slug)
     else:
-        form = CustomUserChangeForm(instance=user_obj)
+        form = CustomUserChangeForm(instance=user_obj, current_user=request.user)
     return render(request, 'company/users/form.html', {'form': form, 'company': company, 'user_obj': user_obj})
 
 

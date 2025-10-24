@@ -4,7 +4,7 @@ from .views import (
     login_view, logout_view,
     company_list, company_create, company_edit,
     user_list, user_create, user_edit,
-    map_list, map_upload,
+    map_list,
     toggle_user_status, toggle_company_status
 )
 
@@ -26,7 +26,6 @@ urlpatterns = [
     
     # URLs para mapas
     path("maps/", map_list, name="map_list"),
-    path("maps/upload/", map_upload, name="map_upload"),
     path("download/<int:file_id>/", download_file, name="download_file"),
     path("delete/<int:file_id>/", delete_file, name="delete_file"),
     
