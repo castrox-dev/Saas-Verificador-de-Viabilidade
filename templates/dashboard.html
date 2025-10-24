@@ -137,13 +137,13 @@
                     name="file" 
                     id="id_file" 
                     class="file-input" 
-                    accept=".xlsx,.xls,.csv"
+                    accept=".xlsx,.xls,.csv,.kml,.kmz"
                     aria-describedby="file-help"
                     required>
            </div>
          </div>
          <div id="file-help" class="sr-only">
-           Formatos aceitos: Excel (.xlsx, .xls) e CSV (.csv). Tamanho máximo: 10MB.
+           Formatos aceitos: Excel (.xlsx, .xls), CSV (.csv), KML (.kml) e KMZ (.kmz). Tamanho máximo: 10MB.
          </div>
          
          <div class="form-row">
@@ -199,6 +199,8 @@
           <option value="xlsx">Excel (.xlsx)</option>
           <option value="xls">Excel (.xls)</option>
           <option value="csv">CSV (.csv)</option>
+          <option value="kml">KML (.kml)</option>
+          <option value="kmz">KMZ (.kmz)</option>
         </select>
         <label for="sortBy" class="sr-only">Ordenar arquivos por</label>
         <select id="sortBy" class="filter-select" aria-label="Ordenar arquivos por">
@@ -249,7 +251,7 @@
         <div class="file-card" 
              data-filename="{{ f.file.name|lower }}"
              data-description="{{ f.description|default:""|lower }}"
-             data-type="{% if f.file.name|slice:"-5:" == ".xlsx" %}xlsx{% elif f.file.name|slice:"-4:" == ".xls" %}xls{% elif f.file.name|slice:"-4:" == ".csv" %}csv{% else %}other{% endif %}"
+             data-type="{% if f.file.name|slice:"-5:" == ".xlsx" %}xlsx{% elif f.file.name|slice:"-4:" == ".xls" %}xls{% elif f.file.name|slice:"-4:" == ".csv" %}csv{% elif f.file.name|slice:"-4:" == ".kml" %}kml{% elif f.file.name|slice:"-4:" == ".kmz" %}kmz{% else %}other{% endif %}"
              data-date="{{ f.uploaded_at|date:"Y-m-d" }}"
              data-size="{{ f.file.size }}"
              role="gridcell"
@@ -272,6 +274,8 @@
                 📊
               {% elif f.file.name|slice:"-4:" == ".csv" %}
                 📋
+              {% elif f.file.name|slice:"-4:" == ".kml" or f.file.name|slice:"-4:" == ".kmz" %}
+                🗺️
               {% else %}
                 📄
               {% endif %}
@@ -319,7 +323,7 @@
           <div class="empty-icon" aria-hidden="true">📂</div>
           <h3>Nenhum arquivo enviado ainda</h3>
           <p>Comece enviando seu primeiro arquivo de mapa CTO para análise.</p>
-          <small>Formatos aceitos: .xlsx, .xls, .csv (máximo 10MB)</small>
+          <small>Formatos aceitos: .xlsx, .xls, .csv, .kml, .kmz (máximo 10MB)</small>
         </div>
       {% endfor %}
     </div>
@@ -376,11 +380,16 @@ function validateFile(file) {
   const allowedTypes = [
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     'application/vnd.ms-excel',
-    'text/csv'
+    'text/csv',
+    'application/vnd.google-earth.kml+xml',
+    'application/vnd.google-earth.kmz',
+    'text/xml',
+    'application/xml',
+    'application/zip'
   ];
   
   if (!allowedTypes.includes(file.type)) {
-    showToast('error', 'Tipo de arquivo inválido', 'Por favor, selecione um arquivo Excel (.xlsx, .xls) ou CSV');
+    showToast('error', 'Tipo de arquivo inválido', 'Por favor, selecione um arquivo Excel (.xlsx, .xls), CSV (.csv), KML (.kml) ou KMZ (.kmz)');
     return false;
   }
   

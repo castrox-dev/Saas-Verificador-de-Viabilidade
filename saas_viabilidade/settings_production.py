@@ -54,17 +54,21 @@ CACHES = {
     }
 }
 
-# Configurações de sessão seguras
+# Configurações de sessão seguras - Segurança máxima
 SESSION_COOKIE_SECURE = True
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Strict'
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_COOKIE_AGE = 3600  # 1 hora
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_COOKIE_NAME = 'rmsys_sessionid'
 
-# Configurações de CSRF
+# Configurações de CSRF - Segurança máxima
 CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = 'Strict'
+CSRF_USE_SESSIONS = True
+CSRF_COOKIE_NAME = 'rmsys_csrftoken'
 CSRF_TRUSTED_ORIGINS = [
     'https://rmsys.com.br',
     'https://www.rmsys.com.br',

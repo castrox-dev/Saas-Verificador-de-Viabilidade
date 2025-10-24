@@ -68,6 +68,12 @@ class SecureFileValidator:
         # 6. Verificação de malware básica
         self._scan_for_malware(file)
         
+        # 7. Validação de assinatura de arquivo
+        self._validate_file_signature(file)
+        
+        # 8. Verificação de conteúdo malicioso
+        self._scan_malicious_content(file)
+        
         logger.info(f"Arquivo validado com sucesso: {file.name}")
         return True
     
@@ -459,3 +465,85 @@ class SecureFileValidator:
         except Exception as e:
             logger.error(f"Erro na verificação de metadados: {str(e)}")
             raise ValidationError("Erro na verificação de metadados")
+    
+    def _validate_file_signature(self, file):
+        """Validação de assinatura de arquivo"""
+        try:
+            file.seek(0)
+            header = file.read(8)
+            file.seek(0)
+            
+            # Verificar assinaturas conhecidas
+            if file.name.lower().endswith('.xlsx'):
+                # XLSX deve começar com PK (ZIP)
+                if not header.startswith(b'PK'):
+                    raise ValidationError("Assinatura XLSX inválida")
+            
+            elif file.name.lower().endswith('.xls'):
+                # XLS deve começar com assinatura OLE
+                if not header.startswith(b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1'):
+                    raise ValidationError("Assinatura XLS inválida")
+            
+            elif file.name.lower().endswith('.csv'):
+                # CSV deve ser texto
+                try:
+                    header.decode('utf-8')
+                except UnicodeDecodeError:
+                    raise ValidationError("Arquivo CSV com codificação inválida")
+            
+            elif file.name.lower().endswith('.kml'):
+                # KML deve começar com XML
+                if not header.startswith(b'<?xml') and not header.startswith(b'<kml'):
+                    raise ValidationError("Assinatura KML inválida")
+            
+            elif file.name.lower().endswith('.kmz'):
+                # KMZ deve começar com PK (ZIP)
+                if not header.startswith(b'PK'):
+                    raise ValidationError("Assinatura KMZ inválida")
+                    
+        except Exception as e:
+            logger.error(f"Erro na validação de assinatura: {str(e)}")
+            raise ValidationError("Assinatura de arquivo inválida")
+    
+    def _scan_malicious_content(self, file):
+        """Verificação de conteúdo malicioso"""
+        try:
+            file.seek(0)
+            content = file.read(1024)  # Ler primeiros 1KB
+            
+            # Padrões suspeitos
+            suspicious_patterns = [
+                b'<script',
+                b'javascript:',
+                b'vbscript:',
+                b'<iframe',
+                b'<object',
+                b'<embed',
+                b'eval(',
+                b'exec(',
+                b'system(',
+                b'shell_exec',
+                b'cmd.exe',
+                b'powershell',
+                b'<form',
+                b'onload=',
+                b'onclick=',
+                b'onerror='
+            ]
+            
+            content_lower = content.lower()
+            for pattern in suspicious_patterns:
+                if pattern in content_lower:
+                    logger.warning(f"Conteúdo suspeito detectado em {file.name}: {pattern}")
+                    raise ValidationError("Conteúdo suspeito detectado no arquivo")
+            
+            # Verificar se é um arquivo binário disfarçado
+            if file.name.lower().endswith(('.csv', '.kml')):
+                # Arquivos de texto não devem ter muitos bytes nulos
+                null_count = content.count(b'\x00')
+                if null_count > len(content) * 0.1:  # Mais de 10% de bytes nulos
+                    raise ValidationError("Arquivo de texto com conteúdo binário suspeito")
+            
+        except Exception as e:
+            logger.error(f"Erro na verificação de conteúdo malicioso: {str(e)}")
+            raise ValidationError("Erro na verificação de conteúdo malicioso")

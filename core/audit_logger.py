@@ -12,16 +12,19 @@ User = get_user_model()
 audit_logger = logging.getLogger('audit')
 audit_logger.setLevel(logging.INFO)
 
-# Handler para arquivo de auditoria
-file_handler = logging.FileHandler('logs/audit.log')
-file_handler.setLevel(logging.INFO)
-
-# Formatter para logs estruturados
-formatter = logging.Formatter(
-    '%(asctime)s - %(levelname)s - %(message)s'
-)
-file_handler.setFormatter(formatter)
-audit_logger.addHandler(file_handler)
+# Handler para arquivo de auditoria (opcional)
+import os
+logs_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs')
+if os.path.exists(logs_dir):
+    file_handler = logging.FileHandler(os.path.join(logs_dir, 'audit.log'))
+    file_handler.setLevel(logging.INFO)
+    
+    # Formatter para logs estruturados
+    formatter = logging.Formatter(
+        '%(asctime)s - %(levelname)s - %(message)s'
+    )
+    file_handler.setFormatter(formatter)
+    audit_logger.addHandler(file_handler)
 
 class AuditLogger:
     """Classe para gerenciar logs de auditoria"""
@@ -156,11 +159,16 @@ def log_map_upload(user, map_file, company):
         }
     )
 
-def log_data_access(user, resource_type, resource_id, action):
+def log_data_access(user, resource_type, resource_id, action, details=None):
     """Log de acesso a dados"""
     AuditLogger.log_data_access(
         user,
         resource_type,
         resource_id,
-        action
+        action,
+        details
     )
+
+def log_user_action(user, action, details=None, ip_address=None):
+    """Log de ações do usuário"""
+    AuditLogger.log_user_action(user, action, details, ip_address)
