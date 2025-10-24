@@ -5,7 +5,7 @@ Sistema SaaS multi-tenant para verificação de viabilidade de mapas CTO com iso
 ## 🚀 Funcionalidades
 
 - **Multi-tenant**: Isolamento completo entre empresas
-- **Verificador de Mapas**: Upload e análise de mapas CTO (.dwg, .dxf, .pdf)
+- **Verificador de Mapas**: Upload e análise de mapas CTO (.xlsx, .xls, .csv, .kml, .kmz)
 - **Gestão de Usuários**: Controle de acesso por empresa
 - **Dashboard Administrativo**: Visão completa para RM e empresas
 - **Interface Responsiva**: Design moderno com dark mode

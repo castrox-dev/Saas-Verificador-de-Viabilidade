@@ -10,6 +10,7 @@
 {% endblock %}
 
 {% block content %}
+{% csrf_token %}
 <div class="main-content">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3>
@@ -37,7 +38,7 @@
                 </div>
                 <h4>Arraste o arquivo aqui ou clique para selecionar</h4>
                 <p class="text-muted mb-3">
-                    Formatos aceitos: .dwg, .dxf, .pdf<br>
+                    Formatos aceitos: .xlsx, .xls, .csv, .kml, .kmz<br>
                     Tamanho máximo: 50MB
                 </p>
                 <button type="button" class="btn btn-primary" id="selectFileBtn">
@@ -77,12 +78,16 @@
                                     <td class="fw-bold">{{ map.original_filename }}</td>
                                     <td>
                                         <span class="badge bg-info">
-                                            {% if map.original_filename|slice:"-4:" == ".dwg" %}
-                                                DWG
-                                            {% elif map.original_filename|slice:"-4:" == ".dxf" %}
-                                                DXF
-                                            {% elif map.original_filename|slice:"-4:" == ".pdf" %}
-                                                PDF
+                                            {% if map.original_filename|slice:"-5:" == ".xlsx" %}
+                                                XLSX
+                                            {% elif map.original_filename|slice:"-4:" == ".xls" %}
+                                                XLS
+                                            {% elif map.original_filename|slice:"-4:" == ".csv" %}
+                                                CSV
+                                            {% elif map.original_filename|slice:"-4:" == ".kml" %}
+                                                KML
+                                            {% elif map.original_filename|slice:"-4:" == ".kmz" %}
+                                                KMZ
                                             {% else %}
                                                 {{ map.original_filename|slice:"-4:"|upper }}
                                             {% endif %}
@@ -103,12 +108,15 @@
                                                title="Download">
                                                 <i class="fas fa-download"></i>
                                             </a>
-                                            <a href="{% url 'company:map_delete' company_slug=company.slug pk=map.pk %}" 
-                                               class="btn btn-outline-danger btn-sm" 
-                                               title="Excluir"
-                                               onclick="return confirm('Tem certeza que deseja excluir este arquivo?')">
-                                                <i class="fas fa-trash"></i>
-                                            </a>
+                                            <form method="post" action="{% url 'company:map_delete' company_slug=company.slug pk=map.pk %}" style="display: inline;">
+                                                {% csrf_token %}
+                                                <button type="submit" 
+                                                        class="btn btn-outline-danger btn-sm" 
+                                                        title="Excluir"
+                                                        onclick="return confirm('Tem certeza que deseja excluir este arquivo?')">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
                                         </div>
                                     </td>
                                 </tr>
@@ -168,11 +176,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function handleFile(file) {
         // Validate file type
-        const allowedTypes = ['.dwg', '.dxf', '.pdf'];
+        const allowedTypes = ['.xlsx', '.xls', '.csv', '.kml', '.kmz'];
         const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
         
         if (!allowedTypes.includes(fileExtension)) {
-            alert('Tipo de arquivo não suportado. Use .dwg, .dxf ou .pdf');
+            alert('Tipo de arquivo não suportado. Use .xlsx, .xls, .csv, .kml ou .kmz');
             return;
         }
 
@@ -182,9 +190,70 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Here you would typically upload the file
-        console.log('File selected:', file.name);
-        // You can add upload logic here
+        // Upload the file
+        uploadFile(file);
+    }
+
+    function uploadFile(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('description', 'Upload via interface web');
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+        // Show loading state
+        const uploadArea = document.getElementById('uploadArea');
+        uploadArea.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i><br>Enviando arquivo...</div>';
+
+        fetch('{% url "company:map_upload" company.slug %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Arquivo enviado com sucesso!');
+                location.reload(); // Reload to show new file
+            } else {
+                alert('Erro ao enviar arquivo: ' + (data.message || 'Erro desconhecido'));
+                resetUploadArea();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Erro ao enviar arquivo. Tente novamente.');
+            resetUploadArea();
+        });
+    }
+
+    function resetUploadArea() {
+        const uploadArea = document.getElementById('uploadArea');
+        uploadArea.innerHTML = `
+            <div class="upload-icon">
+                <i class="fas fa-cloud-upload-alt"></i>
+            </div>
+            <h4>Arraste o arquivo aqui ou clique para selecionar</h4>
+            <p class="text-muted mb-3">
+                Formatos aceitos: .xlsx, .xls, .csv, .kml, .kmz<br>
+                Tamanho máximo: 50MB
+            </p>
+            <button type="button" class="btn btn-primary" id="selectFileBtn">
+                <i class="fas fa-folder-open me-2"></i>
+                Selecionar Arquivo
+            </button>
+        `;
+        setupEventListeners();
+    }
+
+    function setupEventListeners() {
+        const selectFileBtn = document.getElementById('selectFileBtn');
+        const fileInput = document.getElementById('fileInput');
+        
+        if (selectFileBtn && fileInput) {
+            selectFileBtn.addEventListener('click', () => fileInput.click());
+        }
     }
 });
 </script>

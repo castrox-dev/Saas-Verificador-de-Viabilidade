@@ -62,3 +62,5 @@ class Command(BaseCommand):
                     self.stdout.write("✅ Autenticação com senha 'admin123' bem-sucedida")
                 else:
                     self.stdout.write("❌ Falha na autenticação com senha padrão")
+
+

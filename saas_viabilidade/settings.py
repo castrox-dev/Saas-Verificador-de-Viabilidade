@@ -77,6 +77,12 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Configurações adicionais para arquivos estáticos
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+]
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
@@ -108,3 +114,18 @@ CSRF_USE_SESSIONS = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = "same-origin"
 X_FRAME_OPTIONS = "DENY"
+
+# Configurações de tratamento de erros
+handler404 = 'core.error_views.custom_404'
+handler500 = 'core.error_views.custom_500'
+handler403 = 'core.error_views.custom_403'
+handler400 = 'core.error_views.custom_400'
+
+# Forçar uso das páginas de erro personalizadas mesmo em DEBUG
+DEBUG_PROPAGATE_EXCEPTIONS = True
+
+# Desabilitar debug toolbar e outras ferramentas de debug que podem interferir
+INTERNAL_IPS = []
+
+# Forçar uso das páginas de erro personalizadas
+DEBUG = True

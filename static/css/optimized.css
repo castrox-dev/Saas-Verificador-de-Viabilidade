@@ -54,6 +54,17 @@ img {
   display: block;
 }
 
+/* Exceção para logos - tamanho controlado */
+.dashboard-logo,
+.brand-logo,
+.logo-container img {
+  max-width: 120px !important;
+  width: 120px !important;
+  height: 60px !important;
+  object-fit: contain !important;
+  display: block;
+}
+
 /* Otimizações para formulários */
 .form-control {
   transition: var(--transition-fast);

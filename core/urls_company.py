@@ -18,6 +18,7 @@ urlpatterns = [
     
     # Mapa CTO (para usuários comuns)
     path('mapa-cto/', views.company_mapa_cto, name='mapa_cto'),
+    path('mapa-cto/upload/', views.company_map_upload, name='map_upload'),
     
     # Gestão de usuários da empresa (apenas admins)
     path('painel/usuarios/', views.company_user_list, name='user_list'),

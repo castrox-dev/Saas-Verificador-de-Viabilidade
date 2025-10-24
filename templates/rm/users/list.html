@@ -57,7 +57,7 @@
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="{% url 'rm:admin_dashboard' %}">
-                <img src="/static/img/RM_logo.png" alt="RM Systems" height="40">
+                <!-- Logo removido -->
             </a>
             <div class="navbar-nav ms-auto">
                 <div class="nav-item dropdown">
@@ -105,14 +105,81 @@
                 <div class="main-content">
                     <div class="content-card">
                         <div class="d-flex justify-content-between align-items-center mb-4">
-                            <h3>
-                                <i class="fas fa-users me-2"></i>
-                                Gestão de Usuários
-                            </h3>
+                            <div>
+                                <h3>
+                                    <i class="fas fa-users me-2"></i>
+                                    Gestão de Usuários
+                                </h3>
+                                <p class="text-muted mb-0">Gerencie usuários do sistema e suas permissões</p>
+                            </div>
                             <a href="{% url 'rm:user_create' %}" class="btn btn-primary">
                                 <i class="fas fa-user-plus me-2"></i>
                                 Novo Usuário
                             </a>
+                        </div>
+
+                        <!-- Estatísticas -->
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <div class="card bg-primary text-white">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between">
+                                            <div>
+                                                <h4>{{ users|length }}</h4>
+                                                <p class="mb-0">Total de Usuários</p>
+                                            </div>
+                                            <div class="align-self-center">
+                                                <i class="fas fa-users fa-2x opacity-75"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-success text-white">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between">
+                                            <div>
+                                                <h4>{{ users|length }}</h4>
+                                                <p class="mb-0">Usuários Ativos</p>
+                                            </div>
+                                            <div class="align-self-center">
+                                                <i class="fas fa-user-check fa-2x opacity-75"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-warning text-white">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between">
+                                            <div>
+                                                <h4>0</h4>
+                                                <p class="mb-0">Usuários Inativos</p>
+                                            </div>
+                                            <div class="align-self-center">
+                                                <i class="fas fa-user-times fa-2x opacity-75"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-info text-white">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between">
+                                            <div>
+                                                <h4>0</h4>
+                                                <p class="mb-0">Novos Hoje</p>
+                                            </div>
+                                            <div class="align-self-center">
+                                                <i class="fas fa-user-plus fa-2x opacity-75"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         {% if messages %}
@@ -126,22 +193,76 @@
 
                         <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
 
+                        <!-- Ações Rápidas -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6 class="card-title mb-3">
+                                            <i class="fas fa-bolt me-2"></i>Ações Rápidas
+                                        </h6>
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <button class="btn btn-outline-primary w-100" onclick="exportUsers()">
+                                                    <i class="fas fa-download me-2"></i>Exportar Lista
+                                                </button>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <button class="btn btn-outline-success w-100" onclick="bulkActivate()">
+                                                    <i class="fas fa-check-circle me-2"></i>Ativar Selecionados
+                                                </button>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <button class="btn btn-outline-warning w-100" onclick="bulkDeactivate()">
+                                                    <i class="fas fa-pause-circle me-2"></i>Desativar Selecionados
+                                                </button>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <button class="btn btn-outline-info w-100" onclick="refreshUsers()">
+                                                    <i class="fas fa-sync me-2"></i>Atualizar Lista
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Search and Filters -->
                         <div class="row mb-4">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <div class="input-group">
                                     <span class="input-group-text">
                                         <i class="fas fa-search"></i>
                                     </span>
-                                    <input type="text" class="form-control" placeholder="Buscar usuários..." id="searchInput">
+                                    <input type="text" class="form-control" placeholder="Buscar por nome, email ou empresa..." id="searchInput">
                                 </div>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <select class="form-select" id="statusFilter">
                                     <option value="">Todos os status</option>
                                     <option value="active">Ativos</option>
                                     <option value="inactive">Inativos</option>
                                 </select>
+                            </div>
+                            <div class="col-md-2">
+                                <select class="form-select" id="roleFilter">
+                                    <option value="">Todas as funções</option>
+                                    <option value="RM">RM</option>
+                                    <option value="COMPANY_ADMIN">Admin Empresa</option>
+                                    <option value="COMPANY_USER">Usuário Empresa</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <select class="form-select" id="companyFilter">
+                                    <option value="">Todas as empresas</option>
+                                    <!-- Opções serão preenchidas dinamicamente -->
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-outline-secondary w-100" onclick="clearFilters()">
+                                    <i class="fas fa-times me-1"></i>Limpar
+                                </button>
                             </div>
                         </div>
 
@@ -150,11 +271,15 @@
                             <table class="table table-hover">
                                 <thead>
                                     <tr>
+                                        <th>
+                                            <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                                        </th>
                                         <th>Nome</th>
                                         <th>E-mail</th>
                                         <th>Telefone</th>
                                         <th>Função</th>
                                         <th>Empresa</th>
+                                        <th>Último Acesso</th>
                                         <th>Status</th>
                                         <th>Ações</th>
                                     </tr>
@@ -163,12 +288,17 @@
                                     {% for u in users %}
                                         <tr>
                                             <td>
+                                                <input type="checkbox" class="user-checkbox" value="{{ u.id }}">
+                                            </td>
+                                            <td>
                                                 <div class="d-flex align-items-center">
                                                     <div class="me-3">
                                                         <i class="fas fa-user text-primary"></i>
                                                     </div>
                                                     <div>
                                                         <strong>{{ u.get_full_name|default:u.username }}</strong>
+                                                        <br>
+                                                        <small class="text-muted">@{{ u.username }}</small>
                                                     </div>
                                                 </div>
                                             </td>
@@ -184,6 +314,15 @@
                                                 {% endif %}
                                             </td>
                                             <td>{% if u.company %}{{ u.company.name }}{% else %}-{% endif %}</td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    {% if u.last_login %}
+                                                        {{ u.last_login|date:"d/m/Y H:i" }}
+                                                    {% else %}
+                                                        Nunca
+                                                    {% endif %}
+                                                </small>
+                                            </td>
                                             <td>
                                                 {% if u.is_active %}
                                                     <span class="status-badge status-active">
@@ -229,7 +368,7 @@
                                         </tr>
                                     {% empty %}
                                         <tr>
-                                            <td colspan="7" class="text-center py-4">
+                                            <td colspan="9" class="text-center py-4">
                                                 <i class="fas fa-users fa-3x text-muted mb-3"></i>
                                                 <p class="text-muted">Nenhum usuário cadastrado</p>
                                                 <a href="{% url 'rm:user_create' %}" class="btn btn-primary">
@@ -312,20 +451,109 @@
 
         // Status filter
         document.getElementById('statusFilter').addEventListener('change', function() {
-            const filterValue = this.value;
+            applyFilters();
+        });
+
+        // Role filter
+        document.getElementById('roleFilter').addEventListener('change', function() {
+            applyFilters();
+        });
+
+        // Company filter
+        document.getElementById('companyFilter').addEventListener('change', function() {
+            applyFilters();
+        });
+
+        function applyFilters() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+            const roleFilter = document.getElementById('roleFilter').value;
+            const companyFilter = document.getElementById('companyFilter').value;
+            
             const rows = document.querySelectorAll('tbody tr');
             rows.forEach(row => {
-                if (filterValue === '') {
-                    row.style.display = '';
-                } else {
-                    const statusBadge = row.querySelector('.status-badge');
-                    if (statusBadge) {
-                        const isActive = statusBadge.classList.contains('status-active');
-                        const shouldShow = (filterValue === 'active' && isActive) || (filterValue === 'inactive' && !isActive);
-                        row.style.display = shouldShow ? '' : 'none';
+                const text = row.textContent.toLowerCase();
+                const statusBadge = row.querySelector('.status-badge');
+                const roleBadge = row.querySelector('.role-badge');
+                
+                let shouldShow = true;
+                
+                // Search filter
+                if (searchTerm && !text.includes(searchTerm)) {
+                    shouldShow = false;
+                }
+                
+                // Status filter
+                if (statusFilter && statusBadge) {
+                    const isActive = statusBadge.classList.contains('status-active');
+                    if ((statusFilter === 'active' && !isActive) || (statusFilter === 'inactive' && isActive)) {
+                        shouldShow = false;
                     }
                 }
+                
+                // Role filter
+                if (roleFilter && roleBadge) {
+                    const roleText = roleBadge.textContent.trim();
+                    if (!roleText.includes(roleFilter)) {
+                        shouldShow = false;
+                    }
+                }
+                
+                row.style.display = shouldShow ? '' : 'none';
             });
-        });
+        }
+
+        // Toggle select all
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAll');
+            const checkboxes = document.querySelectorAll('.user-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = selectAll.checked;
+            });
+        }
+
+        // Ações rápidas
+        function exportUsers() {
+            alert('Funcionalidade de exportação será implementada em breve!');
+        }
+
+        function bulkActivate() {
+            const selected = getSelectedUsers();
+            if (selected.length === 0) {
+                alert('Selecione pelo menos um usuário!');
+                return;
+            }
+            if (confirm(`Ativar ${selected.length} usuário(s) selecionado(s)?`)) {
+                alert('Funcionalidade de ativação em lote será implementada em breve!');
+            }
+        }
+
+        function bulkDeactivate() {
+            const selected = getSelectedUsers();
+            if (selected.length === 0) {
+                alert('Selecione pelo menos um usuário!');
+                return;
+            }
+            if (confirm(`Desativar ${selected.length} usuário(s) selecionado(s)?`)) {
+                alert('Funcionalidade de desativação em lote será implementada em breve!');
+            }
+        }
+
+        function refreshUsers() {
+            location.reload();
+        }
+
+        function clearFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('roleFilter').value = '';
+            document.getElementById('companyFilter').value = '';
+            applyFilters();
+        }
+
+        function getSelectedUsers() {
+            const checkboxes = document.querySelectorAll('.user-checkbox:checked');
+            return Array.from(checkboxes).map(cb => cb.value);
+        }
     </script>
 {% endblock %}

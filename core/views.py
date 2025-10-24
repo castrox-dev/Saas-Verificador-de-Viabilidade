@@ -11,6 +11,7 @@ from django.db import transaction
 from django.db.models import Count, Q
 from django.core.paginator import Paginator
 from django.urls import reverse
+from django.utils import timezone
 import logging
 import os
 import csv
@@ -299,10 +300,65 @@ def company_verificador(request, company_slug):
 def company_mapa_cto(request, company_slug):
     """Página do mapa CTO para usuários comuns da empresa"""
     company = get_object_or_404(Company, slug=company_slug)
+    
+    # Get maps for this company
+    maps = CTOMapFile.objects.filter(company=company).order_by('-uploaded_at')
+    
     context = {
         'company': company,
+        'maps': maps,
     }
     return render(request, 'company/mapa_cto.html', context)
+
+
+@login_required
+@company_access_required(require_admin=False)
+def company_map_upload(request, company_slug):
+    """Upload de mapa CTO via AJAX"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)
+    
+    company = get_object_or_404(Company, slug=company_slug)
+    
+    try:
+        # Verificar se o usuário pode fazer upload
+        if not request.user.can_upload_maps:
+            return JsonResponse({'success': False, 'message': 'Sem permissão para upload'}, status=403)
+        
+        # Verificar se o usuário pertence à empresa
+        if request.user.company != company:
+            return JsonResponse({'success': False, 'message': 'Acesso negado à empresa'}, status=403)
+        
+        # Criar o arquivo
+        map_file = CTOMapFile(
+            file=request.FILES['file'],
+            description=request.POST.get('description', ''),
+            company=company,
+            uploaded_by=request.user
+        )
+        
+        # Salvar (isso vai executar as validações)
+        map_file.save()
+        
+        # Log do upload
+        try:
+            from .audit_logger import log_map_upload
+            log_map_upload(request.user, map_file, company)
+        except Exception as log_error:
+            logger.warning(f"Erro no log de upload: {str(log_error)}")
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Arquivo enviado com sucesso!',
+            'file_id': map_file.id,
+            'file_name': os.path.basename(map_file.file.name)
+        })
+        
+    except ValidationError as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=400)
+    except Exception as e:
+        logger.error(f"Erro no upload: {str(e)}")
+        return JsonResponse({'success': False, 'message': 'Erro interno do servidor'}, status=500)
 
 
 @login_required
@@ -351,22 +407,32 @@ def company_map_download(request, company_slug, pk):
 
 
 @login_required
-@company_access_required_json(require_admin=True)
+@company_access_required(require_admin=True)
 @require_http_methods(["POST"])
 def company_map_delete(request, company_slug, pk):
     """Deletar mapa da empresa"""
     if not (request.user.is_company_admin or request.user.is_rm_admin or request.user.is_superuser):
-        return JsonResponse({'error': 'Sem permissão'}, status=403)
+        messages.error(request, 'Sem permissão para excluir arquivos')
+        return redirect('company:mapa_cto', company_slug=company_slug)
 
     company = get_object_or_404(Company, slug=company_slug)
     map_file = get_object_or_404(CTOMapFile, pk=pk, company=company)
+    
     try:
+        # Remover arquivo físico se existir
         if map_file.file and os.path.exists(map_file.file.path):
             os.remove(map_file.file.path)
+        
+        # Deletar registro do banco
         map_file.delete()
-        return JsonResponse({'success': True})
-    except Exception:
-        return JsonResponse({'success': False, 'message': 'Falha ao excluir'}, status=500)
+        
+        messages.success(request, 'Arquivo excluído com sucesso!')
+        
+    except Exception as e:
+        logger.error(f"Erro ao excluir arquivo {pk}: {str(e)}")
+        messages.error(request, 'Erro ao excluir arquivo. Tente novamente.')
+    
+    return redirect('company:mapa_cto', company_slug=company_slug)
 
 
 @login_required

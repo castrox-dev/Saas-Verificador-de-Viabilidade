@@ -5,6 +5,7 @@ from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
 from core.views import home_redirect, dashboard_redirect
 from core.admin import rm_admin_site
+from core.error_views import custom_404, force_404
 
 urlpatterns = [
     path("admin/", rm_admin_site.urls),
@@ -19,8 +20,11 @@ urlpatterns = [
     
     # Redirect da raiz para RM
     path("", home_redirect, name="home_redirect"),
+    
+    # Catch-all para 404 - deve ser o último
+    re_path(r'^.*$', force_404, name='catch_all_404'),
 ]
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATICFILES_DIRS[0])

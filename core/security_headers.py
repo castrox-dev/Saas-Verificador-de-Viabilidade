@@ -10,14 +10,14 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
     """
     
     def process_response(self, request, response):
-        # Content Security Policy - Restritivo
+        # Content Security Policy - Restritivo mas permitindo estilos inline para desenvolvimento
         csp = (
             "default-src 'self'; "
-            "script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
-            "style-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
             "img-src 'self' data: https:; "
-            "connect-src 'self'; "
+            "connect-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
             "frame-ancestors 'none'; "
             "base-uri 'self'; "
             "form-action 'self'; "
@@ -47,8 +47,6 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
             "usb=(), "
             "magnetometer=(), "
             "gyroscope=(), "
-            "speaker=(), "
-            "vibrate=(), "
             "fullscreen=(self), "
             "sync-xhr=()"
         )
