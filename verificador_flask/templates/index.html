@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Verificador De Viabilidade</title>
+    
+    <!-- Meta Tags -->
+    <meta name="description" content="Sistema de verificação de viabilidade FTTH com mapas interativos">
+    <meta name="theme-color" content="#ff6600">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='icon.ico') }}">
+    <!-- Preconnect hints para reduzir DNS/TLS e acelerar requisições -->
+    <link rel="preconnect" href="https://unpkg.com" crossorigin>
+    <link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin>
+    <link rel="preconnect" href="https://a.tile.openstreetmap.org" crossorigin>
+    <link rel="preconnect" href="https://b.tile.openstreetmap.org" crossorigin>
+    <link rel="preconnect" href="https://c.tile.openstreetmap.org" crossorigin>
+    <link rel="preconnect" href="https://viacep.com.br" crossorigin>
+    <link rel="preconnect" href="https://brasilapi.com.br" crossorigin>
+    <link rel="preconnect" href="https://nominatim.openstreetmap.org" crossorigin>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='mobile.css') }}">
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js" defer></script>
+</head>
+<body>
+    <!-- Cabeçalho -->
+    <header class="header">
+        <div class="header-content">
+            <h1>RM Systems</h1>
+        </div>
+    </header>
+
+    <!-- Barra superior com pesquisa e controles -->
+    <div class="top-bar">
+        <!-- Botão de menu hambúrguer -->
+        <button id="menu-toggle" class="menu-toggle">
+            <i class="fas fa-bars"></i>
+        </button>
+        
+        <!-- Barra de pesquisa principal -->
+        <div class="search-container">
+            <div class="search-input-wrapper">
+                <input type="text" id="search-input" class="search-input" placeholder="Pesquisar endereço, CEP ou coordenadas...">
+                <button id="search-btn" class="search-btn" title="Pesquisar">
+                    <i class="fas fa-search"></i>
+                </button>
+                <button id="filter-btn" class="filter-btn" title="Filtros de pesquisa" style="display: none;">
+                    <i class="fas fa-filter"></i>
+                </button>
+                <button id="history-btn" class="history-btn" title="Histórico de pesquisas" style="display: none;">
+                    <i class="fas fa-history"></i>
+                </button>
+            </div>
+            
+            <!-- Dropdown de sugestões -->
+            <div class="search-suggestions-dropdown" style="display: none;"></div>
+            
+            <!-- Dropdown de histórico -->
+            <div class="history-dropdown" style="display: none;"></div>
+            
+            <!-- Dropdown de filtros -->
+            <div class="filter-dropdown" style="display: none;"></div>
+            
+            <div id="search-results" class="search-results" style="display: none;"></div>
+        </div>
+        
+        <!-- Botão de alternância do cursor -->
+        <div class="cursor-toggle-container">
+            <button id="cursor-toggle-btn" class="cursor-toggle-btn" title="Alternar para modo de marcação">
+                <i class="fas fa-hand-pointer"></i>
+                <span class="cursor-mode-text">Navegar</span>
+            </button>
+        </div>
+
+        <!-- Botão de Dark Mode -->
+        <div class="theme-toggle-container">
+            <button id="theme-toggle-btn" class="theme-toggle-btn" title="Alternar tema">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
+
+    </div>
+
+    <!-- Sidebar Profissional -->
+    <div id="sidebar" class="sidebar">
+        <!-- Header da Sidebar -->
+        <div class="sidebar-header">
+            <div class="sidebar-brand">
+                <div class="brand-icon-sidebar">
+                    <i class="fas fa-network-wired"></i>
+                </div>
+                <div class="brand-text">
+                    <h1 class="sidebar-title">FTTH Viewer</h1>
+                    <p class="sidebar-subtitle">Verificador De Viabilidade</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Conteúdo da Sidebar -->
+        <div class="sidebar-content">
+
+            <!-- CTOs Disponíveis -->
+            <section class="sidebar-section">
+                <div class="section-header">
+                    <div class="section-icon">
+                        <i class="fas fa-map-marked-alt"></i>
+                    </div>
+                    <h2 class="section-title">CTOs Disponíveis</h2>
+                </div>
+                <div class="cto-grid">
+                    <!-- Arquivos KML -->
+                    <button class="cto-card cto-btn" data-file="Aracatiba.kml" data-type="kml">
+                        <div class="cto-icon kml">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </div>
+                        <div class="cto-info">
+                            <span class="cto-name">Aracatiba</span>
+                            <span class="cto-type">KML</span>
+                        </div>
+                    </button>
+                    <button class="cto-card cto-btn" data-file="Colinas.kml" data-type="kml">
+                        <div class="cto-icon kml">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </div>
+                        <div class="cto-info">
+                            <span class="cto-name">Colinas</span>
+                            <span class="cto-type">KML</span>
+                        </div>
+                    </button>
+                    <button class="cto-card cto-btn" data-file="Itaipuaçu.kml" data-type="kml">
+                        <div class="cto-icon kml">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </div>
+                        <div class="cto-info">
+                            <span class="cto-name">Itaipuaçu</span>
+                            <span class="cto-type">KML</span>
+                        </div>
+                    </button>
+                    <button class="cto-card cto-btn" data-file="Jaconé-Saquarema.kml" data-type="kml">
+                        <div class="cto-icon kml">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </div>
+                        <div class="cto-info">
+                            <span class="cto-name">Jaconé-Saquarema</span>
+                            <span class="cto-type">KML</span>
+                        </div>
+                    </button>
+                    <button class="cto-card cto-btn" data-file="Muqui.kml" data-type="kml">
+                        <div class="cto-icon kml">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </div>
+                        <div class="cto-info">
+                            <span class="cto-name">Muqui</span>
+                            <span class="cto-type">KML</span>
+                        </div>
+                    </button>
+                    <button class="cto-card cto-btn" data-file="Retiro.kml" data-type="kml">
+                        <div class="cto-icon kml">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </div>
+                        <div class="cto-info">
+                            <span class="cto-name">Retiro</span>
+                            <span class="cto-type">KML</span>
+                        </div>
+                    </button>
+                    <button class="cto-card cto-btn" data-file="São Jose.kml" data-type="kml">
+                        <div class="cto-icon kml">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </div>
+                        <div class="cto-info">
+                            <span class="cto-name">São José</span>
+                            <span class="cto-type">KML</span>
+                        </div>
+                    </button>
+                    
+                    <!-- Arquivos KMZ -->
+                    <button class="cto-card cto-btn" data-file="Centro Marica.kmz" data-type="kmz">
+                        <div class="cto-icon kmz">
+                            <i class="fas fa-map-marked-alt"></i>
+                        </div>
+                        <div class="cto-info">
+                            <span class="cto-name">Centro Marica</span>
+                            <span class="cto-type">KMZ</span>
+                        </div>
+                    </button>
+                    <button class="cto-card cto-btn" data-file="Chacara De Inoa.kmz" data-type="kmz">
+                        <div class="cto-icon kmz">
+                            <i class="fas fa-map-marked-alt"></i>
+                        </div>
+                        <div class="cto-info">
+                            <span class="cto-name">Chácara De Inoã</span>
+                            <span class="cto-type">KMZ</span>
+                        </div>
+                    </button>
+                    
+                    <!-- Arquivos CSV -->
+                    <button class="cto-card cto-btn" data-file="ctos_centro.csv" data-type="csv">
+                        <div class="cto-icon csv">
+                            <i class="fas fa-file-csv"></i>
+                        </div>
+                        <div class="cto-info">
+                            <span class="cto-name">CTOs Centro</span>
+                            <span class="cto-type">CSV</span>
+                        </div>
+                    </button>
+                    
+                    <!-- Arquivos XLS -->
+                    <button class="cto-card cto-btn" data-file="ctos_norte.xls" data-type="xls">
+                        <div class="cto-icon xls">
+                            <i class="fas fa-file-excel"></i>
+                        </div>
+                        <div class="cto-info">
+                            <span class="cto-name">CTOs Norte</span>
+                            <span class="cto-type">XLS</span>
+                        </div>
+                    </button>
+                    
+                    <!-- Arquivos XLSX -->
+                    <button class="cto-card cto-btn" data-file="ctos_sul.xlsx" data-type="xlsx">
+                        <div class="cto-icon xlsx">
+                            <i class="fas fa-file-excel"></i>
+                        </div>
+                        <div class="cto-info">
+                            <span class="cto-name">CTOs Sul</span>
+                            <span class="cto-type">XLSX</span>
+                        </div>
+                    </button>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Overlay para mobile -->
+    <div id="overlay" class="overlay" aria-hidden="true"></div>
+
+    <!-- Mapa em tela cheia -->
+    <div id="map"></div>
+
+    <!-- Loading Screen -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-content">
+            <div class="loading-icon">
+                <i class="fas fa-network-wired"></i>
+            </div>
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Verificando viabilidade...</div>
+            <div class="loading-progress">
+                <div class="loading-progress-bar"></div>
+            </div>
+            <div class="loading-subtext">Analisando CTOs próximos e calculando rotas</div>
+        </div>
+    </div>
+
+    <!-- JavaScript separado -->
+    <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+    
+    <!-- Script de teste inline para dark mode -->
+    <script>
+        
+        // Teste imediato quando o script carrega
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🧪 DOM carregado, testando elementos...');
+            
+            const themeBtn = document.getElementById('theme-toggle-btn');
+            console.log('🧪 Botão de tema encontrado:', !!themeBtn);
+            
+            if (themeBtn) {
+                console.log('🧪 Adicionando teste de clique...');
+                themeBtn.addEventListener('click', function() {
+                    console.log('🧪 TESTE: Botão clicado!');
+                    
+                    // Teste manual do tema
+                    const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+                    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+                    
+                    console.log('🧪 TESTE: Alterando tema de', currentTheme, 'para', newTheme);
+                    
+                    document.documentElement.setAttribute('data-theme', newTheme);
+                    document.body.setAttribute('data-theme', newTheme);
+                    
+                    // Teste visual imediato
+                    document.body.style.backgroundColor = newTheme === 'dark' ? '#1a1a1a' : '#ffffff';
+                    document.body.style.color = newTheme === 'dark' ? '#ffffff' : '#1a1a1a';
+                    
+                    console.log('🧪 TESTE: Tema aplicado:', newTheme);
+                });
+            }
+        });
+    </script>
+</body>
+</html>
+

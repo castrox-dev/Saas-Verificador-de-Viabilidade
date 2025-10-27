@@ -26,6 +26,7 @@ from .permissions import (
 from .reports import ReportGenerator, ExportManager
 from .audit_logger import log_user_action, log_data_access
 from .rate_limiting import login_rate_limit, upload_rate_limit, general_rate_limit
+from .verificador_service import VerificadorFlaskService, VerificadorIntegrationManager
 
 logger = logging.getLogger(__name__)
 
@@ -313,8 +314,9 @@ def company_mapa_cto(request, company_slug):
 
 @login_required
 @company_access_required(require_admin=False)
+@upload_rate_limit
 def company_map_upload(request, company_slug):
-    """Upload de mapa CTO via AJAX"""
+    """Upload de mapa CTO via AJAX com verificação Flask"""
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)
     
@@ -329,35 +331,136 @@ def company_map_upload(request, company_slug):
         if request.user.company != company:
             return JsonResponse({'success': False, 'message': 'Acesso negado à empresa'}, status=403)
         
-        # Criar o arquivo
-        map_file = CTOMapFile(
-            file=request.FILES['file'],
-            description=request.POST.get('description', ''),
+        # Verificar se há arquivo no request
+        if 'file' not in request.FILES:
+            return JsonResponse({'success': False, 'message': 'Nenhum arquivo enviado'}, status=400)
+        
+        uploaded_file = request.FILES['file']
+        
+        # Processar arquivo usando o verificador Flask
+        result = VerificadorIntegrationManager.processar_upload_arquivo(
+            uploaded_file=uploaded_file,
             company=company,
-            uploaded_by=request.user
+            user=request.user
         )
         
-        # Salvar (isso vai executar as validações)
-        map_file.save()
-        
-        # Log do upload
-        try:
-            from .audit_logger import log_map_upload
-            log_map_upload(request.user, map_file, company)
-        except Exception as log_error:
-            logger.warning(f"Erro no log de upload: {str(log_error)}")
-        
-        return JsonResponse({
-            'success': True, 
-            'message': 'Arquivo enviado com sucesso!',
-            'file_id': map_file.id,
-            'file_name': os.path.basename(map_file.file.name)
-        })
+        if result['success']:
+            # Log do upload bem-sucedido
+            try:
+                from .audit_logger import log_map_upload
+                map_file = CTOMapFile.objects.get(id=result['cto_file_id'])
+                log_map_upload(request.user, map_file, company)
+            except Exception as log_error:
+                logger.warning(f"Erro no log de upload: {str(log_error)}")
+            
+            # Preparar resposta com dados do Flask
+            flask_result = result.get('flask_result', {})
+            flask_data = flask_result.get('results', {})
+            
+            response_data = {
+                'success': True,
+                'message': 'Arquivo analisado com sucesso!',
+                'file_id': result['cto_file_id'],
+                'file_name': os.path.basename(uploaded_file.name),
+                'analysis': {
+                    'viability_score': flask_data.get('viability_score', 'N/A'),
+                    'issues': flask_data.get('issues', []),
+                    'recommendations': flask_data.get('recommendations', []),
+                    'processing_time': flask_data.get('processing_time', 0),
+                    'coordinates_count': flask_data.get('coordinates_count', 0)
+                },
+                'flask_status': result.get('flask_status', {})
+            }
+            
+            return JsonResponse(response_data)
+        else:
+            # Upload falhou
+            error_message = result.get('error', 'Erro desconhecido na análise')
+            
+            # Se o Flask estiver offline, ainda salvar o arquivo
+            if result.get('flask_status', {}).get('status') != 'online':
+                # Criar arquivo sem análise
+                map_file = CTOMapFile(
+                    file=uploaded_file,
+                    description=request.POST.get('description', f'Arquivo enviado - Análise pendente'),
+                    company=company,
+                    uploaded_by=request.user,
+                    processing_status='pending'
+                )
+                map_file.save()
+                
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Arquivo salvo. Análise será realizada quando o serviço estiver disponível.',
+                    'file_id': map_file.id,
+                    'file_name': os.path.basename(uploaded_file.name),
+                    'analysis_pending': True,
+                    'flask_status': result.get('flask_status', {})
+                })
+            else:
+                return JsonResponse({
+                    'success': False, 
+                    'message': error_message,
+                    'flask_status': result.get('flask_status', {})
+                }, status=400)
         
     except ValidationError as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=400)
     except Exception as e:
         logger.error(f"Erro no upload: {str(e)}")
+        return JsonResponse({'success': False, 'message': 'Erro interno do servidor'}, status=500)
+
+
+@login_required
+@company_access_required(require_admin=False)
+def company_verificar_coordenadas(request, company_slug):
+    """Verifica viabilidade de coordenadas específicas"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)
+    
+    company = get_object_or_404(Company, slug=company_slug)
+    
+    try:
+        # Verificar se o usuário pode fazer verificações
+        if not request.user.can_upload_maps:
+            return JsonResponse({'success': False, 'message': 'Sem permissão para verificação'}, status=403)
+        
+        # Obter coordenadas do request
+        lat = request.POST.get('lat')
+        lon = request.POST.get('lon')
+        
+        if not lat or not lon:
+            return JsonResponse({'success': False, 'message': 'Coordenadas não fornecidas'}, status=400)
+        
+        try:
+            lat = float(lat)
+            lon = float(lon)
+        except (ValueError, TypeError):
+            return JsonResponse({'success': False, 'message': 'Coordenadas inválidas'}, status=400)
+        
+        # Verificar viabilidade usando Flask
+        result = VerificadorFlaskService.verificar_coordenadas(
+            lat=lat,
+            lon=lon,
+            company=company,
+            user=request.user
+        )
+        
+        if result.get('success'):
+            return JsonResponse({
+                'success': True,
+                'message': 'Verificação concluída',
+                'analysis': result
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': result.get('error', 'Erro na verificação'),
+                'analysis': result
+            }, status=400)
+        
+    except Exception as e:
+        logger.error(f"Erro na verificação de coordenadas: {str(e)}")
         return JsonResponse({'success': False, 'message': 'Erro interno do servidor'}, status=500)
 
 
