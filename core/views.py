@@ -26,7 +26,7 @@ from .permissions import (
 from .reports import ReportGenerator, ExportManager
 from .audit_logger import log_user_action, log_data_access
 from .rate_limiting import login_rate_limit, upload_rate_limit, general_rate_limit
-from .verificador_service import VerificadorFlaskService, VerificadorIntegrationManager
+from .verificador_service import VerificadorService, VerificadorIntegrationManager
 
 logger = logging.getLogger(__name__)
 
@@ -250,8 +250,13 @@ def company_login_view(request, company_slug):
         
         if user is not None and user.company and user.company.slug == company_slug:
             login(request, user)
-            logger.info(f"Login successful, redirecting to dashboard for {company_slug}")
-            return redirect('company:dashboard', company_slug=company_slug)
+            logger.info(f"Login successful for {company_slug}")
+            # Redirecionar conforme o papel do usuário
+            if user.role == 'COMPANY_ADMIN':
+                return redirect('company:dashboard', company_slug=company_slug)
+            else:
+                # Usuários padrão vão para o verificador
+                return redirect('company:verificador', company_slug=company_slug)
         else:
             logger.info("Login failed: user not found, no company, or wrong company")
             messages.error(request, 'Credenciais inválidas para esta empresa.')
@@ -285,15 +290,27 @@ def company_dashboard(request, company_slug):
 @login_required
 @company_access_required(require_admin=False)
 def company_verificador(request, company_slug):
+    import os
     company = get_object_or_404(Company, slug=company_slug)
     form = CTOMapFileForm()
     maps = CTOMapFile.objects.filter(company=company).order_by('-uploaded_at')[:10]
+    
+    # Adicionar informações de tamanho de arquivo com tratamento de erro
+    for map in maps:
+        try:
+            if map.file and map.file.name:
+                map.file_size_bytes = os.path.getsize(map.file.path) if os.path.exists(map.file.path) else None
+            else:
+                map.file_size_bytes = None
+        except (FileNotFoundError, ValueError, OSError):
+            map.file_size_bytes = None
+    
     context = {
         'company': company,
         'form': form,
         'maps': maps,
     }
-    return render(request, 'core/company_verifier.html', context)
+    return render(request, 'verificador/company_verifier.html', context)
 
 
 @login_required
@@ -438,8 +455,8 @@ def company_verificar_coordenadas(request, company_slug):
         except (ValueError, TypeError):
             return JsonResponse({'success': False, 'message': 'Coordenadas inválidas'}, status=400)
         
-        # Verificar viabilidade usando Flask
-        result = VerificadorFlaskService.verificar_coordenadas(
+        # Verificar viabilidade usando Verificador Django
+        result = VerificadorService.verificar_coordenadas(
             lat=lat,
             lon=lon,
             company=company,
@@ -750,7 +767,8 @@ def dashboard_redirect(request):
     if user.company:
         if user.role == 'COMPANY_ADMIN':
             return redirect('company:dashboard', company_slug=user.company.slug)
-        return redirect('company:mapa_cto', company_slug=user.company.slug)
+        # Usuários padrão vão para o verificador
+        return redirect('company:verificador', company_slug=user.company.slug)
 
     # Fallback: se não houver empresa associada, enviar para RM dashboard
     return redirect('rm:admin_dashboard')

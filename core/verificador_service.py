@@ -1,33 +1,33 @@
 """
-Serviço de integração com o verificador Flask
-Comunica com o aplicativo Flask para análise de viabilidade
+Serviço de verificação de viabilidade (Migrado para Django)
+Agora usa serviços Django nativos ao invés de Flask
 """
-import requests
-import json
 import os
 import logging
+import uuid
 from typing import Dict, Any, Optional, List
 from django.conf import settings
 from django.core.files.uploadedfile import UploadedFile
 from django.utils import timezone
 from core.models import CTOMapFile, Company, CustomUser
 from core.audit_logger import AuditLogger
+from verificador.services import VerificadorService as DjangoVerificadorService
+from verificador.geocoding import GeocodingService
+from verificador.file_readers import FileReaderService
 
 logger = logging.getLogger(__name__)
 
-class VerificadorFlaskService:
-    """Serviço para comunicação com o verificador Flask"""
-    
-    # URL base do verificador Flask
-    FLASK_BASE_URL = getattr(settings, 'VERIFICADOR_FLASK_URL', 'http://127.0.0.1:5000')
-    
-    # Timeout para requisições
-    TIMEOUT = getattr(settings, 'VERIFICADOR_TIMEOUT', 30)
+
+class VerificadorService:
+    """
+    Serviço principal de verificação - agora Django native
+    Mantém interface compatível com código existente
+    """
     
     @classmethod
     def verificar_arquivo(cls, uploaded_file: UploadedFile, company: Company, user: CustomUser) -> Dict[str, Any]:
         """
-        Verifica viabilidade de um arquivo CTO usando o Flask
+        Verifica viabilidade de um arquivo CTO usando Django native
         
         Args:
             uploaded_file: Arquivo enviado pelo usuário
@@ -40,21 +40,10 @@ class VerificadorFlaskService:
         try:
             # Salvar arquivo temporariamente
             temp_path = cls._save_temp_file(uploaded_file)
+            file_type = cls._get_file_extension(uploaded_file.name)
             
-            # Preparar dados para o Flask
-            data = {
-                'file_path': temp_path,
-                'file_type': cls._get_file_extension(uploaded_file.name),
-                'company_id': company.id,
-                'user_id': user.id,
-                'options': {
-                    'detailed_analysis': True,
-                    'generate_report': True
-                }
-            }
-            
-            # Fazer requisição para o Flask
-            response = cls._make_request('/api/verificar', data)
+            # Usar serviço Django nativo
+            result = DjangoVerificadorService.verificar_arquivo(temp_path, file_type)
             
             # Limpar arquivo temporário
             cls._cleanup_temp_file(temp_path)
@@ -67,14 +56,20 @@ class VerificadorFlaskService:
                     'file_name': uploaded_file.name,
                     'file_size': uploaded_file.size,
                     'company': company.name,
-                    'success': response.get('success', False)
+                    'success': result.get('success', False),
+                    'service': 'django_native'
                 }
             )
             
-            return response
+            # Adicionar analysis_id se não existir
+            if result.get('success') and 'analysis_id' not in result:
+                result['analysis_id'] = str(uuid.uuid4())
+                result['status'] = 'completed'
+            
+            return result
             
         except Exception as e:
-            logger.error(f"Erro na verificação Flask: {str(e)}")
+            logger.error(f"Erro na verificação Django: {str(e)}")
             return {
                 'success': False,
                 'error': f'Erro na análise: {str(e)}',
@@ -84,7 +79,7 @@ class VerificadorFlaskService:
     @classmethod
     def verificar_coordenadas(cls, lat: float, lon: float, company: Company, user: CustomUser) -> Dict[str, Any]:
         """
-        Verifica viabilidade de coordenadas específicas
+        Verifica viabilidade de coordenadas específicas usando Django native
         
         Args:
             lat: Latitude
@@ -96,13 +91,8 @@ class VerificadorFlaskService:
             Dict com resultados da análise
         """
         try:
-            # Fazer requisição para o Flask
-            params = {
-                'lat': lat,
-                'lon': lon
-            }
-            
-            response = cls._make_request('/api/verificar-viabilidade', params, method='GET')
+            # Usar serviço Django nativo
+            resultado = DjangoVerificadorService.verificar_viabilidade_coordenada(lat, lon, company)
             
             # Log da ação
             AuditLogger.log_user_action(
@@ -111,11 +101,24 @@ class VerificadorFlaskService:
                 details={
                     'coordinates': f'{lat},{lon}',
                     'company': company.name,
-                    'success': response.get('success', False)
+                    'success': 'erro' not in resultado,
+                    'service': 'django_native'
                 }
             )
             
-            return response
+            # Converter para formato compatível
+            if 'erro' in resultado:
+                return {
+                    'success': False,
+                    'error': resultado['erro'],
+                    'status': 'failed'
+                }
+            
+            return {
+                'success': True,
+                'status': 'completed',
+                'results': resultado
+            }
             
         except Exception as e:
             logger.error(f"Erro na verificação de coordenadas: {str(e)}")
@@ -128,17 +131,28 @@ class VerificadorFlaskService:
     @classmethod
     def listar_arquivos_disponiveis(cls) -> List[Dict[str, Any]]:
         """
-        Lista arquivos disponíveis no verificador Flask
+        Lista arquivos disponíveis no sistema Django
         
         Returns:
             Lista de arquivos disponíveis
         """
         try:
-            response = cls._make_request('/api/arquivos', method='GET')
-            return response if isinstance(response, list) else []
+            arquivos = []
+            mapas = CTOMapFile.objects.filter(is_processed=True).select_related('company')
+            
+            for mapa in mapas:
+                if mapa.file:
+                    arquivos.append({
+                        'nome': mapa.file_name,
+                        'tipo': mapa.file_type,
+                        'company': mapa.company.name,
+                        'uploaded_at': mapa.uploaded_at.isoformat() if mapa.uploaded_at else None
+                    })
+            
+            return arquivos
             
         except Exception as e:
-            logger.error(f"Erro ao listar arquivos Flask: {str(e)}")
+            logger.error(f"Erro ao listar arquivos: {str(e)}")
             return []
     
     @classmethod
@@ -153,9 +167,13 @@ class VerificadorFlaskService:
             Lista de coordenadas
         """
         try:
-            params = {'arquivo': arquivo}
-            response = cls._make_request('/api/coordenadas', params, method='GET')
-            return response if isinstance(response, list) else []
+            # Buscar arquivo no Django
+            mapa = CTOMapFile.objects.filter(file__icontains=arquivo).first()
+            
+            if mapa and mapa.file and hasattr(mapa.file, 'path'):
+                return FileReaderService.ler_arquivo(mapa.file.path)
+            
+            return []
             
         except Exception as e:
             logger.error(f"Erro ao obter coordenadas: {str(e)}")
@@ -164,7 +182,7 @@ class VerificadorFlaskService:
     @classmethod
     def geocodificar_endereco(cls, endereco: str) -> Dict[str, Any]:
         """
-        Geocodifica um endereço usando o Flask
+        Geocodifica um endereço usando Django native
         
         Args:
             endereco: Endereço para geocodificar
@@ -173,10 +191,13 @@ class VerificadorFlaskService:
             Coordenadas do endereço
         """
         try:
-            params = {'endereco': endereco}
-            response = cls._make_request('/api/geocode', params, method='GET')
-            return response
+            resultado = GeocodingService.geocodificar(endereco)
             
+            if resultado:
+                return resultado
+            else:
+                return {'error': 'Endereço não encontrado'}
+                
         except Exception as e:
             logger.error(f"Erro na geocodificação: {str(e)}")
             return {'error': f'Erro na geocodificação: {str(e)}'}
@@ -184,57 +205,14 @@ class VerificadorFlaskService:
     @classmethod
     def verificar_status_flask(cls) -> Dict[str, Any]:
         """
-        Verifica se o serviço Flask está funcionando
-        
-        Returns:
-            Status do serviço Flask
+        Verifica se o serviço está funcionando
+        Retorna status Django (sempre online agora)
         """
-        try:
-            response = cls._make_request('/health', method='GET')
-            return {
-                'status': 'online',
-                'flask_response': response
-            }
-            
-        except Exception as e:
-            logger.error(f"Flask service offline: {str(e)}")
-            return {
-                'status': 'offline',
-                'error': str(e)
-            }
-    
-    @classmethod
-    def _make_request(cls, endpoint: str, data: Optional[Dict] = None, method: str = 'POST') -> Any:
-        """
-        Faz requisição para o Flask
-        
-        Args:
-            endpoint: Endpoint do Flask
-            data: Dados para enviar
-            method: Método HTTP
-            
-        Returns:
-            Resposta do Flask
-        """
-        url = f"{cls.FLASK_BASE_URL}{endpoint}"
-        
-        try:
-            if method.upper() == 'GET':
-                response = requests.get(url, params=data, timeout=cls.TIMEOUT)
-            else:
-                response = requests.post(url, json=data, timeout=cls.TIMEOUT)
-            
-            response.raise_for_status()
-            return response.json()
-            
-        except requests.exceptions.ConnectionError:
-            raise Exception("Serviço Flask não está disponível")
-        except requests.exceptions.Timeout:
-            raise Exception("Timeout na comunicação com Flask")
-        except requests.exceptions.HTTPError as e:
-            raise Exception(f"Erro HTTP do Flask: {e}")
-        except Exception as e:
-            raise Exception(f"Erro na comunicação com Flask: {e}")
+        return {
+            'status': 'online',
+            'service': 'django_native',
+            'flask_response': {'migrated': True}
+        }
     
     @classmethod
     def _save_temp_file(cls, uploaded_file: UploadedFile) -> str:
@@ -252,7 +230,6 @@ class VerificadorFlaskService:
         os.makedirs(temp_dir, exist_ok=True)
         
         # Gerar nome único para o arquivo
-        import uuid
         temp_filename = f"{uuid.uuid4()}_{uploaded_file.name}"
         temp_path = os.path.join(temp_dir, temp_filename)
         
@@ -290,13 +267,14 @@ class VerificadorFlaskService:
         """
         return filename.split('.')[-1].lower() if '.' in filename else ''
 
+
 class VerificadorIntegrationManager:
-    """Gerenciador de integração entre Django e Flask"""
+    """Gerenciador de integração - agora Django native"""
     
     @classmethod
     def processar_upload_arquivo(cls, uploaded_file: UploadedFile, company: Company, user: CustomUser) -> Dict[str, Any]:
         """
-        Processa upload de arquivo completo
+        Processa upload de arquivo completo usando Django native
         
         Args:
             uploaded_file: Arquivo enviado
@@ -316,33 +294,34 @@ class VerificadorIntegrationManager:
                 is_processed=False
             )
             
-            # 2. Verificar se Flask está online
-            flask_status = VerificadorFlaskService.verificar_status_flask()
-            if flask_status['status'] != 'online':
-                return {
-                    'success': False,
-                    'error': 'Serviço de verificação temporariamente indisponível',
-                    'cto_file_id': cto_file.id,
-                    'flask_status': flask_status
-                }
+            # 2. Verificar arquivo usando Django native
+            result = VerificadorService.verificar_arquivo(uploaded_file, company, user)
             
-            # 3. Processar arquivo no Flask
-            flask_result = VerificadorFlaskService.verificar_arquivo(uploaded_file, company, user)
-            
-            # 4. Atualizar registro Django com resultado
-            if flask_result.get('success'):
+            # 3. Atualizar registro Django com resultado
+            if result.get('success'):
                 cto_file.is_processed = True
                 cto_file.processed_at = timezone.now()
                 
-                # Salvar dados do resultado (pode ser expandido)
-                cto_file.description = f"Análise concluída - {flask_result.get('results', {}).get('viability_score', 'N/A')} pontos"
+                # Salvar dados do resultado
+                results = result.get('results', {})
+                cto_file.viability_score = results.get('viability_score')
+                cto_file.analysis_results = results
+                cto_file.issues_found = results.get('issues', [])
+                cto_file.recommendations = results.get('recommendations', [])
+                cto_file.coordinates_count = results.get('coordinates_count', 0)
+                cto_file.processing_time = results.get('processing_time')
+                
+                if results.get('file_info'):
+                    cto_file.file_size = results['file_info'].get('size')
+                
+                cto_file.description = f"Análise concluída - {results.get('viability_score', 'N/A')} pontos"
                 cto_file.save()
             
             return {
-                'success': flask_result.get('success', False),
+                'success': result.get('success', False),
                 'cto_file_id': cto_file.id,
-                'flask_result': flask_result,
-                'flask_status': flask_status
+                'django_result': result,
+                'service': 'django_native'
             }
             
         except Exception as e:
@@ -355,31 +334,28 @@ class VerificadorIntegrationManager:
     @classmethod
     def obter_estatisticas_integracao(cls) -> Dict[str, Any]:
         """
-        Obtém estatísticas da integração
+        Obtém estatísticas da integração Django
         
         Returns:
             Estatísticas da integração
         """
         try:
-            # Status do Flask
-            flask_status = VerificadorFlaskService.verificar_status_flask()
-            
             # Estatísticas Django
             total_files = CTOMapFile.objects.count()
             processed_files = CTOMapFile.objects.filter(is_processed=True).count()
             
-            # Arquivos disponíveis no Flask
-            flask_files = VerificadorFlaskService.listar_arquivos_disponiveis()
-            
             return {
-                'flask_status': flask_status,
+                'service_status': {
+                    'status': 'online',
+                    'service': 'django_native',
+                    'migrated_from_flask': True
+                },
                 'django_stats': {
                     'total_files': total_files,
                     'processed_files': processed_files,
                     'processing_rate': (processed_files / total_files * 100) if total_files > 0 else 0
                 },
-                'flask_files_count': len(flask_files),
-                'integration_active': flask_status['status'] == 'online'
+                'integration_active': True
             }
             
         except Exception as e:

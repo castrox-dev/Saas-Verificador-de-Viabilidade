@@ -1,0 +1,266 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Verificador - {{ company.name }}{% endblock %}
+
+{% block body_class %}verificador-page{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/verificador.css' %}">
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="main-content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3>
+            <i class="fas fa-search me-2"></i>
+            Verificador de Viabilidade - {{ company.name }}
+        </h3>
+        <div class="text-muted">
+            <i class="fas fa-info-circle me-1"></i>
+            Faça upload do mapa CTO para análise
+        </div>
+    </div>
+
+    <!-- Upload Section -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-cloud-upload-alt me-2"></i>
+                Upload de Mapas
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                </div>
+                <h4>Arraste o arquivo aqui ou clique para selecionar</h4>
+                <p class="text-muted mb-3">
+                    Formatos aceitos: .xlsx, .xls, .csv, .kml, .kmz<br>
+                    Tamanho máximo: 50MB
+                </p>
+                <button type="button" class="btn btn-primary" id="selectFileBtn">
+                    <i class="fas fa-folder-open me-2"></i>
+                    Selecionar Arquivo
+                </button>
+                <input type="file" id="fileInput" accept=".xlsx,.xls,.csv,.kml,.kmz" style="display: none;">
+            </div>
+        </div>
+    </div>
+
+    <!-- Mapas Uploaded Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-history me-2"></i>
+                Mapas Enviados
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            {% if maps %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="border-0">Nome do Arquivo</th>
+                                <th class="border-0">Tipo</th>
+                                <th class="border-0">Tamanho</th>
+                                <th class="border-0">Data de Upload</th>
+                                <th class="border-0">Status</th>
+                                <th class="border-0">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for map in maps %}
+                                <tr>
+                                    <td class="fw-bold">{{ map.original_filename }}</td>
+                                    <td>
+                                        <span class="badge bg-info">
+                                            {% if map.original_filename|slice:"-5:" == ".xlsx" %}
+                                                XLSX
+                                            {% elif map.original_filename|slice:"-4:" == ".xls" %}
+                                                XLS
+                                            {% elif map.original_filename|slice:"-4:" == ".csv" %}
+                                                CSV
+                                            {% elif map.original_filename|slice:"-4:" == ".kml" %}
+                                                KML
+                                            {% elif map.original_filename|slice:"-4:" == ".kmz" %}
+                                                KMZ
+                                            {% else %}
+                                                {{ map.original_filename|slice:"-4:"|upper }}
+                                            {% endif %}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if map.file_size_bytes %}
+                                            {{ map.file_size_bytes|filesizeformat }}
+                                        {% else %}
+                                            <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ map.uploaded_at|date:"d/m/Y H:i" }}</td>
+                                    <td>
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check me-1"></i>
+                                            Processado
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'company:map_download' company_slug=company.slug pk=map.pk %}" 
+                                               class="btn btn-outline-primary btn-sm" 
+                                               title="Download">
+                                                <i class="fas fa-download"></i>
+                                            </a>
+                                            <form method="post" action="{% url 'company:map_delete' company_slug=company.slug pk=map.pk %}" style="display: inline;">
+                                                {% csrf_token %}
+                                                <button type="submit" 
+                                                        class="btn btn-outline-danger btn-sm" 
+                                                        title="Excluir"
+                                                        onclick="return confirm('Tem certeza que deseja excluir este arquivo?')">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state p-4">
+                    <div class="text-center">
+                        <i class="fas fa-arrow-up text-muted mb-3" style="font-size: 3rem;"></i>
+                        <h5 class="text-muted">Nenhum mapa enviado ainda</h5>
+                        <p class="text-muted">Faça o primeiro upload de um mapa CTO para começar</p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const selectFileBtn = document.getElementById('selectFileBtn');
+
+    // Click to select file
+    selectFileBtn.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    // Drag and drop
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFile(files[0]);
+        }
+    });
+
+    // File input change
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFile(e.target.files[0]);
+        }
+    });
+
+    function handleFile(file) {
+        // Validate file type
+        const allowedTypes = ['.xlsx', '.xls', '.csv', '.kml', '.kmz'];
+        const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+        
+        if (!allowedTypes.includes(fileExtension)) {
+            alert('Tipo de arquivo não suportado. Use .xlsx, .xls, .csv, .kml ou .kmz');
+            return;
+        }
+
+        // Validate file size (50MB)
+        if (file.size > 50 * 1024 * 1024) {
+            alert('Arquivo muito grande. Tamanho máximo: 50MB');
+            return;
+        }
+
+        // Upload the file
+        uploadFile(file);
+    }
+
+    function uploadFile(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('description', 'Upload via interface web');
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+        // Show loading state
+        const uploadArea = document.getElementById('uploadArea');
+        uploadArea.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i><br>Enviando arquivo...</div>';
+
+        fetch('{% url "company:map_upload" company_slug=company.slug %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Arquivo enviado com sucesso!');
+                location.reload(); // Reload to show new file
+            } else {
+                alert('Erro ao enviar arquivo: ' + (data.message || 'Erro desconhecido'));
+                resetUploadArea();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Erro ao enviar arquivo. Tente novamente.');
+            resetUploadArea();
+        });
+    }
+
+    function resetUploadArea() {
+        const uploadArea = document.getElementById('uploadArea');
+        uploadArea.innerHTML = `
+            <div class="upload-icon">
+                <i class="fas fa-cloud-upload-alt"></i>
+            </div>
+            <h4>Arraste o arquivo aqui ou clique para selecionar</h4>
+            <p class="text-muted mb-3">
+                Formatos aceitos: .xlsx, .xls, .csv, .kml, .kmz<br>
+                Tamanho máximo: 50MB
+            </p>
+            <button type="button" class="btn btn-primary" id="selectFileBtn">
+                <i class="fas fa-folder-open me-2"></i>
+                Selecionar Arquivo
+            </button>
+        `;
+        setupEventListeners();
+    }
+
+    function setupEventListeners() {
+        const selectFileBtn = document.getElementById('selectFileBtn');
+        const fileInput = document.getElementById('fileInput');
+        
+        if (selectFileBtn && fileInput) {
+            selectFileBtn.addEventListener('click', () => fileInput.click());
+        }
+    }
+});
+</script>
+{% endblock %}

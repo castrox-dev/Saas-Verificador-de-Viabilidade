@@ -15,6 +15,9 @@ urlpatterns = [
     # URLs RM Systems
     path("rm/", include(("core.urls_rm", "rm"), namespace="rm")),
     
+    # URLs do verificador (agora app Django separado)
+    path("verificador/", include(("verificador.urls", "verificador"), namespace="verificador")),
+    
     # URLs específicas por empresa
     re_path(r'^(?P<company_slug>[\w-]+)/', include(("core.urls_company", "company"), namespace="company")),
     

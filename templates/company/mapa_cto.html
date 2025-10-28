@@ -7,254 +7,513 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'css/verificador.css' %}">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  .verificador-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  
+  .tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--rm-border);
+  }
+  
+  .tab {
+    padding: 12px 24px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--rm-text-secondary);
+    transition: all 0.3s;
+  }
+  
+  .tab.active {
+    color: var(--rm-primary);
+    border-bottom-color: var(--rm-primary);
+  }
+  
+  .tab-content {
+    display: none;
+  }
+  
+  .tab-content.active {
+    display: block;
+  }
+  
+  .upload-area {
+    border: 2px dashed var(--rm-border);
+    border-radius: 10px;
+    padding: 40px;
+    text-align: center;
+    transition: all 0.3s;
+    cursor: pointer;
+  }
+  
+  .upload-area:hover {
+    border-color: var(--rm-primary);
+    background: var(--rm-bg-secondary);
+  }
+  
+  .upload-area.dragover {
+    border-color: var(--rm-primary);
+    background: var(--rm-bg-secondary);
+  }
+  
+  .map-container {
+    height: 500px;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  
+  .results-card {
+    margin-top: 20px;
+    padding: 20px;
+    border-radius: 10px;
+    background: var(--rm-card-bg);
+    border: 1px solid var(--rm-border);
+  }
+  
+  .viability-badge {
+    display: inline-block;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 0.9rem;
+  }
+  
+  .viability-viable {
+    background: #d4edda;
+    color: #155724;
+  }
+  
+  .viability-limited {
+    background: #fff3cd;
+    color: #856404;
+  }
+  
+  .viability-inviable {
+    background: #f8d7da;
+    color: #721c24;
+  }
+</style>
 {% endblock %}
 
 {% block content %}
-{% csrf_token %}
-<div class="main-content">
+<div class="verificador-container">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3>
             <i class="fas fa-map me-2"></i>
-            Mapas CTO
+            Verificador de Viabilidade - {{ company.name }}
         </h3>
-        <div class="text-muted">
-            <i class="fas fa-info-circle me-1"></i>
-            Faça upload do mapa CTO para análise
-        </div>
     </div>
 
-    <!-- Upload Section -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="mb-0">
-                <i class="fas fa-cloud-upload-alt me-2"></i>
-                Upload de Mapas
-            </h5>
-        </div>
-        <div class="card-body">
-            <div class="upload-area" id="uploadArea">
-                <div class="upload-icon">
-                    <i class="fas fa-cloud-upload-alt"></i>
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('upload')">
+            <i class="fas fa-upload me-2"></i>Upload de Arquivo
+        </button>
+        <button class="tab" onclick="switchTab('coordinates')">
+            <i class="fas fa-map-marker-alt me-2"></i>Verificar Coordenadas
+        </button>
+        <button class="tab" onclick="switchTab('history')">
+            <i class="fas fa-history me-2"></i>Histórico
+        </button>
+    </div>
+
+    <!-- Tab 1: Upload -->
+    <div id="tab-upload" class="tab-content active">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Upload de Arquivo CTO</h5>
+                <p class="text-muted">Faça upload de arquivos KML, KMZ, CSV, XLS ou XLSX para verificar viabilidade</p>
+                
+                <div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()">
+                    <i class="fas fa-cloud-upload-alt" style="font-size: 3rem; color: var(--rm-primary); margin-bottom: 15px;"></i>
+                    <h4>Arraste e solte ou clique para selecionar</h4>
+                    <p class="text-muted">Formatos suportados: KML, KMZ, CSV, XLS, XLSX</p>
+                    <input type="file" id="file-input" accept=".kml,.kmz,.csv,.xls,.xlsx" style="display: none;">
                 </div>
-                <h4>Arraste o arquivo aqui ou clique para selecionar</h4>
-                <p class="text-muted mb-3">
-                    Formatos aceitos: .xlsx, .xls, .csv, .kml, .kmz<br>
-                    Tamanho máximo: 50MB
-                </p>
-                <button type="button" class="btn btn-primary" id="selectFileBtn">
-                    <i class="fas fa-folder-open me-2"></i>
-                    Selecionar Arquivo
-                </button>
-                <input type="file" id="fileInput" accept=".xlsx,.xls,.csv,.kml,.kmz" style="display: none;">
+                
+                <div id="upload-progress" style="display: none; margin-top: 20px;">
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <p class="text-center mt-2">Processando arquivo...</p>
+                </div>
+                
+                <div id="upload-results" class="results-card" style="display: none;">
+                    <h5>Resultados da Análise</h5>
+                    <div id="results-content"></div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Mapas Uploaded Table -->
-    <div class="card">
-        <div class="card-header">
-            <h5 class="mb-0">
-                <i class="fas fa-history me-2"></i>
-                Mapas Enviados
-            </h5>
-        </div>
-        <div class="card-body p-0">
-            {% if maps %}
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th class="border-0">Nome do Arquivo</th>
-                                <th class="border-0">Tipo</th>
-                                <th class="border-0">Tamanho</th>
-                                <th class="border-0">Data de Upload</th>
-                                <th class="border-0">Status</th>
-                                <th class="border-0">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for map in maps %}
-                                <tr>
-                                    <td class="fw-bold">{{ map.original_filename }}</td>
-                                    <td>
-                                        <span class="badge bg-info">
-                                            {% if map.original_filename|slice:"-5:" == ".xlsx" %}
-                                                XLSX
-                                            {% elif map.original_filename|slice:"-4:" == ".xls" %}
-                                                XLS
-                                            {% elif map.original_filename|slice:"-4:" == ".csv" %}
-                                                CSV
-                                            {% elif map.original_filename|slice:"-4:" == ".kml" %}
-                                                KML
-                                            {% elif map.original_filename|slice:"-4:" == ".kmz" %}
-                                                KMZ
-                                            {% else %}
-                                                {{ map.original_filename|slice:"-4:"|upper }}
-                                            {% endif %}
-                                        </span>
-                                    </td>
-                                    <td>{{ map.file.size|filesizeformat }}</td>
-                                    <td>{{ map.uploaded_at|date:"d/m/Y H:i" }}</td>
-                                    <td>
-                                        <span class="badge bg-success">
-                                            <i class="fas fa-check me-1"></i>
-                                            Processado
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="btn-group" role="group">
-                                            <a href="{% url 'company:map_download' company_slug=company.slug pk=map.pk %}" 
-                                               class="btn btn-outline-primary btn-sm" 
-                                               title="Download">
-                                                <i class="fas fa-download"></i>
-                                            </a>
-                                            <form method="post" action="{% url 'company:map_delete' company_slug=company.slug pk=map.pk %}" style="display: inline;">
-                                                {% csrf_token %}
-                                                <button type="submit" 
-                                                        class="btn btn-outline-danger btn-sm" 
-                                                        title="Excluir"
-                                                        onclick="return confirm('Tem certeza que deseja excluir este arquivo?')">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            {% else %}
-                <div class="empty-state p-4">
-                    <div class="text-center">
-                        <i class="fas fa-arrow-up text-muted mb-3" style="font-size: 3rem;"></i>
-                        <h5 class="text-muted">Nenhum mapa enviado ainda</h5>
-                        <p class="text-muted">Faça o primeiro upload de um mapa CTO para começar</p>
+    <!-- Tab 2: Coordenadas -->
+    <div id="tab-coordinates" class="tab-content">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Verificar Viabilidade por Coordenadas</h5>
+                <p class="text-muted">Digite um endereço ou coordenadas para verificar viabilidade</p>
+                
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <label for="address-input">Endereço</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="address-input" placeholder="Ex: Rua Exemplo, 123 - Rio de Janeiro">
+                            <button class="btn btn-primary" onclick="geocodeAddress()">
+                                <i class="fas fa-search"></i> Buscar
+                            </button>
+                        </div>
                     </div>
                 </div>
-            {% endif %}
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="lat-input">Latitude</label>
+                        <input type="number" step="any" class="form-control" id="lat-input" placeholder="-22.9068">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="lng-input">Longitude</label>
+                        <input type="number" step="any" class="form-control" id="lng-input" placeholder="-43.1729">
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button class="btn btn-primary w-100" onclick="verifyCoordinates()">
+                            <i class="fas fa-check"></i> Verificar
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="map-container" id="map"></div>
+                
+                <div id="coordinates-results" class="results-card" style="display: none;">
+                    <h5>Resultados da Verificação</h5>
+                    <div id="coordinates-results-content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 3: Histórico -->
+    <div id="tab-history" class="tab-content">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Histórico de Análises</h5>
+                <div id="history-content">
+                    <p class="text-muted">Carregando histórico...</p>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
+let map, marker, routeLayer;
+
+// Inicializar mapa
 document.addEventListener('DOMContentLoaded', function() {
-    const uploadArea = document.getElementById('uploadArea');
-    const fileInput = document.getElementById('fileInput');
-    const selectFileBtn = document.getElementById('selectFileBtn');
-
-    // Click to select file
-    selectFileBtn.addEventListener('click', () => {
-        fileInput.click();
-    });
-
-    // Drag and drop
-    uploadArea.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        uploadArea.classList.add('dragover');
-    });
-
-    uploadArea.addEventListener('dragleave', () => {
-        uploadArea.classList.remove('dragover');
-    });
-
-    uploadArea.addEventListener('drop', (e) => {
-        e.preventDefault();
-        uploadArea.classList.remove('dragover');
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            handleFile(files[0]);
-        }
-    });
-
-    // File input change
-    fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            handleFile(e.target.files[0]);
-        }
-    });
-
-    function handleFile(file) {
-        // Validate file type
-        const allowedTypes = ['.xlsx', '.xls', '.csv', '.kml', '.kmz'];
-        const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
-        
-        if (!allowedTypes.includes(fileExtension)) {
-            alert('Tipo de arquivo não suportado. Use .xlsx, .xls, .csv, .kml ou .kmz');
-            return;
-        }
-
-        // Validate file size (50MB)
-        if (file.size > 50 * 1024 * 1024) {
-            alert('Arquivo muito grande. Tamanho máximo: 50MB');
-            return;
-        }
-
-        // Upload the file
-        uploadFile(file);
-    }
-
-    function uploadFile(file) {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('description', 'Upload via interface web');
-        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
-
-        // Show loading state
-        const uploadArea = document.getElementById('uploadArea');
-        uploadArea.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i><br>Enviando arquivo...</div>';
-
-        fetch('{% url "company:map_upload" company.slug %}', {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('Arquivo enviado com sucesso!');
-                location.reload(); // Reload to show new file
-            } else {
-                alert('Erro ao enviar arquivo: ' + (data.message || 'Erro desconhecido'));
-                resetUploadArea();
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Erro ao enviar arquivo. Tente novamente.');
-            resetUploadArea();
-        });
-    }
-
-    function resetUploadArea() {
-        const uploadArea = document.getElementById('uploadArea');
-        uploadArea.innerHTML = `
-            <div class="upload-icon">
-                <i class="fas fa-cloud-upload-alt"></i>
-            </div>
-            <h4>Arraste o arquivo aqui ou clique para selecionar</h4>
-            <p class="text-muted mb-3">
-                Formatos aceitos: .xlsx, .xls, .csv, .kml, .kmz<br>
-                Tamanho máximo: 50MB
-            </p>
-            <button type="button" class="btn btn-primary" id="selectFileBtn">
-                <i class="fas fa-folder-open me-2"></i>
-                Selecionar Arquivo
-            </button>
-        `;
-        setupEventListeners();
-    }
-
-    function setupEventListeners() {
-        const selectFileBtn = document.getElementById('selectFileBtn');
-        const fileInput = document.getElementById('fileInput');
-        
-        if (selectFileBtn && fileInput) {
-            selectFileBtn.addEventListener('click', () => fileInput.click());
-        }
-    }
+    initMap();
+    setupUploadArea();
+    loadHistory();
 });
+
+function initMap() {
+    map = L.map('map').setView([-22.9068, -43.1729], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
+}
+
+function switchTab(tabName) {
+    // Esconder todas as tabs
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+    
+    // Mostrar tab selecionada
+    document.getElementById(`tab-${tabName}`).classList.add('active');
+    event.target.classList.add('active');
+    
+    // Recarregar histórico se necessário
+    if (tabName === 'history') {
+        loadHistory();
+    }
+}
+
+function setupUploadArea() {
+    const uploadArea = document.getElementById('upload-area');
+    const fileInput = document.getElementById('file-input');
+    
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, preventDefaults, false);
+    });
+    
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    
+    ['dragenter', 'dragover'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, () => uploadArea.classList.add('dragover'), false);
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, () => uploadArea.classList.remove('dragover'), false);
+    });
+    
+    uploadArea.addEventListener('drop', handleDrop, false);
+    fileInput.addEventListener('change', handleFileSelect, false);
+}
+
+function handleDrop(e) {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    if (files.length > 0) {
+        handleFile(files[0]);
+    }
+}
+
+function handleFileSelect(e) {
+    if (e.target.files.length > 0) {
+        handleFile(e.target.files[0]);
+    }
+}
+
+async function handleFile(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    document.getElementById('upload-progress').style.display = 'block';
+    document.getElementById('upload-results').style.display = 'none';
+    
+    try {
+        const response = await fetch(`/verificador/{{ company.slug }}/api/verificar/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        document.getElementById('upload-progress').style.display = 'none';
+        
+        if (data.success) {
+            displayUploadResults(data);
+        } else {
+            alert('Erro: ' + (data.error || 'Erro desconhecido'));
+        }
+    } catch (error) {
+        document.getElementById('upload-progress').style.display = 'none';
+        alert('Erro ao processar arquivo: ' + error.message);
+    }
+}
+
+function displayUploadResults(data) {
+    const results = data.results || {};
+    const content = document.getElementById('results-content');
+    
+    let html = `
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>Score de Viabilidade:</strong> ${results.viability_score || 'N/A'}/100</p>
+                <p><strong>Coordenadas encontradas:</strong> ${results.coordinates_count || 0}</p>
+                <p><strong>Tempo de processamento:</strong> ${results.processing_time || 0}s</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>Arquivo:</strong> ${results.file_info?.name || 'N/A'}</p>
+                <p><strong>Tipo:</strong> ${results.file_info?.type || 'N/A'}</p>
+                <p><strong>Tamanho:</strong> ${formatBytes(results.file_info?.size || 0)}</p>
+            </div>
+        </div>
+    `;
+    
+    if (results.issues && results.issues.length > 0) {
+        html += '<h6 class="mt-3">Problemas Encontrados:</h6><ul>';
+        results.issues.forEach(issue => {
+            html += `<li>${issue}</li>`;
+        });
+        html += '</ul>';
+    }
+    
+    if (results.recommendations && results.recommendations.length > 0) {
+        html += '<h6 class="mt-3">Recomendações:</h6><ul>';
+        results.recommendations.forEach(rec => {
+            html += `<li>${rec}</li>`;
+        });
+        html += '</ul>';
+    }
+    
+    content.innerHTML = html;
+    document.getElementById('upload-results').style.display = 'block';
+}
+
+async function geocodeAddress() {
+    const address = document.getElementById('address-input').value;
+    if (!address) {
+        alert('Digite um endereço');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/verificador/api/geocode/?endereco=${encodeURIComponent(address)}`);
+        const data = await response.json();
+        
+        if (data.lat && data.lng) {
+            document.getElementById('lat-input').value = data.lat;
+            document.getElementById('lng-input').value = data.lng;
+            
+            // Atualizar mapa
+            map.setView([data.lat, data.lng], 15);
+            if (marker) map.removeLayer(marker);
+            marker = L.marker([data.lat, data.lng]).addTo(map);
+        } else {
+            alert('Endereço não encontrado');
+        }
+    } catch (error) {
+        alert('Erro ao geocodificar: ' + error.message);
+    }
+}
+
+async function verifyCoordinates() {
+    const lat = parseFloat(document.getElementById('lat-input').value);
+    const lng = parseFloat(document.getElementById('lng-input').value);
+    
+    if (!lat || !lng) {
+        alert('Digite coordenadas válidas');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/verificador/{{ company.slug }}/api/verificar-viabilidade/?lat=${lat}&lon=${lng}`);
+        const data = await response.json();
+        
+        if (data.erro) {
+            alert('Erro: ' + data.erro);
+            return;
+        }
+        
+        displayCoordinatesResults(data);
+        
+        // Atualizar mapa
+        map.setView([lat, lng], 13);
+        if (marker) map.removeLayer(marker);
+        marker = L.marker([lat, lng]).addTo(map);
+        
+        // CTO mais próximo
+        if (data.cto) {
+            const ctoMarker = L.marker([data.cto.lat, data.cto.lng], {
+                icon: L.icon({
+                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                    popupAnchor: [1, -34],
+                })
+            }).addTo(map);
+            ctoMarker.bindPopup(`CTO: ${data.cto.nome || 'N/A'}`).openPopup();
+        }
+        
+        // Desenhar rota
+        if (data.rota && data.rota.geometria) {
+            if (routeLayer) map.removeLayer(routeLayer);
+            routeLayer = L.polyline(
+                data.rota.geometria.map(coord => [coord[1], coord[0]]),
+                {color: 'blue', weight: 3}
+            ).addTo(map);
+            map.fitBounds(routeLayer.getBounds());
+        }
+    } catch (error) {
+        alert('Erro ao verificar: ' + error.message);
+    }
+}
+
+function displayCoordinatesResults(data) {
+    const content = document.getElementById('coordinates-results-content');
+    const viability = data.viabilidade || {};
+    
+    let badgeClass = 'viability-inviable';
+    if (viability.status === 'Viável') badgeClass = 'viability-viable';
+    else if (viability.status === 'Viabilidade Limitada') badgeClass = 'viability-limited';
+    
+    const html = `
+        <div class="row">
+            <div class="col-md-6">
+                <h6>Status de Viabilidade</h6>
+                <span class="viability-badge ${badgeClass}">${viability.status || 'N/A'}</span>
+                <p class="mt-2">${viability.descricao || ''}</p>
+                
+                <h6 class="mt-3">Distância</h6>
+                <p><strong>${data.distancia?.metros || 0}m</strong> (${data.distancia?.km || 0}km)</p>
+            </div>
+            <div class="col-md-6">
+                <h6>CTO Mais Próximo</h6>
+                <p><strong>Nome:</strong> ${data.cto?.nome || 'N/A'}</p>
+                <p><strong>Arquivo:</strong> ${data.cto?.arquivo || 'N/A'}</p>
+                <p><strong>Coordenadas:</strong> ${data.cto?.lat || 'N/A'}, ${data.cto?.lon || 'N/A'}</p>
+            </div>
+        </div>
+    `;
+    
+    content.innerHTML = html;
+    document.getElementById('coordinates-results').style.display = 'block';
+}
+
+async function loadHistory() {
+    try {
+        const response = await fetch(`/verificador/{{ company.slug }}/api/arquivos/`);
+        const data = await response.json();
+        
+        const content = document.getElementById('history-content');
+        if (data.length === 0) {
+            content.innerHTML = '<p class="text-muted">Nenhum arquivo processado ainda</p>';
+            return;
+        }
+        
+        let html = '<div class="table-responsive"><table class="table table-striped"><thead><tr><th>Arquivo</th><th>Tipo</th><th>Score</th><th>Data</th></tr></thead><tbody>';
+        data.forEach(file => {
+            html += `<tr>
+                <td>${file.nome || 'N/A'}</td>
+                <td>${file.tipo || 'N/A'}</td>
+                <td>${file.viability_score !== null ? file.viability_score + '/100' : 'N/A'}</td>
+                <td>${file.uploaded_at ? new Date(file.uploaded_at).toLocaleString('pt-BR') : 'N/A'}</td>
+            </tr>`;
+        });
+        html += '</tbody></table></div>';
+        content.innerHTML = html;
+    } catch (error) {
+        document.getElementById('history-content').innerHTML = '<p class="text-danger">Erro ao carregar histórico</p>';
+    }
+}
+
+function formatBytes(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
 </script>
 {% endblock %}
