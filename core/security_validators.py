@@ -68,10 +68,13 @@ class SecureFileValidator:
         # 6. Verificação de malware básica
         self._scan_for_malware(file)
         
-        # 7. Validação de assinatura de arquivo
+        # 7. Validação rigorosa de magic numbers
+        self._validate_magic_numbers(file)
+        
+        # 8. Validação de assinatura de arquivo (validação dupla)
         self._validate_file_signature(file)
         
-        # 8. Verificação de conteúdo malicioso
+        # 9. Verificação de conteúdo malicioso
         self._scan_malicious_content(file)
         
         logger.info(f"Arquivo validado com sucesso: {file.name}")
@@ -327,43 +330,189 @@ class SecureFileValidator:
         return True
     
     def _validate_magic_numbers(self, file):
-        """Verificação de magic numbers do arquivo"""
+        """
+        Verificação rigorosa de magic numbers do arquivo
+        Valida o conteúdo real do arquivo, não apenas a extensão
+        """
         try:
             file.seek(0)
-            header = file.read(16)
+            # Ler mais bytes para verificação mais robusta
+            header = file.read(64)
             file.seek(0)
             
-            # Magic numbers para tipos permitidos
-            valid_magic_numbers = {
-                b'PK\x03\x04': 'Excel/Office',
-                b'\xd0\xcf\x11\xe0': 'Excel Legacy',
-                b'<?xml': 'XML/KML',
-                b'<kml': 'KML',
-                b'<Document': 'KML Document'
+            file_ext = os.path.splitext(file.name)[1].lower()
+            
+            # Magic numbers específicos e completos para cada tipo
+            magic_validation_rules = {
+                '.xlsx': [
+                    # Office Open XML (XLSX) - deve começar com ZIP
+                    (b'PK\x03\x04', 0, 'XLSX deve começar com assinatura ZIP'),
+                    # Verificar se é realmente um Office Open XML
+                    (b'[Content_Types].xml', None, 'XLSX deve conter [Content_Types].xml'),
+                    (b'xl/', None, 'XLSX deve conter diretório xl/'),
+                ],
+                '.xls': [
+                    # Microsoft Excel Legacy - OLE Compound Document
+                    (b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1', 0, 'XLS deve começar com assinatura OLE'),
+                ],
+                '.csv': [
+                    # CSV deve ser texto válido
+                    ('TEXT', None, 'CSV deve ser texto válido'),
+                ],
+                '.kml': [
+                    # KML deve começar com XML
+                    (b'<?xml', 0, 'KML deve começar com <?xml'),
+                    (b'<kml', None, 'KML deve conter tag <kml'),
+                ],
+                '.kmz': [
+                    # KMZ é um arquivo ZIP contendo KML
+                    (b'PK\x03\x04', 0, 'KMZ deve começar com assinatura ZIP'),
+                    # Verificar se contém arquivo KML dentro do ZIP
+                    ('ZIP_WITH_KML', None, 'KMZ deve conter arquivo KML'),
+                ]
             }
             
-            # Verificar se o header corresponde a um tipo permitido
+            # Validar magic number baseado na extensão do arquivo
+            if file_ext not in magic_validation_rules:
+                raise ValidationError(f"Extensão {file_ext} não tem validação de magic number definida")
+            
+            rules = magic_validation_rules[file_ext]
             is_valid = False
-            for magic, file_type in valid_magic_numbers.items():
-                if header.startswith(magic):
-                    is_valid = True
-                    logger.info(f"Magic number válido detectado: {file_type}")
-                    break
+            validation_errors = []
             
-            if not is_valid:
-                # Para CSV, verificar se é texto válido
-                if file.name.lower().endswith('.csv'):
+            # Para arquivos CSV - validação especial de texto
+            if file_ext == '.csv':
+                try:
+                    # Tentar decodificar como UTF-8
+                    file.seek(0)
+                    sample = file.read(1024)
+                    file.seek(0)
+                    
+                    # Verificar se é texto válido
                     try:
-                        file.seek(0)
-                        content = file.read(1024).decode('utf-8')
-                        if content and not any(ord(c) < 32 and c not in '\t\n\r' for c in content[:100]):
+                        decoded = sample.decode('utf-8')
+                        # Verificar se não tem muitos caracteres de controle (exceto \t\n\r)
+                        control_chars = sum(1 for c in decoded[:100] if ord(c) < 32 and c not in '\t\n\r')
+                        if control_chars > len(decoded[:100]) * 0.1:
+                            raise ValidationError("CSV contém muitos caracteres de controle inválidos")
+                        
+                        # Verificar se não é um arquivo binário disfarçado
+                        null_byte_count = sample.count(b'\x00')
+                        if null_byte_count > 0:
+                            raise ValidationError("CSV não pode conter bytes nulos")
+                        
+                        is_valid = True
+                    except UnicodeDecodeError:
+                        # Tentar outras codificações comuns
+                        for encoding in ['latin-1', 'iso-8859-1', 'cp1252']:
+                            try:
+                                sample.decode(encoding)
+                                is_valid = True
+                                break
+                            except:
+                                continue
+                        
+                        if not is_valid:
+                            raise ValidationError("CSV com codificação inválida ou não é texto")
+                            
+                except ValidationError:
+                    raise
+                except Exception as e:
+                    logger.error(f"Erro na validação de CSV: {str(e)}")
+                    raise ValidationError("CSV inválido ou corrompido")
+            
+            # Para arquivos KMZ - validação especial de ZIP com KML
+            elif file_ext == '.kmz':
+                try:
+                    # Verificar assinatura ZIP
+                    if not header.startswith(b'PK\x03\x04'):
+                        raise ValidationError("KMZ deve ser um arquivo ZIP válido")
+                    
+                    # Verificar se contém KML dentro do ZIP
+                    file.seek(0)
+                    file_content = file.read()
+                    file.seek(0)
+                    
+                    try:
+                        with zipfile.ZipFile(io.BytesIO(file_content), 'r') as zip_file:
+                            kml_files = [name for name in zip_file.namelist() if name.lower().endswith('.kml')]
+                            if not kml_files:
+                                raise ValidationError("KMZ deve conter pelo menos um arquivo KML")
+                            
+                            # Verificar se o KML principal é válido
+                            main_kml = kml_files[0]
+                            kml_content = zip_file.read(main_kml)
+                            if not kml_content.startswith(b'<?xml') and not b'<kml' in kml_content[:100]:
+                                raise ValidationError("KMZ contém KML inválido")
                             is_valid = True
-                    except:
-                        pass
+                    except zipfile.BadZipFile:
+                        raise ValidationError("KMZ não é um arquivo ZIP válido")
+                    except Exception as e:
+                        logger.error(f"Erro na validação de KMZ: {str(e)}")
+                        raise ValidationError("KMZ inválido ou corrompido")
+                except ValidationError:
+                    raise
+                except Exception as e:
+                    logger.error(f"Erro na validação de KMZ: {str(e)}")
+                    raise ValidationError("KMZ inválido ou corrompido")
+            
+            # Para outros tipos (XLSX, XLS, KML)
+            else:
+                for magic, position, description in rules:
+                    if position == 0:
+                        # Magic number deve estar no início
+                        if header.startswith(magic):
+                            is_valid = True
+                            logger.debug(f"Magic number válido: {description}")
+                            break
+                    elif position is None:
+                        # Magic number pode estar em qualquer lugar (dentro do arquivo)
+                        if magic in header or (len(header) < 64 and magic in file.read(2048)):
+                            is_valid = True
+                            logger.debug(f"Conteúdo válido encontrado: {description}")
+                            break
+                    else:
+                        # Magic number em posição específica
+                        if len(header) > position and header[position:position+len(magic)] == magic:
+                            is_valid = True
+                            logger.debug(f"Magic number válido na posição {position}: {description}")
+                            break
+                    
+                    validation_errors.append(description)
+                
+                # Validações adicionais específicas por tipo
+                if file_ext == '.xlsx':
+                    # XLSX é um arquivo ZIP, verificar estrutura interna
+                    if header.startswith(b'PK\x03\x04'):
+                        file.seek(0)
+                        file_content = file.read(2048)
+                        # Verificar se contém estruturas esperadas do Office Open XML
+                        if b'[Content_Types].xml' not in file_content and b'xl/' not in file_content:
+                            # Pode ser um ZIP comum, não um XLSX - verificar mais profundamente
+                            logger.warning(f"XLSX pode não ser válido: {file.name}")
+                            # Não bloquear imediatamente, mas avisar
+                
+                elif file_ext == '.xls':
+                    # XLS Legacy deve ter assinatura OLE completa
+                    if not header.startswith(b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1'):
+                        raise ValidationError("XLS não é um arquivo OLE válido")
+                
+                elif file_ext == '.kml':
+                    # KML deve começar com XML ou ter tag kml
+                    if not (header.startswith(b'<?xml') or b'<kml' in header[:200]):
+                        raise ValidationError("KML deve começar com <?xml ou conter tag <kml")
             
             if not is_valid:
-                raise ValidationError("Arquivo com magic number inválido ou suspeito")
+                error_msg = f"Magic number inválido para {file_ext}"
+                if validation_errors:
+                    error_msg += f". Esperado: {', '.join(validation_errors)}"
+                logger.warning(f"{error_msg} - Arquivo: {file.name}")
+                raise ValidationError(error_msg)
+            
+            logger.info(f"Magic number validado com sucesso para {file.name} ({file_ext})")
                 
+        except ValidationError:
+            raise
         except Exception as e:
             logger.error(f"Erro na verificação de magic numbers: {str(e)}")
             raise ValidationError("Erro na verificação de integridade do arquivo")

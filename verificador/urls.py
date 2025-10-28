@@ -8,6 +8,9 @@ from . import views
 app_name = 'verificador'
 
 urlpatterns = [
+    # View principal do verificador (página com mapa)
+    path('<slug:company_slug>/', views.verificador_view, name='verificador_view'),
+    
     # Health check
     path('health/', views.health_check, name='health'),
     

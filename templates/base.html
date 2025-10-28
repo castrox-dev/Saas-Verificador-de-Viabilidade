@@ -174,23 +174,30 @@
             <i class="fas fa-cog me-2"></i>Admin Django
           </a>
         {% elif user.company %}
+          {% if not user.is_company_user %}
           <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'company:dashboard' company_slug=user.company.slug %}">
             <i class="fas fa-tachometer-alt me-2"></i>Dashboard
           </a>
+          {% endif %}
           {% if user.is_company_admin %}
           <a class="nav-link {% if 'user' in request.resolver_match.url_name and 'company' in request.resolver_match.namespace %}active{% endif %}" href="{% url 'company:user_list' company_slug=user.company.slug %}">
             <i class="fas fa-users me-2"></i>Usuários
           </a>
           {% endif %}
+          <a class="nav-link {% if 'upload' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'company:upload' company_slug=user.company.slug %}">
+            <i class="fas fa-cloud-upload-alt me-2"></i>Upload
+          </a>
           <a class="nav-link {% if 'verificador' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'company:verificador' company_slug=user.company.slug %}">
             <i class="fas fa-search me-2"></i>Verificador
           </a>
+          {% if not user.is_company_user %}
           <a class="nav-link {% if 'map_history' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'company:map_history' company_slug=user.company.slug %}">
             <i class="fas fa-history me-2"></i>Histórico
           </a>
           <a class="nav-link" href="#">
             <i class="fas fa-chart-bar me-2"></i>Relatórios
           </a>
+          {% endif %}
         {% endif %}
       </nav>
     </div>

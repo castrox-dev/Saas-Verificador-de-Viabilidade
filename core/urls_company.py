@@ -13,13 +13,13 @@ urlpatterns = [
     # Painel da empresa (para admins)
     path('painel/', views.company_dashboard, name='dashboard'),
     
-    # Verificador (para todos os usuários)
+    # Verificador de viabilidade (redireciona para app verificador)
     path('verificador/', views.company_verificador, name='verificador'),
     
-    # Mapa CTO (para usuários comuns)
-    path('mapa-cto/', views.company_mapa_cto, name='mapa_cto'),
-    path('mapa-cto/upload/', views.company_map_upload, name='map_upload'),
-    path('mapa-cto/verificar-coordenadas/', views.company_verificar_coordenadas, name='verificar_coordenadas'),
+    # Upload de mapas CTO (página de upload)
+    path('upload/', views.company_map_upload_page, name='upload'),
+    path('upload/arquivo/', views.company_map_upload, name='map_upload'),
+    path('verificar-coordenadas/', views.company_verificar_coordenadas, name='verificar_coordenadas'),
     
     # Gestão de usuários da empresa (apenas admins)
     path('painel/usuarios/', views.company_user_list, name='user_list'),

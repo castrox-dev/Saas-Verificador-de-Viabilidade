@@ -191,21 +191,53 @@
   document.querySelectorAll('.js-delete-company').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = btn.getAttribute('data-company-id');
-      const confirmed = confirm('Tem certeza que deseja excluir esta empresa? Todos os usuários e mapas associados serão removidos.');
-      if (!confirmed) return;
+      
       try {
+        // Primeira requisição - obter informações de dependências
         const resp = await fetch(`{% url 'rm:company_delete' 0 %}`.replace('/0/', `/${id}/`), {
           method: 'POST',
           headers: { 'X-CSRFToken': csrftoken },
         });
         const data = await resp.json();
-        if (data.success) {
+        
+        if (data.requires_confirmation) {
+          // Mostrar confirmação com informações de dependências
+          const warning = data.warning || 'A exclusão desta empresa também excluirá usuários e mapas associados.';
+          const deps = data.dependencies || {};
+          const confirmMsg = `${warning}\n\n` +
+                           `Empresa: ${deps.company_name || 'N/A'}\n` +
+                           `Usuários: ${deps.users || 0}\n` +
+                           `Mapas: ${deps.maps || 0}\n\n` +
+                           `Tem certeza que deseja continuar?`;
+          
+          if (!confirm(confirmMsg)) return;
+          
+          // Segunda requisição - confirmar exclusão
+          const confirmResp = await fetch(`{% url 'rm:company_delete' 0 %}`.replace('/0/', `/${id}/`), {
+            method: 'POST',
+            headers: { 
+              'X-CSRFToken': csrftoken,
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `confirmed=true`
+          });
+          
+          const confirmData = await confirmResp.json();
+          if (confirmData.success) {
+            alert(confirmData.message || 'Empresa excluída com sucesso!');
+            location.reload();
+          } else {
+            alert(confirmData.message || 'Erro ao excluir empresa.');
+          }
+        } else if (data.success) {
+          // Resposta direta de sucesso (caso não precise confirmação)
           location.reload();
         } else {
           alert(data.message || 'Erro ao excluir empresa.');
         }
       } catch (e) {
-        alert('Erro ao excluir empresa.');
+        console.error('Erro ao excluir empresa:', e);
+        alert('Erro ao excluir empresa. Verifique o console para mais detalhes.');
       }
     });
   });

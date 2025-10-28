@@ -50,12 +50,13 @@ user_management_required = user_passes_test(lambda u: can_manage_users(u) or u.i
 # map_upload_required removido - funcionalidade de upload foi consolidada
 
 
-def company_access_required(require_admin=False):
+def company_access_required(require_admin=False, allow_user_role=True):
     """
     Decorator que garante acesso multi-tenant por slug de empresa.
     - RM admins e superusers sempre têm acesso.
     - Caso contrário, o usuário deve pertencer à empresa do slug.
     - Se require_admin=True, o usuário também deve ser COMPANY_ADMIN.
+    - Se allow_user_role=False, COMPANY_USER não pode acessar (exceto verificador).
     Respostas padrão: 403 HTML.
     """
     def decorator(view_func):
@@ -78,6 +79,13 @@ def company_access_required(require_admin=False):
             # Verificação de pertencimento
             if not user.company or user.company != company:
                 return HttpResponseForbidden()
+            
+            # COMPANY_USER só pode acessar verificador e upload
+            if user.role == 'COMPANY_USER' and not allow_user_role:
+                # Redirecionar para verificador se tentar acessar outras páginas
+                from django.shortcuts import redirect
+                return redirect('company:verificador', company_slug=company_slug)
+            
             # Se requer admin, validar
             if require_admin and not getattr(user, 'is_company_admin', False):
                 return HttpResponseForbidden()

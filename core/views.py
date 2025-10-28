@@ -237,44 +237,42 @@ def company_login_view(request, company_slug):
         
         user = authenticate(request, username=username, password=password)
         
-        # Debug logging
-        logger.info(f"Login attempt for company: {company_slug}, input: {input_id}, resolved username: {username}")
+        # Debug logging (apenas em nível DEBUG para não expor informações sensíveis)
+        logger.debug(f"Login attempt for company: {company_slug}")
         if user:
-            logger.info(f"User found: {user.username}, company: {user.company}, is_active: {user.is_active}")
-            if user.company:
-                logger.info(f"User company slug: {user.company.slug}")
-            else:
-                logger.info("User has no company associated")
+            logger.debug(f"User authentication successful for company: {company_slug}")
+            if not user.company:
+                logger.warning("User without company associated attempted login")
         else:
-            logger.info("Authentication failed")
+            logger.debug("Authentication failed - invalid credentials")
         
         if user is not None and user.company and user.company.slug == company_slug:
             login(request, user)
-            logger.info(f"Login successful for {company_slug}")
+            # Log apenas sucesso sem informações sensíveis
+            logger.info(f"Successful login for company: {company_slug}")
             # Redirecionar conforme o papel do usuário
             if user.role == 'COMPANY_ADMIN':
                 return redirect('company:dashboard', company_slug=company_slug)
+            elif user.role == 'COMPANY_USER':
+                # Usuários comuns vão direto para o verificador
+                return redirect('company:verificador', company_slug=company_slug)
             else:
-                # Usuários padrão vão para o verificador
+                # Fallback para verificador
                 return redirect('company:verificador', company_slug=company_slug)
         else:
-            logger.info("Login failed: user not found, no company, or wrong company")
+            logger.warning(f"Failed login attempt for company: {company_slug} - invalid credentials or wrong company")
             messages.error(request, 'Credenciais inválidas para esta empresa.')
     return render(request, 'company/login.html', context)
 
 
 @login_required
-@company_access_required(require_admin=False)
+@company_access_required(require_admin=False, allow_user_role=False)
 def company_dashboard(request, company_slug):
+    """Dashboard - apenas para COMPANY_ADMIN e RM"""
     company = get_object_or_404(Company, slug=company_slug)
     
-    # Debug logging
-    logger.info(f"Dashboard access for company: {company_slug}")
-    logger.info(f"User: {request.user.username}, Company: {request.user.company}, Role: {request.user.role}")
-    
-    # Redirecionar usuários comuns para o mapa CTO
-    if request.user.role == 'COMPANY_USER':
-        return redirect('company:mapa_cto', company_slug=company_slug)
+    # Debug logging (apenas em nível DEBUG para não expor informações sensíveis)
+    logger.debug(f"Dashboard access - company: {company_slug}, user_id: {request.user.id}, role: {request.user.role}")
     
     users_qs = CustomUser.objects.filter(company=company)
     maps_qs = CTOMapFile.objects.filter(company=company)
@@ -288,45 +286,39 @@ def company_dashboard(request, company_slug):
 
 
 @login_required
-@company_access_required(require_admin=False)
+@company_access_required(require_admin=False, allow_user_role=True)
 def company_verificador(request, company_slug):
+    """Verificador - acessível para todos os usuários da empresa"""
+    from django.shortcuts import redirect
+    return redirect('verificador:verificador_view', company_slug=company_slug)
+
+
+@login_required
+@company_access_required(require_admin=False, allow_user_role=True)
+def company_map_upload_page(request, company_slug):
+    """Página de upload de mapas CTO"""
     import os
     company = get_object_or_404(Company, slug=company_slug)
-    form = CTOMapFileForm()
-    maps = CTOMapFile.objects.filter(company=company).order_by('-uploaded_at')[:10]
+    maps = CTOMapFile.objects.filter(company=company).order_by('-uploaded_at')[:20]
     
     # Adicionar informações de tamanho de arquivo com tratamento de erro
     for map in maps:
         try:
             if map.file and map.file.name:
                 map.file_size_bytes = os.path.getsize(map.file.path) if os.path.exists(map.file.path) else None
+                map.original_filename = os.path.basename(map.file.name)
             else:
                 map.file_size_bytes = None
+                map.original_filename = getattr(map, 'description', 'N/A')
         except (FileNotFoundError, ValueError, OSError):
             map.file_size_bytes = None
-    
-    context = {
-        'company': company,
-        'form': form,
-        'maps': maps,
-    }
-    return render(request, 'verificador/company_verifier.html', context)
-
-
-@login_required
-@company_access_required(require_admin=False)
-def company_mapa_cto(request, company_slug):
-    """Página do mapa CTO para usuários comuns da empresa"""
-    company = get_object_or_404(Company, slug=company_slug)
-    
-    # Get maps for this company
-    maps = CTOMapFile.objects.filter(company=company).order_by('-uploaded_at')
+            map.original_filename = getattr(map, 'description', 'N/A')
     
     context = {
         'company': company,
         'maps': maps,
     }
-    return render(request, 'company/mapa_cto.html', context)
+    return render(request, 'core/upload_page.html', context)
 
 
 @login_required
@@ -533,7 +525,7 @@ def company_map_delete(request, company_slug, pk):
     """Deletar mapa da empresa"""
     if not (request.user.is_company_admin or request.user.is_rm_admin or request.user.is_superuser):
         messages.error(request, 'Sem permissão para excluir arquivos')
-        return redirect('company:mapa_cto', company_slug=company_slug)
+        return redirect('company:upload', company_slug=company_slug)
 
     company = get_object_or_404(Company, slug=company_slug)
     map_file = get_object_or_404(CTOMapFile, pk=pk, company=company)
@@ -552,11 +544,11 @@ def company_map_delete(request, company_slug, pk):
         logger.error(f"Erro ao excluir arquivo {pk}: {str(e)}")
         messages.error(request, 'Erro ao excluir arquivo. Tente novamente.')
     
-    return redirect('company:mapa_cto', company_slug=company_slug)
+    return redirect('company:upload', company_slug=company_slug)
 
 
 @login_required
-@company_access_required(require_admin=False)
+@company_access_required(require_admin=False, allow_user_role=False)
 def company_map_history(request, company_slug):
     company = get_object_or_404(Company, slug=company_slug)
     maps = CTOMapFile.objects.filter(company=company).order_by('-uploaded_at')
@@ -875,12 +867,131 @@ def company_user_toggle(request, company_slug, user_id):
 @rm_admin_required
 @require_http_methods(["POST"])
 def rm_company_delete(request, company_id):
+    """
+    Exclui uma empresa com validações de segurança e dependências
+    
+    Validações:
+    - Verifica se empresa existe
+    - Conta dependências (usuários, mapas)
+    - Requer confirmação explícita
+    - Faz backup/log da ação
+    - Remove em transação para garantir integridade
+    """
     company = get_object_or_404(Company, id=company_id)
+    
+    # Verificar confirmação
+    confirmed = request.POST.get('confirmed', 'false').lower() == 'true'
+    if not confirmed:
+        # Retornar informações sobre dependências para confirmação
+        user_count = company.users.count()
+        map_count = company.cto_maps.count()
+        
+        return JsonResponse({
+            'success': False,
+            'requires_confirmation': True,
+            'message': 'Confirmação necessária para excluir empresa',
+            'dependencies': {
+                'users': user_count,
+                'maps': map_count,
+                'company_name': company.name
+            },
+            'warning': f'A exclusão desta empresa também excluirá {user_count} usuário(s) e {map_count} mapa(s) associado(s).'
+        }, status=400)
+    
+    # Validar dependências
+    user_count = company.users.count()
+    map_count = company.cto_maps.count()
+    
+    # Log da tentativa de exclusão
+    logger.warning(
+        f"Tentativa de exclusão de empresa: {company.name} (ID: {company.id})",
+        extra={
+            'user_id': request.user.id,
+            'company_id': company.id,
+            'company_name': company.name,
+            'user_count': user_count,
+            'map_count': map_count,
+            'timestamp': timezone.now().isoformat()
+        }
+    )
+    
+    # Executar exclusão em transação
     try:
-        company.delete()
-        return JsonResponse({'success': True})
-    except Exception:
-        return JsonResponse({'success': False, 'message': 'Falha ao excluir empresa'}, status=500)
+        with transaction.atomic():
+            # Coletar informações antes da exclusão para log
+            company_info = {
+                'name': company.name,
+                'cnpj': company.cnpj,
+                'email': company.email,
+                'slug': company.slug,
+                'user_count': user_count,
+                'map_count': map_count
+            }
+            
+            # Remover arquivos físicos dos mapas antes de excluir
+            for map_file in company.cto_maps.all():
+                try:
+                    if map_file.file and os.path.exists(map_file.file.path):
+                        os.remove(map_file.file.path)
+                        logger.debug(f"Arquivo de mapa removido: {map_file.file.path}")
+                except Exception as file_error:
+                    logger.warning(f"Erro ao remover arquivo de mapa {map_file.id}: {file_error}")
+            
+            # Excluir empresa (cascata excluirá usuários e mapas do banco)
+            company.delete()
+            
+            # Log da exclusão bem-sucedida
+            logger.info(
+                f"Empresa excluída com sucesso: {company_info['name']}",
+                extra={
+                    'user_id': request.user.id,
+                    'deleted_company': company_info,
+                    'timestamp': timezone.now().isoformat()
+                }
+            )
+            
+            # Registrar no audit log
+            try:
+                from .audit_logger import log_user_action
+                log_user_action(
+                    user=request.user,
+                    action='company_deleted',
+                    details={
+                        'company_name': company_info['name'],
+                        'company_cnpj': company_info['cnpj'],
+                        'users_deleted': user_count,
+                        'maps_deleted': map_count
+                    }
+                )
+            except Exception as audit_error:
+                logger.warning(f"Erro ao registrar no audit log: {audit_error}")
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Empresa "{company_info["name"]}" excluída com sucesso',
+                'deleted': {
+                    'company': company_info['name'],
+                    'users': user_count,
+                    'maps': map_count
+                }
+            })
+            
+    except Exception as e:
+        logger.error(
+            f"Erro ao excluir empresa {company.id}: {str(e)}",
+            extra={
+                'user_id': request.user.id,
+                'company_id': company.id,
+                'error': str(e),
+                'timestamp': timezone.now().isoformat()
+            },
+            exc_info=True
+        )
+        
+        return JsonResponse({
+            'success': False,
+            'message': f'Erro ao excluir empresa: {str(e)}'
+        }, status=500)
 
 
 # === RELATÓRIOS E EXPORTAÇÃO ===

@@ -9,15 +9,28 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from django.conf import settings
 
 from core.models import Company, CTOMapFile
+from core.permissions import company_access_required
 from .services import VerificadorService
 from .geocoding import GeocodingService
 from .file_readers import FileReaderService
 
 logger = logging.getLogger(__name__)
+
+
+@login_required
+@company_access_required(require_admin=False)
+def verificador_view(request, company_slug):
+    """View principal do verificador - página com mapa interativo"""
+    company = get_object_or_404(Company, slug=company_slug)
+    
+    context = {
+        'company': company,
+    }
+    return render(request, 'verificador/verificador.html', context)
 
 
 @require_http_methods(["GET"])
@@ -51,25 +64,29 @@ def verificar_arquivo(request, company_slug):
             uploaded_file = request.FILES['file']
             file_type = os.path.splitext(uploaded_file.name)[1][1:].lower()
             
-            # Salvar arquivo temporariamente
+            # Salvar arquivo temporariamente usando context manager
+            import tempfile
             temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp_verificacao')
             os.makedirs(temp_dir, exist_ok=True)
             
             temp_filename = f"{uuid.uuid4()}_{uploaded_file.name}"
             temp_path = os.path.join(temp_dir, temp_filename)
             
-            with open(temp_path, 'wb') as f:
-                for chunk in uploaded_file.chunks():
-                    f.write(chunk)
-            
-            # Verificar arquivo
-            result = VerificadorService.verificar_arquivo(temp_path, file_type)
-            
-            # Limpar arquivo temporário
+            # Usar try/finally para garantir limpeza mesmo em caso de erro
             try:
-                os.remove(temp_path)
-            except Exception as e:
-                logger.warning(f"Erro ao remover arquivo temporário: {e}")
+                with open(temp_path, 'wb') as f:
+                    for chunk in uploaded_file.chunks():
+                        f.write(chunk)
+                
+                # Verificar arquivo
+                result = VerificadorService.verificar_arquivo(temp_path, file_type)
+            finally:
+                # Sempre limpar arquivo temporário
+                try:
+                    if os.path.exists(temp_path):
+                        os.remove(temp_path)
+                except Exception as e:
+                    logger.warning(f"Erro ao remover arquivo temporário: {e}")
             
             if result.get('success'):
                 # Gerar ID único para a análise
@@ -172,7 +189,7 @@ def listar_arquivos(request, company_slug):
         user = request.user
         
         # Buscar mapas da empresa
-        mapas = CTOMapFile.objects.filter(company=company)
+        mapas = CTOMapFile.objects.filter(company=company, is_processed=True)
         
         arquivos = []
         for mapa in mapas:

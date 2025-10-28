@@ -193,14 +193,20 @@
                                     Ações Rápidas
                                 </h5>
                                 <div class="d-grid gap-2">
-                                    <a href="{% url 'company:verificador' company_slug=company.slug %}" class="btn btn-primary">
+                                    <a href="{% url 'company:upload' company_slug=company.slug %}" class="btn btn-primary">
+                                        <i class="fas fa-cloud-upload-alt me-2"></i>
+                                        Upload de Mapas
+                                    </a>
+                                    <a href="{% url 'company:verificador' company_slug=company.slug %}" class="btn btn-outline-primary">
                                         <i class="fas fa-search me-2"></i>
                                         Verificador
                                     </a>
+                                    {% if user.is_company_admin %}
                                     <a href="{% url 'company:user_list' company_slug=company.slug %}" class="btn btn-outline-primary">
                                         <i class="fas fa-users me-2"></i>
                                         Gerenciar Usuários
                                     </a>
+                                    {% endif %}
                                     <a href="{% url 'company:map_history' company_slug=company.slug %}" class="btn btn-outline-primary">
                                         <i class="fas fa-history me-2"></i>
                                         Histórico

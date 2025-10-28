@@ -37,6 +37,7 @@ class VerificadorService:
         Returns:
             Dict com resultados da análise
         """
+        temp_path = None
         try:
             # Salvar arquivo temporariamente
             temp_path = cls._save_temp_file(uploaded_file)
@@ -44,9 +45,6 @@ class VerificadorService:
             
             # Usar serviço Django nativo
             result = DjangoVerificadorService.verificar_arquivo(temp_path, file_type)
-            
-            # Limpar arquivo temporário
-            cls._cleanup_temp_file(temp_path)
             
             # Log da ação
             AuditLogger.log_user_action(
@@ -60,21 +58,24 @@ class VerificadorService:
                     'service': 'django_native'
                 }
             )
-            
-            # Adicionar analysis_id se não existir
-            if result.get('success') and 'analysis_id' not in result:
-                result['analysis_id'] = str(uuid.uuid4())
-                result['status'] = 'completed'
-            
-            return result
-            
         except Exception as e:
             logger.error(f"Erro na verificação Django: {str(e)}")
-            return {
+            result = {
                 'success': False,
                 'error': f'Erro na análise: {str(e)}',
                 'status': 'failed'
             }
+        finally:
+            # Sempre limpar arquivo temporário, mesmo em caso de erro
+            if temp_path:
+                cls._cleanup_temp_file(temp_path)
+        
+        # Adicionar analysis_id se não existir
+        if result and result.get('success') and 'analysis_id' not in result:
+            result['analysis_id'] = str(uuid.uuid4())
+            result['status'] = 'completed'
+        
+        return result
     
     @classmethod
     def verificar_coordenadas(cls, lat: float, lon: float, company: Company, user: CustomUser) -> Dict[str, Any]:
@@ -243,16 +244,27 @@ class VerificadorService:
     @classmethod
     def _cleanup_temp_file(cls, temp_path: str):
         """
-        Remove arquivo temporário
+        Remove arquivo temporário de forma segura
         
         Args:
             temp_path: Caminho do arquivo temporário
         """
         try:
-            if os.path.exists(temp_path):
+            if temp_path and os.path.exists(temp_path):
                 os.remove(temp_path)
+                logger.debug(f"Arquivo temporário removido: {temp_path}")
+        except PermissionError as e:
+            logger.warning(f"Sem permissão para remover arquivo temporário {temp_path}: {e}")
+            # Tentar novamente após um pequeno delay (arquivo pode estar em uso)
+            import time
+            time.sleep(0.1)
+            try:
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+            except Exception as retry_error:
+                logger.error(f"Falha ao remover arquivo temporário após retry {temp_path}: {retry_error}")
         except Exception as e:
-            logger.warning(f"Erro ao remover arquivo temporário {temp_path}: {e}")
+            logger.error(f"Erro inesperado ao remover arquivo temporário {temp_path}: {e}")
     
     @classmethod
     def _get_file_extension(cls, filename: str) -> str:

@@ -84,21 +84,18 @@ class FileReaderService:
                 for arquivo in kmz.namelist():
                     if arquivo.endswith('.kml'):
                         with kmz.open(arquivo) as kml_file:
-                            # Salvar temporariamente o KML
-                            temp_kml = 'temp.kml'
-                            with open(temp_kml, 'wb') as f:
-                                f.write(kml_file.read())
-                            
-                            coordenadas = FileReaderService.ler_kml(temp_kml)
-                            
-                            # Remover arquivo temporário
-                            if os.path.exists(temp_kml):
-                                os.remove(temp_kml)
-                            
-                            if filtrar_brasil:
-                                coordenadas = FileReaderService.filtrar_coordenadas_brasil(coordenadas)
-                            
-                            return coordenadas
+                            # Usar tempfile para garantir limpeza automática
+                            import tempfile
+                            with tempfile.NamedTemporaryFile(mode='wb', suffix='.kml', delete=True) as temp_kml:
+                                temp_kml.write(kml_file.read())
+                                temp_kml.flush()
+                                
+                                coordenadas = FileReaderService.ler_kml(temp_kml.name)
+                                
+                                if filtrar_brasil:
+                                    coordenadas = FileReaderService.filtrar_coordenadas_brasil(coordenadas)
+                                
+                                return coordenadas
             return []
         except Exception as e:
             logger.error(f"Erro ao ler KMZ {caminho_kmz}: {e}")
