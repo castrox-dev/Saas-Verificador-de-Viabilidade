@@ -130,3 +130,35 @@ INTERNAL_IPS = []
 
 # Forçar uso das páginas de erro personalizadas
 DEBUG = True
+
+# ===== CONFIGURAÇÕES FTTH VERIFICADOR =====
+# Baseado no Verificador-De-Viabilidade-main
+
+# Diretórios de mapas (criados automaticamente se não existirem)
+FTTH_MAPAS_ROOT = BASE_DIR / 'Mapas'
+FTTH_KML_DIR = FTTH_MAPAS_ROOT / 'kml'
+FTTH_KMZ_DIR = FTTH_MAPAS_ROOT / 'kmz'
+FTTH_CSV_DIR = FTTH_MAPAS_ROOT / 'csv'
+FTTH_XLS_DIR = FTTH_MAPAS_ROOT / 'xls'
+FTTH_XLSX_DIR = FTTH_MAPAS_ROOT / 'xlsx'
+
+# Configurações de roteamento
+ROUTING_TIMEOUT = int(os.getenv('ROUTING_TIMEOUT', '15'))  # Timeout em segundos
+ENABLE_ROUTE_CACHE = True
+MAX_CACHE_SIZE = 1000
+
+# Configurações de viabilidade (distâncias em metros)
+FTTH_VIABILIDADE_CONFIG = {
+    'viavel': int(os.getenv('VIABILIDADE_VIABLE', '300')),      # Até 300m = Viável
+    'limitada': int(os.getenv('VIABILIDADE_LIMITADA', '800')),  # 300-800m = Viabilidade Limitada  
+    'inviavel': int(os.getenv('VIABILIDADE_INVIAVEL', '800'))   # Acima de 800m = Sem Viabilidade
+}
+
+# OpenRouteService API Key (opcional - para melhor qualidade de roteamento)
+OPENROUTESERVICE_API_KEY = os.getenv('OPENROUTESERVICE_API_KEY', '')
+
+# Criar diretórios de mapas se não existirem (apenas se não for test)
+import sys
+if 'test' not in sys.argv:
+    for directory in [FTTH_MAPAS_ROOT, FTTH_KML_DIR, FTTH_KMZ_DIR, FTTH_CSV_DIR, FTTH_XLS_DIR, FTTH_XLSX_DIR]:
+        directory.mkdir(parents=True, exist_ok=True)

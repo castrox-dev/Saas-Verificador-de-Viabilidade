@@ -13,6 +13,7 @@ from django.conf import settings
 
 from .file_readers import FileReaderService
 from .routing import RoutingService
+from .utils import get_all_ctos, classificar_viabilidade
 from core.models import CTOMapFile, Company
 
 logger = logging.getLogger(__name__)
@@ -173,7 +174,7 @@ class VerificadorService:
                 return {"erro": "Nenhum CTO válido encontrado"}
             
             # Classificar viabilidade
-            viabilidade = RoutingService.classificar_viabilidade(menor_distancia)
+            viabilidade = classificar_viabilidade(menor_distancia)
             
             # Preparar resposta
             resultado = {
@@ -206,15 +207,23 @@ class VerificadorService:
     def _obter_ctos_empresa(cls, company: Company) -> List[Dict]:
         """
         Obtém todos os CTOs de uma empresa dos mapas salvos
+        Integra com sistema de diretórios FTTH e mapas da empresa
         """
         try:
-            # Buscar mapas CTO da empresa
+            # Verificar cache primeiro
+            cache_key = f"ctos_empresa_{company.slug}"
+            cached_ctos = cache.get(cache_key)
+            if cached_ctos:
+                logger.debug(f"Cache HIT para CTOs da empresa {company.slug}")
+                return cached_ctos
+            
+            ctos = []
+            
+            # 1. Buscar mapas CTO da empresa (sistema SaaS)
             mapas = CTOMapFile.objects.filter(
                 company=company,
                 is_processed=True
             ).select_related('company')
-            
-            ctos = []
             
             for mapa in mapas:
                 if not mapa.file:
@@ -231,8 +240,22 @@ class VerificadorService:
                 for coord in coords:
                     coord["arquivo"] = os.path.basename(arquivo_path)
                     coord["mapa_id"] = mapa.id
+                    coord["fonte"] = "empresa"
                     ctos.append(coord)
             
+            # 2. Buscar CTOs dos diretórios FTTH (sistema global)
+            try:
+                ctos_globais = get_all_ctos()
+                for coord in ctos_globais:
+                    coord["fonte"] = "global"
+                    ctos.append(coord)
+            except Exception as e:
+                logger.warning(f"Erro ao carregar CTOs globais: {e}")
+            
+            # Salvar no cache por 30 minutos
+            cache.set(cache_key, ctos, 1800)
+            
+            logger.info(f"CTOs encontrados para {company.name}: {len(ctos)} (Empresa: {len([c for c in ctos if c.get('fonte') == 'empresa'])}, Global: {len([c for c in ctos if c.get('fonte') == 'global'])})")
             return ctos
         except Exception as e:
             logger.error(f"Erro ao obter CTOs da empresa {company.slug}: {e}")

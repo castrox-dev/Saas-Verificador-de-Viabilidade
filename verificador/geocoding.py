@@ -8,6 +8,7 @@ import time
 from typing import Optional, Dict
 from django.core.cache import cache
 from django.conf import settings
+from .utils import get_cached_geocoding, set_cached_geocoding
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +35,8 @@ class GeocodingService:
         if not endereco:
             return None
         
-        # Verificar cache primeiro
-        cache_key = f"geocode_{endereco.lower().strip()}"
-        cached_result = cache.get(cache_key)
+        # Verificar cache persistente primeiro
+        cached_result = get_cached_geocoding(endereco)
         if cached_result:
             logger.debug(f"Cache HIT para geocodificação: {endereco}")
             return cached_result
@@ -63,8 +63,8 @@ class GeocodingService:
                     'endereco_completo': resultado['display_name']
                 }
                 
-                # Armazenar no cache
-                cache.set(cache_key, geocoding_result, cls.CACHE_TTL)
+                # Armazenar no cache persistente
+                set_cached_geocoding(endereco, geocoding_result)
                 logger.info(f"Geocodificação bem-sucedida: {endereco}")
                 return geocoding_result
             else:

@@ -19,6 +19,7 @@ class RoutingService:
     # Configurações
     ROUTING_TIMEOUT = getattr(settings, 'ROUTING_TIMEOUT', 15)
     BASE_URL = "https://router.project-osrm.org/route/v1/driving"
+    OPENROUTESERVICE_API_KEY = getattr(settings, 'OPENROUTESERVICE_API_KEY', '')
     
     # Session HTTP compartilhada
     _session = None
@@ -110,15 +111,21 @@ class RoutingService:
     @staticmethod
     def classificar_viabilidade(distancia_metros: float) -> dict:
         """
-        Classifica a viabilidade baseada na distância
+        Classifica a viabilidade baseada na distância usando configurações do settings
         """
-        if distancia_metros <= 300:
+        config = getattr(settings, 'FTTH_VIABILIDADE_CONFIG', {
+            'viavel': 300,
+            'limitada': 800,
+            'inviavel': 800
+        })
+        
+        if distancia_metros <= config['viavel']:
             return {
                 "status": "Viável",
                 "cor": "#28a745",  # Verde
                 "descricao": "Instalação viável"
             }
-        elif distancia_metros <= 1000:
+        elif distancia_metros <= config['limitada']:
             return {
                 "status": "Viabilidade Limitada", 
                 "cor": "#ffc107",  # Amarelo
