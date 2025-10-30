@@ -207,13 +207,26 @@ class CTOMapFile(models.Model):
         """Validações customizadas"""
         super().clean()
         
-        # Verificar se o usuário pode fazer upload
-        if self.uploaded_by and not self.uploaded_by.can_upload_maps:
-            raise ValidationError("Usuário não tem permissão para fazer upload de mapas.")
+        # Verificar se o usuário pode fazer upload (exceto RM Admins e superusers)
+        if self.uploaded_by:
+            is_rm_admin = getattr(self.uploaded_by, 'is_rm_admin', False)
+            is_superuser = getattr(self.uploaded_by, 'is_superuser', False)
+            is_company_admin = getattr(self.uploaded_by, 'is_company_admin', False)
+            
+            # RM Admins, superusers e Company Admins sempre podem fazer upload
+            if not (is_rm_admin or is_superuser or is_company_admin):
+                if not self.uploaded_by.can_upload_maps:
+                    raise ValidationError("Usuário não tem permissão para fazer upload de mapas.")
         
-        # Verificar se o usuário pertence à empresa
-        if self.uploaded_by and self.company and self.uploaded_by.company != self.company:
-            raise ValidationError("Usuário não pertence à empresa especificada.")
+        # Verificar se o usuário pertence à empresa (exceto RM Admins e superusers)
+        if self.uploaded_by and self.company:
+            is_rm_admin = getattr(self.uploaded_by, 'is_rm_admin', False)
+            is_superuser = getattr(self.uploaded_by, 'is_superuser', False)
+            
+            # RM Admins e superusers podem fazer upload para qualquer empresa
+            if not (is_rm_admin or is_superuser):
+                if not self.uploaded_by.company or self.uploaded_by.company != self.company:
+                    raise ValidationError("Usuário não pertence à empresa especificada.")
         
         # Determinar tipo de arquivo automaticamente
         if self.file and not self.file_type:

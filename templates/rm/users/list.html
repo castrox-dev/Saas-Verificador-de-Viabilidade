@@ -8,13 +8,31 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 <style>
     body { background-color: var(--rm-bg-primary); color: var(--rm-text-primary); }
-    .navbar { background: var(--rm-gradient-primary); box-shadow: var(--rm-shadow); }
+    /* Ocultar coluna de sidebar e centralizar conteúdo */
+    .sidebar-col { display: none; }
+    .main-content { 
+        padding: 30px; 
+        background-color: var(--rm-bg-primary);
+        display: flex; 
+        justify-content: center; 
+        align-items: center; 
+        min-height: calc(100vh - 76px);
+    }
+    .content-card { 
+        background: var(--rm-card-bg); 
+        border-radius: 15px; 
+        padding: 25px; 
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15), 0 5px 15px rgba(0, 0, 0, 0.1); 
+        border: 1px solid var(--rm-card-border); 
+        color: var(--rm-text-primary);
+        width: 100%; 
+        max-width: 1200px; 
+        margin: 0 auto; 
+    }
     .sidebar { background: var(--rm-sidebar-bg); min-height: calc(100vh - 76px); box-shadow: var(--rm-shadow); border-right: 1px solid var(--rm-sidebar-border); }
     .sidebar .nav-link { color: var(--rm-text-primary); padding: 15px 20px; border-bottom: 1px solid var(--rm-border-primary); transition: all 0.3s; }
     .sidebar .nav-link:hover { background-color: var(--rm-bg-secondary); color: var(--rm-primary); transform: translateX(5px); }
     .sidebar .nav-link.active { background-color: var(--rm-primary); color: var(--rm-white); }
-    .main-content { padding: 30px; background-color: var(--rm-bg-primary); }
-    .content-card { background: var(--rm-card-bg); border-radius: 15px; padding: 25px; box-shadow: var(--rm-card-shadow); border: 1px solid var(--rm-card-border); color: var(--rm-text-primary); }
     .btn-primary { background: var(--rm-primary); border: none; border-radius: 10px; color: var(--rm-white); }
     .btn-primary:hover { background: var(--rm-primary-dark); transform: translateY(-2px); box-shadow: var(--rm-shadow-lg); }
     .status-badge { padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
@@ -28,7 +46,7 @@
         overflow-x: auto; 
         -webkit-overflow-scrolling: touch;
         border-radius: 12px;
-        box-shadow: var(--rm-shadow);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12), 0 3px 10px rgba(0, 0, 0, 0.08);
         margin: 0 -15px;
         padding: 0 15px;
     }
@@ -49,36 +67,100 @@
     .content-card {
         overflow: hidden;
     }
+    /* Estilos para Ações Rápidas seguindo o tema */
+    .card {
+        background: var(--rm-card-bg) !important;
+        border: 1px solid var(--rm-card-border) !important;
+        color: var(--rm-text-primary) !important;
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+    }
+    .card-body {
+        background: var(--rm-card-bg) !important;
+        color: var(--rm-text-primary) !important;
+    }
+    .card-title {
+        color: var(--rm-text-primary) !important;
+    }
+    .btn-outline-primary {
+        border-color: var(--rm-primary) !important;
+        color: var(--rm-primary) !important;
+    }
+    .btn-outline-primary:hover {
+        background-color: var(--rm-primary) !important;
+        color: var(--rm-white) !important;
+    }
+    .btn-outline-success {
+        border-color: var(--rm-success) !important;
+        color: var(--rm-success) !important;
+    }
+    .btn-outline-success:hover {
+        background-color: var(--rm-success) !important;
+        color: var(--rm-white) !important;
+    }
+    .btn-outline-warning {
+        border-color: var(--rm-warning) !important;
+        color: var(--rm-warning) !important;
+    }
+    .btn-outline-warning:hover {
+        background-color: var(--rm-warning) !important;
+        color: var(--rm-white) !important;
+    }
+    .btn-outline-info {
+        border-color: var(--rm-info) !important;
+        color: var(--rm-info) !important;
+    }
+    .btn-outline-info:hover {
+        background-color: var(--rm-info) !important;
+        color: var(--rm-white) !important;
+    }
+    /* Estilo para linha clicável */
+    .user-row:hover {
+        background-color: var(--rm-bg-secondary) !important;
+        transition: background-color 0.2s ease;
+    }
+    /* Modal de detalhes do usuário */
+    .user-details-modal .modal-content {
+        background: var(--rm-card-bg);
+        color: var(--rm-text-primary);
+        border: 1px solid var(--rm-card-border);
+    }
+    .user-details-modal .modal-header {
+        background: var(--rm-gradient-primary);
+        color: var(--rm-white);
+        border-bottom: 1px solid var(--rm-card-border);
+    }
+    .user-details-modal .modal-body {
+        background: var(--rm-card-bg);
+        color: var(--rm-text-primary);
+    }
+    .user-details-modal .modal-footer {
+        background: var(--rm-card-bg);
+        border-top: 1px solid var(--rm-card-border);
+    }
+    .user-detail-item {
+        padding: 12px 0;
+        border-bottom: 1px solid var(--rm-border-primary);
+    }
+    .user-detail-item:last-child {
+        border-bottom: none;
+    }
+    .user-detail-label {
+        font-weight: 600;
+        color: var(--rm-text-secondary);
+        margin-bottom: 4px;
+    }
+    .user-detail-value {
+        color: var(--rm-text-primary);
+        font-size: 1.05rem;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="{% url 'rm:admin_dashboard' %}">
-                <!-- Logo removido -->
-            </a>
-            <div class="navbar-nav ms-auto">
-                <div class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                        <i class="fas fa-user-circle me-1"></i>
-                        {{ user.username }}
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{% url 'rm:logout' %}">
-                            <i class="fas fa-sign-out-alt me-2"></i>Sair
-                        </a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </nav>
-
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2 px-0">
+            <div class="col-md-3 col-lg-2 px-0 sidebar-col">
                 <div class="sidebar">
                     <nav class="nav flex-column">
                         <a class="nav-link" href="{% url 'rm:admin_dashboard' %}">
@@ -101,7 +183,7 @@
             </div>
 
             <!-- Main Content -->
-            <div class="col-md-9 col-lg-10">
+            <div class="col-md-12 col-lg-12">
                 <div class="main-content">
                     <div class="content-card">
                         <div class="d-flex justify-content-between align-items-center mb-4">
@@ -196,9 +278,9 @@
                         <!-- Ações Rápidas -->
                         <div class="row mb-4">
                             <div class="col-12">
-                                <div class="card bg-light">
+                                <div class="card">
                                     <div class="card-body">
-                                        <h6 class="card-title mb-3">
+                                        <h6 class="card-title mb-3" style="color: var(--rm-text-primary);">
                                             <i class="fas fa-bolt me-2"></i>Ações Rápidas
                                         </h6>
                                         <div class="row">
@@ -276,18 +358,16 @@
                                         </th>
                                         <th>Nome</th>
                                         <th>E-mail</th>
-                                        <th>Telefone</th>
                                         <th>Função</th>
                                         <th>Empresa</th>
-                                        <th>Último Acesso</th>
                                         <th>Status</th>
                                         <th>Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for u in users %}
-                                        <tr>
-                                            <td>
+                                        <tr class="user-row" style="cursor: pointer;" data-user-id="{{ u.id }}" onclick="showUserDetails({{ u.id }})">
+                                            <td onclick="event.stopPropagation();">
                                                 <input type="checkbox" class="user-checkbox" value="{{ u.id }}">
                                             </td>
                                             <td>
@@ -303,7 +383,6 @@
                                                 </div>
                                             </td>
                                             <td>{{ u.email }}</td>
-                                            <td>{{ u.phone|default:'-' }}</td>
                                             <td>
                                                 {% if u.role == 'RM' %}
                                                     <span class="badge bg-purple role-badge" style="background-color:#764ba2">{{ u.get_role_display }}</span>
@@ -315,15 +394,6 @@
                                             </td>
                                             <td>{% if u.company %}{{ u.company.name }}{% else %}-{% endif %}</td>
                                             <td>
-                                                <small class="text-muted">
-                                                    {% if u.last_login %}
-                                                        {{ u.last_login|date:"d/m/Y H:i" }}
-                                                    {% else %}
-                                                        Nunca
-                                                    {% endif %}
-                                                </small>
-                                            </td>
-                                            <td>
                                                 {% if u.is_active %}
                                                     <span class="status-badge status-active">
                                                         <i class="fas fa-check-circle me-1"></i>Ativo
@@ -334,7 +404,7 @@
                                                     </span>
                                                 {% endif %}
                                             </td>
-                                            <td>
+                                            <td onclick="event.stopPropagation();">
                                                 <div class="btn-group" role="group">
                                                     <a href="{% url 'rm:user_edit' u.id %}"
                                                        class="btn btn-sm btn-outline-primary"
@@ -343,22 +413,16 @@
                                                     </a>
                                                     <button type="button"
                                                             class="btn btn-sm btn-outline-{% if u.is_active %}warning{% else %}success{% endif %}"
--                                                            onclick="toggleUserStatus({{ u.id }})"
--                                                            data-user-id="{{ u.id }}"
--                                                            onclick="toggleUserStatus(this.dataset.userId)"
-+                                                            data-user-id="{{ u.id }}"
-+                                                            onclick="toggleUserStatus(this.dataset.userId)"
+                                                            data-user-id="{{ u.id }}"
+                                                            onclick="toggleUserStatus(this.dataset.userId)"
                                                             title="{% if u.is_active %}Desativar{% else %}Ativar{% endif %}">
                                                         <i class="fas fa-{% if u.is_active %}pause{% else %}play{% endif %}"></i>
                                                     </button>
                                                     {% if not u.is_superuser and u.id != user.id %}
                                                     <button type="button"
                                                             class="btn btn-sm btn-outline-danger"
--                                                            onclick="deleteUser({{ u.id }})"
--                                                            data-user-id="{{ u.id }}"
--                                                            onclick="deleteUser(this.dataset.userId)"
-+                                                            data-user-id="{{ u.id }}"
-+                                                            onclick="deleteUser(this.dataset.userId)"
+                                                            data-user-id="{{ u.id }}"
+                                                            onclick="deleteUser(this.dataset.userId)"
                                                             title="Apagar">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
@@ -368,7 +432,7 @@
                                         </tr>
                                     {% empty %}
                                         <tr>
-                                            <td colspan="9" class="text-center py-4">
+                                            <td colspan="7" class="text-center py-4">
                                                 <i class="fas fa-users fa-3x text-muted mb-3"></i>
                                                 <p class="text-muted">Nenhum usuário cadastrado</p>
                                                 <a href="{% url 'rm:user_create' %}" class="btn btn-primary">
@@ -384,6 +448,33 @@
 
                         <!-- Pagination placeholder if needed in future -->
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Detalhes do Usuário -->
+    <div class="modal fade user-details-modal" id="userDetailsModal" tabindex="-1" aria-labelledby="userDetailsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="userDetailsModalLabel">
+                        <i class="fas fa-user-circle me-2"></i>Detalhes do Usuário
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body" id="userDetailsContent">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                    <a href="#" id="editUserBtn" class="btn btn-primary">
+                        <i class="fas fa-edit me-2"></i>Editar Usuário
+                    </a>
                 </div>
             </div>
         </div>
@@ -554,6 +645,134 @@
         function getSelectedUsers() {
             const checkboxes = document.querySelectorAll('.user-checkbox:checked');
             return Array.from(checkboxes).map(cb => cb.value);
+        }
+
+        // Função para exibir detalhes do usuário
+        function showUserDetails(userId) {
+            const modal = new bootstrap.Modal(document.getElementById('userDetailsModal'));
+            const contentDiv = document.getElementById('userDetailsContent');
+            const editBtn = document.getElementById('editUserBtn');
+            
+            // Mostrar loading
+            contentDiv.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                    <p class="mt-2">Carregando informações do usuário...</p>
+                </div>
+            `;
+            
+            // Atualizar link de edição
+            editBtn.href = `/rm/usuarios/${userId}/editar/`;
+            
+            // Abrir modal
+            modal.show();
+            
+            // Buscar detalhes do usuário
+            fetch(`/rm/usuarios/${userId}/detalhes/`, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    contentDiv.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Erro ao carregar informações: ${data.error}
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Renderizar detalhes
+                const roleColors = {
+                    'RM': '#764ba2',
+                    'COMPANY_ADMIN': 'var(--rm-primary)',
+                    'COMPANY_USER': 'var(--rm-secondary)'
+                };
+                
+                const statusBadge = data.is_active 
+                    ? '<span class="badge bg-success">Ativo</span>' 
+                    : '<span class="badge bg-danger">Inativo</span>';
+                
+                const roleBadge = `<span class="badge" style="background-color: ${roleColors[data.role_code] || '#6c757d'}">${data.role}</span>`;
+                
+                contentDiv.innerHTML = `
+                    <div class="row mb-4">
+                        <div class="col-12 text-center">
+                            <div class="mb-3">
+                                <i class="fas fa-user-circle" style="font-size: 4rem; color: var(--rm-primary);"></i>
+                            </div>
+                            <h4>${data.full_name || data.username}</h4>
+                            <p class="text-muted">@${data.username}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="user-detail-item">
+                        <div class="user-detail-label"><i class="fas fa-envelope me-2"></i>E-mail</div>
+                        <div class="user-detail-value">${data.email || 'Não informado'}</div>
+                    </div>
+                    
+                    <div class="user-detail-item">
+                        <div class="user-detail-label"><i class="fas fa-phone me-2"></i>Telefone</div>
+                        <div class="user-detail-value">${data.phone}</div>
+                    </div>
+                    
+                    <div class="user-detail-item">
+                        <div class="user-detail-label"><i class="fas fa-user-tag me-2"></i>Função</div>
+                        <div class="user-detail-value">${roleBadge}</div>
+                    </div>
+                    
+                    <div class="user-detail-item">
+                        <div class="user-detail-label"><i class="fas fa-building me-2"></i>Empresa</div>
+                        <div class="user-detail-value">${data.company}</div>
+                    </div>
+                    
+                    <div class="user-detail-item">
+                        <div class="user-detail-label"><i class="fas fa-info-circle me-2"></i>Status</div>
+                        <div class="user-detail-value">${statusBadge} ${data.is_staff ? '<span class="badge bg-info ms-2">Staff</span>' : ''} ${data.is_superuser ? '<span class="badge bg-warning ms-2">Superusuário</span>' : ''}</div>
+                    </div>
+                    
+                    <div class="user-detail-item">
+                        <div class="user-detail-label"><i class="fas fa-calendar-check me-2"></i>Último Acesso</div>
+                        <div class="user-detail-value">${data.last_login}</div>
+                    </div>
+                    
+                    <div class="user-detail-item">
+                        <div class="user-detail-label"><i class="fas fa-calendar-plus me-2"></i>Data de Cadastro</div>
+                        <div class="user-detail-value">${data.date_joined || data.created_at || 'Não disponível'}</div>
+                    </div>
+                    
+                    ${data.updated_at ? `
+                    <div class="user-detail-item">
+                        <div class="user-detail-label"><i class="fas fa-calendar-edit me-2"></i>Última Atualização</div>
+                        <div class="user-detail-value">${data.updated_at}</div>
+                    </div>
+                    ` : ''}
+                    
+                    <div class="user-detail-item">
+                        <div class="user-detail-label"><i class="fas fa-key me-2"></i>Hash da Senha</div>
+                        <div class="user-detail-value">
+                            <code style="font-size: 0.85rem; background: var(--rm-bg-secondary); padding: 4px 8px; border-radius: 4px;">${data.password_hash}</code>
+                            <small class="text-muted d-block mt-1">A senha está criptografada e não pode ser visualizada</small>
+                        </div>
+                    </div>
+                `;
+            })
+            .catch(error => {
+                contentDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Erro ao carregar informações do usuário. Por favor, tente novamente.
+                    </div>
+                `;
+                console.error('Erro:', error);
+            });
         }
     </script>
 {% endblock %}

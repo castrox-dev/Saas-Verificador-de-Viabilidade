@@ -83,9 +83,9 @@
   --rm-sidebar-bg: var(--rm-gray-50);
   --rm-sidebar-border: var(--rm-gray-200);
   
-  --rm-header-bg: var(--rm-white);
-  --rm-header-border: var(--rm-gray-200);
-  --rm-header-shadow: var(--rm-shadow-sm);
+  --rm-header-bg: var(--rm-gradient-primary);
+  --rm-header-border: var(--rm-primary-dark);
+  --rm-header-shadow: var(--rm-shadow);
   
   --rm-footer-bg: var(--rm-gray-50);
   --rm-footer-border: var(--rm-gray-200);

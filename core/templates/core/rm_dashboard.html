@@ -11,10 +11,17 @@
             background-color: var(--rm-bg-primary);
             color: var(--rm-text-primary);
         }
-        .navbar {
-            background: var(--rm-gradient-primary);
-            box-shadow: var(--rm-shadow);
+        /* Ocultar coluna de sidebar e centralizar conteúdo como nas outras telas */
+        .sidebar-col { display: none; }
+        .main-content { 
+            padding: 30px; 
+            background-color: var(--rm-bg-primary);
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: calc(100vh - 76px);
         }
+        .content-card { width: 100%; max-width: 1200px; margin: 0 auto; }
         .sidebar {
             background: var(--rm-sidebar-bg);
             min-height: calc(100vh - 76px);
@@ -35,10 +42,6 @@
         .sidebar .nav-link.active {
             background-color: var(--rm-primary);
             color: var(--rm-white);
-        }
-        .main-content {
-            padding: 30px;
-            background-color: var(--rm-bg-primary);
         }
         .stats-card {
             background: var(--rm-card-bg);
@@ -99,33 +102,12 @@
 {% endblock %}
 
 {% block content %}
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">
-                <i class="fas fa-shield-alt me-2"></i>
-                RM Systems
-            </a>
-            <div class="navbar-nav ms-auto">
-                <div class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                        <i class="fas fa-user-circle me-1"></i>
-                        {{ user.username }}
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{% url 'rm:logout' %}">
-                            <i class="fas fa-sign-out-alt me-2"></i>Sair
-                        </a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </nav>
+    <!-- Navbar local removida para usar a global de base.html -->
 
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2 px-0">
+            <div class="col-md-3 col-lg-2 px-0 sidebar-col">
                 <div class="sidebar">
                     <nav class="nav flex-column">
                         <a class="nav-link active" href="{% url 'rm:admin_dashboard' %}">
@@ -150,6 +132,7 @@
             <!-- Main Content -->
             <div class="col-md-9 col-lg-10">
                 <div class="main-content">
+                    <div class="content-card">
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <h2>Dashboard Administrativo</h2>
                         <div class="text-muted">
@@ -279,6 +262,7 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
                     </div>
                 </div>
             </div>

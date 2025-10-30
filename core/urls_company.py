@@ -14,9 +14,8 @@ urlpatterns = [
     # Painel da empresa (para admins)
     path('painel/', views.company_dashboard, name='dashboard'),
     
-    # Rota nomeada compatível para links antigos: company:verificador
-    path('verificador/', ftth_views.index, name='verificador'),
-    # Verificador de viabilidade (todas as demais URLs do app)
+    # Verificador de viabilidade (todas as URLs do app, incluindo index e APIs)
+    # O include já inclui a rota '' que é o index, então /verificador/ funciona
     path('verificador/', include(('ftth_viewer.urls', 'ftth_viewer'), namespace='ftth_viewer')),
     
     # Upload de mapas CTO (página de upload)

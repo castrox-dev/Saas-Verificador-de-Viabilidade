@@ -1316,6 +1316,7 @@ function setupCTOButtonListeners() {
         
         const filename = button.getAttribute('data-file');
         const fileType = button.getAttribute('data-type');
+        const mapId = button.getAttribute('data-map-id'); // ID do mapa no banco de dados
         
         if (!filename) {
             console.error('Nome do arquivo não encontrado no botão');
@@ -1327,8 +1328,8 @@ function setupCTOButtonListeners() {
         button.disabled = true;
         
         try {
-            // Carregar o arquivo KML/KMZ/CSV/XLS/XLSX
-            await loadKML(filename);
+            // Carregar o arquivo KML/KMZ/CSV/XLS/XLSX (passar ID se disponível)
+            await loadKML(filename, mapId);
             
             // Fechar sidebar em dispositivos móveis
             const sidebar = document.getElementById('sidebar');
@@ -1358,16 +1359,16 @@ function initializeCtoButtons() {
 }
 
 // Nova função: carregar KML/KMZ e exibir CTOs com lazy loading
-async function loadKML(filename) {
+async function loadKML(filename, mapId = null) {
     const timer = performanceMonitor.startTimer('loadKML');
-    console.log('📥 Carregando arquivo:', filename);
-    if (!filename) throw new Error('Nome de arquivo inválido');
+    console.log('📥 Carregando arquivo:', filename, mapId ? `(ID: ${mapId})` : '');
+    if (!filename && !mapId) throw new Error('Nome de arquivo ou ID inválido');
 
-    // Verificar cache primeiro
-    const cacheKey = `coords_${filename}`;
+    // Verificar cache primeiro (usar ID ou filename como chave)
+    const cacheKey = mapId ? `coords_id_${mapId}` : `coords_${filename}`;
     const cachedData = smartCache.get('coordinates', cacheKey);
     if (cachedData) {
-        console.log('📦 Usando dados do cache para:', filename);
+        console.log('📦 Usando dados do cache para:', filename || mapId);
         performanceMonitor.recordCacheHit();
         performanceMonitor.endTimer(timer, 'loadKML-cached');
         return processKMLData(cachedData, filename);
@@ -1380,7 +1381,14 @@ async function loadKML(filename) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s
 
-    const url = `${API_BASE}/coordenadas?arquivo=${encodeURIComponent(filename)}`;
+    // Construir URL com ID se disponível (prioridade) ou filename
+    let url = `${API_BASE}/coordenadas?`;
+    if (mapId) {
+        url += `id=${encodeURIComponent(mapId)}`;
+        if (filename) url += `&arquivo=${encodeURIComponent(filename)}`;
+    } else {
+        url += `arquivo=${encodeURIComponent(filename)}`;
+    }
     let data;
     try {
         const resp = await fetch(url, { signal: controller.signal });
@@ -2742,51 +2750,82 @@ window.apenasMarcar = function(lat, lng) {
 async function loadCTOFiles() {
     try {
         const response = await fetch(`${API_BASE}/arquivos`);
-        const arquivos = await response.json();
+        const data = await response.json();
         
         const ctoGrid = document.querySelector('.cto-grid');
         if (!ctoGrid) return;
         
-        // Mapeamento de ícones por tipo
-        const iconMap = {
-            'kml': { class: 'kml', icon: 'fa-map-marker-alt' },
-            'kmz': { class: 'kmz', icon: 'fa-map-marked-alt' },
-            'csv': { class: 'csv', icon: 'fa-file-csv' },
-            'xls': { class: 'xls', icon: 'fa-file-excel' },
-            'xlsx': { class: 'xlsx', icon: 'fa-file-excel' }
-        };
+        // Limpar todos os botões dinâmicos
+        ctoGrid.innerHTML = '';
         
-        // Limpar apenas os botões dinâmicos (mantém os hardcoded que já existem)
-        // Na verdade, vamos remover todos e recriar apenas os que existem
-        
-        arquivos.forEach(arquivo => {
-            // Verificar se o botão já existe (hardcoded)
-            const existingBtn = document.querySelector(`[data-file="${arquivo.nome}"]`);
-            if (existingBtn) return; // Não duplicar botões já existentes
-            
-            // Criar novo botão para arquivo da API
-            const iconInfo = iconMap[arquivo.tipo] || { class: 'kml', icon: 'fa-map-marker-alt' };
+        // Função helper para criar botão de CTO
+        function createCTOButton(arquivo) {
             const nomeDisplay = arquivo.nome.replace(/\.[^.]+$/, ''); // Remove extensão
             
             const button = document.createElement('button');
             button.className = 'cto-card cto-btn';
             button.setAttribute('data-file', arquivo.nome);
             button.setAttribute('data-type', arquivo.tipo);
+            if (arquivo.id) {
+                button.setAttribute('data-map-id', arquivo.id);
+            }
             
             button.innerHTML = `
-                <div class="cto-icon ${iconInfo.class}">
-                    <i class="fas ${iconInfo.icon}"></i>
+                <div class="cto-icon">
+                    <i class="fas fa-map"></i>
                 </div>
                 <div class="cto-info">
                     <span class="cto-name">${nomeDisplay}</span>
-                    <span class="cto-type">${arquivo.tipo.toUpperCase()}</span>
                 </div>
             `;
             
-            ctoGrid.appendChild(button);
-        });
+            return button;
+        }
         
-        console.log(`✅ ${arquivos.length} arquivos carregados dinamicamente`);
+        // Verificar se está agrupado por empresa
+        if (data.agrupado && data.empresas) {
+            // Renderizar agrupado por empresa
+            Object.keys(data.empresas).sort().forEach(empresaNome => {
+                const arquivos = data.empresas[empresaNome];
+                
+                // Criar seção de empresa
+                const empresaSection = document.createElement('div');
+                empresaSection.className = 'cto-empresa-section';
+                
+                const empresaHeader = document.createElement('div');
+                empresaHeader.className = 'cto-empresa-header';
+                empresaHeader.innerHTML = `
+                    <i class="fas fa-building"></i>
+                    <span class="cto-empresa-nome">${empresaNome}</span>
+                    <span class="cto-empresa-count">(${arquivos.length})</span>
+                `;
+                empresaSection.appendChild(empresaHeader);
+                
+                const empresaGrid = document.createElement('div');
+                empresaGrid.className = 'cto-empresa-grid';
+                
+                arquivos.forEach(arquivo => {
+                    const button = createCTOButton(arquivo);
+                    empresaGrid.appendChild(button);
+                });
+                
+                empresaSection.appendChild(empresaGrid);
+                ctoGrid.appendChild(empresaSection);
+            });
+            
+            const totalArquivos = Object.values(data.empresas).reduce((sum, arr) => sum + arr.length, 0);
+            console.log(`✅ ${totalArquivos} arquivos de ${Object.keys(data.empresas).length} empresas carregados`);
+        } else {
+            // Formato simples (array de arquivos)
+            const arquivos = Array.isArray(data) ? data : [];
+            
+            arquivos.forEach(arquivo => {
+                const button = createCTOButton(arquivo);
+                ctoGrid.appendChild(button);
+            });
+            
+            console.log(`✅ ${arquivos.length} arquivos carregados dinamicamente`);
+        }
     } catch (error) {
         console.error('Erro ao carregar arquivos:', error);
     }

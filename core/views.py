@@ -206,6 +206,33 @@ def rm_user_delete(request, user_id):
 
 @login_required
 @rm_admin_required
+def rm_user_details(request, user_id):
+    """Retorna detalhes completos do usuário em JSON"""
+    user_obj = get_object_or_404(CustomUser, id=user_id)
+    
+    return JsonResponse({
+        'id': user_obj.id,
+        'username': user_obj.username,
+        'email': user_obj.email,
+        'first_name': user_obj.first_name or '',
+        'last_name': user_obj.last_name or '',
+        'full_name': user_obj.get_full_name() or user_obj.username,
+        'phone': user_obj.phone or '-',
+        'role': user_obj.get_role_display(),
+        'role_code': user_obj.role,
+        'company': user_obj.company.name if user_obj.company else '-',
+        'is_active': user_obj.is_active,
+        'is_staff': user_obj.is_staff,
+        'is_superuser': user_obj.is_superuser,
+        'last_login': user_obj.last_login.strftime('%d/%m/%Y %H:%M') if user_obj.last_login else 'Nunca',
+        'date_joined': user_obj.date_joined.strftime('%d/%m/%Y %H:%M') if user_obj.date_joined else None,
+        'created_at': user_obj.created_at.strftime('%d/%m/%Y %H:%M') if hasattr(user_obj, 'created_at') and user_obj.created_at else None,
+        'updated_at': user_obj.updated_at.strftime('%d/%m/%Y %H:%M') if hasattr(user_obj, 'updated_at') and user_obj.updated_at else None,
+        'password_hash': user_obj.password[:20] + '...' + user_obj.password[-10:] if user_obj.password else 'N/A',
+    })
+
+@login_required
+@rm_admin_required
 def rm_user_edit(request, user_id):
     user_obj = get_object_or_404(CustomUser, id=user_id)
     if request.method == 'POST':
@@ -332,12 +359,17 @@ def company_map_upload(request, company_slug):
     company = get_object_or_404(Company, slug=company_slug)
     
     try:
-        # Verificar se o usuário pode fazer upload
-        if not request.user.can_upload_maps:
+        # Verificar se o usuário pode fazer upload (RM/Superuser/Company Admin sempre podem)
+        if not (
+            getattr(request.user, 'is_rm_admin', False)
+            or getattr(request.user, 'is_superuser', False)
+            or getattr(request.user, 'is_company_admin', False)
+            or getattr(request.user, 'can_upload_maps', False)
+        ):
             return JsonResponse({'success': False, 'message': 'Sem permissão para upload'}, status=403)
         
-        # Verificar se o usuário pertence à empresa
-        if request.user.company != company:
+        # Verificar se o usuário pertence à empresa (liberar RM/Superuser)
+        if not (getattr(request.user, 'is_rm_admin', False) or getattr(request.user, 'is_superuser', False)) and request.user.company != company:
             return JsonResponse({'success': False, 'message': 'Acesso negado à empresa'}, status=403)
         
         # Verificar se há arquivo no request

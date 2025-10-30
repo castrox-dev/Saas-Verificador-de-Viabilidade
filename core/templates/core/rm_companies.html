@@ -11,43 +11,48 @@
         background-color: var(--rm-bg-primary);
         color: var(--rm-text-primary);
     }
-    .navbar {
-        background: var(--rm-gradient-primary);
-        box-shadow: var(--rm-shadow);
+    /* Ocultar coluna de sidebar e centralizar conteúdo */
+    .sidebar-col { display: none; }
+    .main-content { 
+        padding: 30px; 
+        background-color: var(--rm-bg-primary);
+        display: flex; 
+        justify-content: center; 
+        align-items: center; 
+        min-height: calc(100vh - 76px);
+    }
+    .content-card { 
+        background: var(--rm-card-bg); 
+        border-radius: 15px; 
+        padding: 25px; 
+        box-shadow: var(--rm-card-shadow); 
+        border: 1px solid var(--rm-card-border); 
+        color: var(--rm-text-primary);
+        width: 100%; 
+        max-width: 1200px; 
+        margin: 0 auto; 
     }
     .sidebar {
         background: var(--rm-sidebar-bg);
         min-height: calc(100vh - 76px);
         box-shadow: var(--rm-shadow);
         border-right: 1px solid var(--rm-sidebar-border);
-        }
-        .sidebar .nav-link {
-            color: var(--rm-text-primary);
-            padding: 15px 20px;
-            border-bottom: 1px solid var(--rm-border-primary);
-            transition: all 0.3s;
-        }
-        .sidebar .nav-link:hover {
-            background-color: var(--rm-bg-secondary);
-            color: var(--rm-primary);
-            transform: translateX(5px);
-        }
-        .sidebar .nav-link.active {
-            background-color: var(--rm-primary);
-            color: var(--rm-white);
-        }
-        .main-content {
-            padding: 30px;
-            background-color: var(--rm-bg-primary);
-        }
-        .content-card {
-            background: var(--rm-card-bg);
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: var(--rm-card-shadow);
-            border: 1px solid var(--rm-card-border);
-            color: var(--rm-text-primary);
-        }
+    }
+    .sidebar .nav-link {
+        color: var(--rm-text-primary);
+        padding: 15px 20px;
+        border-bottom: 1px solid var(--rm-border-primary);
+        transition: all 0.3s;
+    }
+    .sidebar .nav-link:hover {
+        background-color: var(--rm-bg-secondary);
+        color: var(--rm-primary);
+        transform: translateX(5px);
+    }
+    .sidebar .nav-link.active {
+        background-color: var(--rm-primary);
+        color: var(--rm-white);
+    }
         .btn-primary {
             background: var(--rm-primary);
             border: none;
@@ -116,32 +121,10 @@
 {% endblock %}
 
 {% block content %}
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="{% url 'rm:admin_dashboard' %}">
-                <!-- Logo removido -->
-            </a>
-            <div class="navbar-nav ms-auto">
-                <div class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                        <i class="fas fa-user-circle me-1"></i>
-                        {{ user.username }}
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{% url 'rm:logout' %}">
-                            <i class="fas fa-sign-out-alt me-2"></i>Sair
-                        </a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </nav>
-
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2 px-0">
+            <div class="col-md-3 col-lg-2 px-0 sidebar-col">
                 <div class="sidebar">
                     <nav class="nav flex-column">
                         <a class="nav-link" href="{% url 'rm:admin_dashboard' %}">
@@ -164,7 +147,7 @@
             </div>
 
             <!-- Main Content -->
-            <div class="col-md-9 col-lg-10">
+            <div class="col-md-12 col-lg-12">
                 <div class="main-content">
                     <div class="content-card">
                         <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">

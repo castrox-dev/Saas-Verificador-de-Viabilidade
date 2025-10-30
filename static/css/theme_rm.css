@@ -87,8 +87,8 @@
 .col-12{width:100%}
 
 /* Topbar subtle override */
-.topbar a{color:var(--rm-text-primary);transition:all 0.3s ease}
-.topbar a:hover{color:var(--rm-white) !important;background:var(--rm-primary) !important;transform:translateY(-1px);box-shadow:var(--rm-shadow)}
+.topbar a{color:var(--rm-white);transition:all 0.3s ease}
+.topbar a:hover{color:var(--rm-white) !important;background:rgba(255, 255, 255, 0.1) !important;transform:translateY(-1px);box-shadow:var(--rm-shadow)}
 
 /* Navigation links hover fix */
 .nav-link{color:var(--rm-text-primary);transition:all 0.3s ease}
