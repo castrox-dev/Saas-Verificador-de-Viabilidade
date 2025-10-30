@@ -8,19 +8,12 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 <style>
     body { background-color: var(--rm-bg-primary); color: var(--rm-text-primary); }
-    /* Navbar local removida, usamos a do base.html */
+    .navbar { background: var(--rm-gradient-primary); box-shadow: var(--rm-shadow); }
     .sidebar { background: var(--rm-sidebar-bg); min-height: calc(100vh - 76px); box-shadow: var(--rm-shadow); border-right: 1px solid var(--rm-sidebar-border); }
     .sidebar .nav-link { color: var(--rm-text-primary); padding: 15px 20px; border-bottom: 1px solid var(--rm-border-primary); transition: all 0.3s; }
     .sidebar .nav-link:hover { background-color: var(--rm-bg-secondary); color: var(--rm-primary); transform: translateX(5px); }
     .sidebar .nav-link.active { background-color: var(--rm-primary); color: var(--rm-white); }
-    .main-content {
-        padding: 30px;
-        background-color: var(--rm-bg-primary);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: calc(100vh - 76px);
-    }
+    .main-content { padding: 30px; background-color: var(--rm-bg-primary); }
     .content-card { background: var(--rm-card-bg); border-radius: 15px; padding: 25px; box-shadow: var(--rm-card-shadow); border: 1px solid var(--rm-card-border); color: var(--rm-text-primary); }
     .btn-primary { background: var(--rm-primary); border: none; border-radius: 10px; color: var(--rm-white); }
     .btn-primary:hover { background: var(--rm-primary-dark); transform: translateY(-2px); box-shadow: var(--rm-shadow-lg); }
@@ -75,18 +68,36 @@
         border-color: var(--rm-primary-light);
         box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
     }
-    /* Remover a coluna de sidebar para centralização total */
-    .sidebar-col { display: none; }
 </style>
 {% endblock %}
 
 {% block content %}
-    <!-- Navbar local removida (duplicava com base.html) -->
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'rm:admin_dashboard' %}">
+                <!-- Logo removido -->
+            </a>
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user-circle me-1"></i>
+                        {{ user.username }}
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'rm:logout' %}">
+                            <i class="fas fa-sign-out-alt me-2"></i>Sair
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
 
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2 px-0 sidebar-col">
+            <div class="col-md-3 col-lg-2 px-0">
                 <div class="sidebar">
                     <nav class="nav flex-column">
                         <a class="nav-link" href="{% url 'rm:admin_dashboard' %}">
@@ -109,7 +120,7 @@
             </div>
 
             <!-- Main Content -->
-            <div class="col-12">
+            <div class="col-md-9 col-lg-10">
                 <div class="main-content">
                     <div class="content-card">
                         <div class="d-flex justify-content-between align-items-center mb-4">

@@ -1,4 +1,4 @@
-from django.urls import path, include, re_path
+from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from . import views
 from ftth_viewer import views as ftth_views
@@ -16,14 +16,8 @@ urlpatterns = [
     
     # Rota nomeada compatível para links antigos: company:verificador
     path('verificador/', ftth_views.index, name='verificador'),
-    # Rotas explícitas para evitar 404 em chamadas diretas via fetch
-    path('verificador/api/verificar-viabilidade', ftth_views.api_verificar_viabilidade, name='api_verificar_viabilidade_company'),
-    path('verificador/api/verificar-viabilidade/', ftth_views.api_verificar_viabilidade),
-    re_path(r'^verificador/api/verificar-viabilidade/?$', ftth_views.api_verificar_viabilidade),
-    path('verificador/api/arquivos', ftth_views.api_arquivos, name='api_arquivos_company'),
-    path('verificador/api/arquivos/', ftth_views.api_arquivos),
-    path('verificador/api/coordenadas', ftth_views.api_coordenadas, name='api_coordenadas_company'),
-    path('verificador/api/coordenadas/', ftth_views.api_coordenadas),
+    # Verificador de viabilidade (todas as demais URLs do app)
+    path('verificador/', include(('ftth_viewer.urls', 'ftth_viewer'), namespace='ftth_viewer')),
     
     # Upload de mapas CTO (página de upload)
     path('upload/', views.company_map_upload_page, name='upload'),

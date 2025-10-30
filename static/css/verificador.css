@@ -371,17 +371,17 @@
 /* === RESPONSIVIDADE === */
 @media (max-width: 768px) {
   .mapas-cto-page .main-container {
-    margin: 0 0 0 var(--rm-space-lg);
+    margin: 0 0 0 20px;
   }
   
   .main-content {
-    padding: var(--rm-space-md) var(--rm-space-xl);
+    padding: 15px 30px;
     max-width: 100%;
-    margin: 0 0 0 var(--rm-space-lg);
+    margin: 0 0 0 20px;
   }
   
   .upload-area {
-    padding: var(--rm-space-lg) var(--rm-space-lg);
+    padding: 25px 20px;
     max-width: 100%;
   }
   
@@ -396,20 +396,20 @@
   
   .upload-item-actions {
     margin-left: 0;
-    margin-top: var(--rm-space-sm);
+    margin-top: 10px;
   }
   
   .btn-sm {
-    margin: var(--rm-space-xs);
+    margin: 2px;
   }
   
   /* === RESPONSIVIDADE PARA PÁGINA "EM BREVE" === */
   .coming-soon-card {
-    padding: var(--rm-space-2xl) var(--rm-space-lg);
+    padding: 40px 20px;
   }
   
   .coming-soon-title {
-    font-size: var(--rm-font-3xl);
+    font-size: 2rem;
   }
   
   .feature-list {
@@ -417,7 +417,7 @@
   }
   
   .feature-item {
-    padding: var(--rm-space-md);
+    padding: 15px;
   }
 }
 

@@ -11,7 +11,10 @@
             background-color: var(--rm-bg-primary);
             color: var(--rm-text-primary);
         }
-        /* Navbar removida - usamos o header global do base.html */
+        .navbar {
+            background: var(--rm-gradient-primary);
+            box-shadow: var(--rm-shadow);
+        }
         .sidebar {
             background: var(--rm-sidebar-bg);
             min-height: calc(100vh - 76px);
@@ -36,10 +39,6 @@
         .main-content {
             padding: 30px;
             background-color: var(--rm-bg-primary);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: calc(100vh - 76px);
         }
         .stats-card {
             background: var(--rm-card-bg);
@@ -96,17 +95,37 @@
             transform: translateY(-2px);
             box-shadow: var(--rm-shadow-lg);
         }
-        .sidebar-col { display: none; }
     </style>
 {% endblock %}
 
 {% block content %}
-    <!-- Navbar local removida (duplicava com a do base.html) -->
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-shield-alt me-2"></i>
+                RM Systems
+            </a>
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user-circle me-1"></i>
+                        {{ user.username }}
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'rm:logout' %}">
+                            <i class="fas fa-sign-out-alt me-2"></i>Sair
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
 
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2 px-0 sidebar-col">
+            <div class="col-md-3 col-lg-2 px-0">
                 <div class="sidebar">
                     <nav class="nav flex-column">
                         <a class="nav-link active" href="{% url 'rm:admin_dashboard' %}">
@@ -129,7 +148,7 @@
             </div>
 
             <!-- Main Content -->
-            <div class="col-12">
+            <div class="col-md-9 col-lg-10">
                 <div class="main-content">
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <h2>Dashboard Administrativo</h2>

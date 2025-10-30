@@ -15,11 +15,11 @@ urlpatterns = [
     # URLs RM Systems
     path("rm/", include(("core.urls_rm", "rm"), namespace="rm")),
     
-    # URLs específicas por empresa (DEVE vir antes do verificador genérico)
-    re_path(r'^(?P<company_slug>[\w-]+)/', include(("core.urls_company", "company"), namespace="company")),
-    
-    # URLs do verificador (novo app FTTH Viewer) - apenas para acesso direto
+    # URLs do verificador (novo app FTTH Viewer)
     path("verificador/", include(("ftth_viewer.urls", "ftth_viewer"), namespace="verificador")),
+    
+    # URLs específicas por empresa
+    re_path(r'^(?P<company_slug>[\w-]+)/', include(("core.urls_company", "company"), namespace="company")),
     
     # Redirect da raiz para RM
     path("", home_redirect, name="home_redirect"),

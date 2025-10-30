@@ -75,6 +75,21 @@
     };
 })();
 
+// Base de API dinâmica: /<company_slug>/verificador/api ou fallback /verificador/api
+const API_BASE = (() => {
+    try {
+        const parts = window.location.pathname.split('/').filter(Boolean);
+        const first = parts[0] || '';
+        if (first === 'verificador') {
+            return '/verificador/api';
+        }
+        const isCompany = first && first !== 'rm' && first !== 'admin';
+        return isCompany ? `/${first}/verificador/api` : '/verificador/api';
+    } catch (_e) {
+        return '/verificador/api';
+    }
+})();
+
 // ===== DARK MODE FUNCTIONALITY =====
 function initializeThemeToggle() {
     // Aguardar o DOM estar completamente carregado
@@ -1085,27 +1100,11 @@ async function verificarViabilidade(lat, lon, endereco) {
         // Remover notificação desnecessária
         showViabilityLoading(); // Mostrar loading screen
         
-        // Garantir coordenadas: se não vieram, usar o marcador atual
-        if ((lat === undefined || lat === null || isNaN(lat)) || (lon === undefined || lon === null || isNaN(lon))) {
-            if (window.searchMarker && typeof window.searchMarker.getLatLng === 'function') {
-                const p = window.searchMarker.getLatLng();
-                lat = typeof lat === 'number' && !isNaN(lat) ? lat : p.lat;
-                lon = typeof lon === 'number' && !isNaN(lon) ? lon : p.lng;
-            }
-        }
-
-        // Se ainda não houver coordenadas válidas, abortar com mensagem amigável
-        if (lat === undefined || lon === undefined || isNaN(lat) || isNaN(lon)) {
-            hideViabilityLoading();
-            showNotification('Coordenadas não disponíveis. Tente marcar o ponto no mapa novamente.', 'error');
-            return;
-        }
-
         // Timeout para a verificação de viabilidade
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 segundos
         
-        const response = await fetch(buildApiUrl(`api/verificar-viabilidade?lat=${lat}&lon=${lon}`), {
+        const response = await fetch(`${API_BASE}/verificar-viabilidade?lat=${lat}&lon=${lon}`, {
             signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -1315,13 +1314,11 @@ function setupCTOButtonListeners() {
         const button = event.target.closest('.cto-btn');
         if (!button) return;
         
-        const mapId = button.getAttribute('data-map-id');
         const filename = button.getAttribute('data-file');
-        const displayName = button.getAttribute('data-display-name');
         const fileType = button.getAttribute('data-type');
         
-        if (!mapId && !filename) {
-            console.error('Arquivo/Mapa não encontrado no botão');
+        if (!filename) {
+            console.error('Nome do arquivo não encontrado no botão');
             return;
         }
         
@@ -1330,13 +1327,8 @@ function setupCTOButtonListeners() {
         button.disabled = true;
         
         try {
-            // Carregar o arquivo do banco (mapId) ou pelo nome do arquivo
-            if (mapId) {
-                await loadKML(null, mapId, displayName);
-            } else {
-                const base = (filename || '').replace(/\.(kml|kmz|csv|xls|xlsx)$/i, '') || 'mapa';
-                await loadKML(filename, null, base);
-            }
+            // Carregar o arquivo KML/KMZ/CSV/XLS/XLSX
+            await loadKML(filename);
             
             // Fechar sidebar em dispositivos móveis
             const sidebar = document.getElementById('sidebar');
@@ -1366,19 +1358,19 @@ function initializeCtoButtons() {
 }
 
 // Nova função: carregar KML/KMZ e exibir CTOs com lazy loading
-async function loadKML(filename, mapId, displayName) {
+async function loadKML(filename) {
     const timer = performanceMonitor.startTimer('loadKML');
-    console.log('📥 Carregando arquivo:', filename ?? `(by id: ${mapId})`);
-    if (!filename && !mapId) throw new Error('Nome de arquivo inválido');
+    console.log('📥 Carregando arquivo:', filename);
+    if (!filename) throw new Error('Nome de arquivo inválido');
 
     // Verificar cache primeiro
-    const cacheKey = mapId ? `coords_map_${mapId}` : `coords_${filename}`;
+    const cacheKey = `coords_${filename}`;
     const cachedData = smartCache.get('coordinates', cacheKey);
     if (cachedData) {
-        console.log('📦 Usando dados do cache para:', filename ?? `(by id: ${mapId})`);
+        console.log('📦 Usando dados do cache para:', filename);
         performanceMonitor.recordCacheHit();
         performanceMonitor.endTimer(timer, 'loadKML-cached');
-        return processKMLData(cachedData, filename, displayName, mapId);
+        return processKMLData(cachedData, filename);
     }
 
     performanceMonitor.recordCacheMiss();
@@ -1388,9 +1380,7 @@ async function loadKML(filename, mapId, displayName) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s
 
-    const url = mapId
-        ? buildApiUrl(`api/coordenadas?map_id=${encodeURIComponent(mapId)}`)
-        : buildApiUrl(`api/coordenadas?arquivo=${encodeURIComponent(filename)}`);
+    const url = `${API_BASE}/coordenadas?arquivo=${encodeURIComponent(filename)}`;
     let data;
     try {
         const resp = await fetch(url, { signal: controller.signal });
@@ -1534,8 +1524,8 @@ async function loadKML(filename, mapId, displayName) {
     
     // Notificação única de sucesso
     if (typeof showNotification === 'function') {
-        const safeName = displayName || (filename || '').replace(/\.(kml|kmz|csv|xls|xlsx)$/i, '') || `map_${mapId || 'selecionado'}`;
-        showNotification(`${safeName} carregado!`, 'success');
+        const base = filename.replace(/\.(kml|kmz|csv|xls|xlsx)$/i, '');
+        showNotification(`${base} carregado!`, 'success');
     }
 }
 
@@ -1648,7 +1638,7 @@ function processKMLData(data, filename) {
             
             // Notificação de sucesso
             if (typeof showNotification === 'function') {
-                const base = (filename || '').replace(/\.(kml|kmz|csv|xls|xlsx)$/i, '') || 'mapa';
+                const base = filename.replace(/\.(kml|kmz|csv|xls|xlsx)$/i, '');
                 showNotification(`${base} carregado! (${processed} pontos)`, 'success');
             }
         }
@@ -2748,20 +2738,10 @@ window.apenasMarcar = function(lat, lng) {
 };
 
 
-// Helper para construir URL relativa à página atual (ex.: /{slug}/verificador/)
-function buildApiUrl(path) {
-    const clean = path.startsWith('/') ? path.slice(1) : path;
-    const companySlug = document.body && document.body.getAttribute('data-company-slug');
-    if (companySlug) {
-        return `/${companySlug}/verificador/${clean}`;
-    }
-    return new URL(clean, window.location.href).toString();
-}
-
 // Função para carregar arquivos dinamicamente da API
 async function loadCTOFiles() {
     try {
-        const response = await fetch(buildApiUrl('api/arquivos'));
+        const response = await fetch(`${API_BASE}/arquivos`);
         const arquivos = await response.json();
         
         const ctoGrid = document.querySelector('.cto-grid');
@@ -2769,12 +2749,11 @@ async function loadCTOFiles() {
         
         // Mapeamento de ícones por tipo
         const iconMap = {
-            // Usar sempre um ícone de mapa para todos os tipos
-            'kml': { class: 'kml', icon: 'fa-map' },
-            'kmz': { class: 'kmz', icon: 'fa-map' },
-            'csv': { class: 'csv', icon: 'fa-map' },
-            'xls': { class: 'xls', icon: 'fa-map' },
-            'xlsx': { class: 'xlsx', icon: 'fa-map' }
+            'kml': { class: 'kml', icon: 'fa-map-marker-alt' },
+            'kmz': { class: 'kmz', icon: 'fa-map-marked-alt' },
+            'csv': { class: 'csv', icon: 'fa-file-csv' },
+            'xls': { class: 'xls', icon: 'fa-file-excel' },
+            'xlsx': { class: 'xlsx', icon: 'fa-file-excel' }
         };
         
         // Limpar apenas os botões dinâmicos (mantém os hardcoded que já existem)
@@ -2786,19 +2765,13 @@ async function loadCTOFiles() {
             if (existingBtn) return; // Não duplicar botões já existentes
             
             // Criar novo botão para arquivo da API
-            const iconInfo = iconMap[arquivo.tipo] || { class: 'kml', icon: 'fa-map' };
+            const iconInfo = iconMap[arquivo.tipo] || { class: 'kml', icon: 'fa-map-marker-alt' };
             const nomeDisplay = arquivo.nome.replace(/\.[^.]+$/, ''); // Remove extensão
             
             const button = document.createElement('button');
             button.className = 'cto-card cto-btn';
-            if (arquivo.id) {
-                button.setAttribute('data-map-id', arquivo.id);
-                button.setAttribute('data-display-name', nomeDisplay);
-            } else {
-                button.setAttribute('data-file', arquivo.nome);
-                button.setAttribute('data-type', arquivo.tipo);
-                button.setAttribute('data-display-name', nomeDisplay);
-            }
+            button.setAttribute('data-file', arquivo.nome);
+            button.setAttribute('data-type', arquivo.tipo);
             
             button.innerHTML = `
                 <div class="cto-icon ${iconInfo.class}">
@@ -2806,6 +2779,7 @@ async function loadCTOFiles() {
                 </div>
                 <div class="cto-info">
                     <span class="cto-name">${nomeDisplay}</span>
+                    <span class="cto-type">${arquivo.tipo.toUpperCase()}</span>
                 </div>
             `;
             
