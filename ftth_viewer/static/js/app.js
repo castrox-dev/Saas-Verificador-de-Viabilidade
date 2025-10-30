@@ -75,23 +75,20 @@
     };
 })();
 
-// Helper: resolve base de API considerando o prefixo /<company_slug>/verificador
-function getApiUrl(relativePath) {
+// Base de API dinâmica: /<company_slug>/verificador/api ou fallback /verificador/api
+const API_BASE = (() => {
     try {
-        const path = window.location.pathname;
-        // Match /<slug>/verificador/... -> captura <slug>
-        const m = path.match(/^\/(\w[\w-]*)\/verificador\//);
-        if (m && m[1]) {
-            return `/${m[1]}/verificador${relativePath}`;
+        const parts = window.location.pathname.split('/').filter(Boolean);
+        const first = parts[0] || '';
+        if (first === 'verificador') {
+            return '/verificador/api';
         }
-        // Se já estamos em /verificador/ sem slug (ambiente alternativo)
-        const idx = path.indexOf('/verificador/');
-        if (idx !== -1) {
-            return `${path.substring(0, idx + '/verificador'.length)}${relativePath}`;
-        }
-    } catch (e) { /* noop */ }
-    return relativePath;
-}
+        const isCompany = first && first !== 'rm' && first !== 'admin';
+        return isCompany ? `/${first}/verificador/api` : '/verificador/api';
+    } catch (_e) {
+        return '/verificador/api';
+    }
+})();
 
 // ===== DARK MODE FUNCTIONALITY =====
 function initializeThemeToggle() {
@@ -1107,7 +1104,7 @@ async function verificarViabilidade(lat, lon, endereco) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 segundos
         
-        const response = await fetch(getApiUrl(`/api/verificar-viabilidade?lat=${lat}&lon=${lon}`), {
+        const response = await fetch(`${API_BASE}/verificar-viabilidade?lat=${lat}&lon=${lon}`, {
             signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -1383,7 +1380,7 @@ async function loadKML(filename) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s
 
-    const url = getApiUrl(`/api/coordenadas?arquivo=${encodeURIComponent(filename)}`);
+    const url = `${API_BASE}/coordenadas?arquivo=${encodeURIComponent(filename)}`;
     let data;
     try {
         const resp = await fetch(url, { signal: controller.signal });
@@ -2744,7 +2741,7 @@ window.apenasMarcar = function(lat, lng) {
 // Função para carregar arquivos dinamicamente da API
 async function loadCTOFiles() {
     try {
-        const response = await fetch(getApiUrl('/api/arquivos'));
+        const response = await fetch(`${API_BASE}/arquivos`);
         const arquivos = await response.json();
         
         const ctoGrid = document.querySelector('.cto-grid');

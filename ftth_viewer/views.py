@@ -22,14 +22,14 @@ from .models import ViabilidadeCache
 
 
 @login_required
-def index(request, company_slug):
+def index(request, company_slug=None):
     """Página principal do FTTH Viewer"""
     return render(request, 'ftth_viewer/index.html')
 
 
 @login_required
 @require_http_methods(["GET"])
-def api_arquivos(request, company_slug):
+def api_arquivos(request, company_slug=None):
     """Lista todos os arquivos disponíveis (KML, KMZ, CSV, XLS, XLSX)"""
     arquivos = []
     
@@ -57,7 +57,7 @@ def api_arquivos(request, company_slug):
 
 @login_required
 @require_http_methods(["GET"])
-def api_coordenadas(request, company_slug):
+def api_coordenadas(request, company_slug=None):
     """Retorna coordenadas de um arquivo específico"""
     arquivo = request.GET.get('arquivo')
     if not arquivo:
@@ -88,7 +88,7 @@ def api_coordenadas(request, company_slug):
 
 @login_required
 @require_http_methods(["GET"])
-def api_contar_pontos(request, company_slug):
+def api_contar_pontos(request, company_slug=None):
     """Conta o número de pontos em um arquivo"""
     arquivo = request.GET.get('arquivo')
     if not arquivo:
@@ -126,7 +126,7 @@ def api_contar_pontos(request, company_slug):
 
 @login_required
 @require_http_methods(["GET"])
-def api_geocode(request, company_slug):
+def api_geocode(request, company_slug=None):
     """Geocodificação usando OpenStreetMap Nominatim com cache"""
     endereco = request.GET.get('endereco')
     if not endereco:
@@ -170,7 +170,7 @@ def api_geocode(request, company_slug):
 
 @login_required
 @require_http_methods(["GET"])
-def api_verificar_viabilidade(request, company_slug):
+def api_verificar_viabilidade(request, company_slug=None):
     """Verifica viabilidade de instalação FTTH"""
     try:
         lat = request.GET.get("lat")
@@ -293,7 +293,7 @@ def api_verificar_viabilidade(request, company_slug):
 
 @login_required
 @require_http_methods(["GET"])
-def api_cache_geocoding_stats(request, company_slug):
+def api_cache_geocoding_stats(request, company_slug=None):
     """Retorna estatísticas do cache de geocodificação"""
     from .models import GeocodingCache
     from django.utils import timezone
@@ -317,7 +317,7 @@ def api_cache_geocoding_stats(request, company_slug):
 
 @login_required
 @require_http_methods(["POST"])
-def api_cache_geocoding_clear(request, company_slug):
+def api_cache_geocoding_clear(request, company_slug=None):
     """Limpa o cache de geocodificação"""
     from .models import GeocodingCache
     count = GeocodingCache.objects.count()
