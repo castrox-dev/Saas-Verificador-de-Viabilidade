@@ -140,6 +140,16 @@
     </div>
 </div>
 
+<!-- Formulário oculto apenas para disponibilizar o token CSRF (HttpOnly cookie impede leitura via JS) -->
+<form id="csrfHelperForm" style="display:none;" method="post">
+    {% csrf_token %}
+    <input type="hidden" name="company_slug" value="{{ company.slug }}">
+    <input type="hidden" name="_upload_csrf_helper" value="1">
+    <!-- OBS: não será submetido; usado somente para ler o valor do input csrf -->
+    <button type="submit" disabled aria-hidden="true" tabindex="-1"></button>
+    <noscript>CSRF helper</noscript>
+  </form>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const uploadArea = document.getElementById('uploadArea');
@@ -207,27 +217,37 @@ document.addEventListener('DOMContentLoaded', function() {
         const originalContent = uploadArea.innerHTML;
         uploadArea.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i><br>Enviando arquivo...</div>';
 
+        const csrfToken = getCsrfToken();
         fetch('{% url "company:map_upload" company_slug=company.slug %}', {
             method: 'POST',
             body: formData,
             headers: {
-                'X-CSRFToken': getCookie('csrftoken')
-            }
+                'X-CSRFToken': csrfToken || '',
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            },
+            credentials: 'same-origin'
         })
-        .then(response => response.json())
+        .then(async (response) => {
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(`HTTP ${response.status}: ${text.substring(0, 200)}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
-                alert('Arquivo enviado com sucesso!');
+                try { window.showSuccess(`Arquivo "${data.file_name || file.name}" enviado com sucesso!`, 'Upload'); } catch(e) {}
                 location.reload(); // Reload to show new file
             } else {
-                alert('Erro ao enviar arquivo: ' + (data.message || 'Erro desconhecido'));
+                try { window.showError('Erro ao enviar arquivo: ' + (data.message || 'Erro desconhecido'), 'Upload'); } catch(e) { alert('Erro ao enviar arquivo: ' + (data.message || 'Erro desconhecido')); }
                 uploadArea.innerHTML = originalContent;
                 setupEventListeners();
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Erro ao enviar arquivo. Tente novamente.');
+            try { window.showError('Erro ao enviar arquivo. Tente novamente.', 'Upload'); } catch(e) { alert('Erro ao enviar arquivo. Tente novamente.'); }
             uploadArea.innerHTML = originalContent;
             setupEventListeners();
         });
@@ -242,19 +262,20 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
+    function getCsrfToken() {
+        // Prioriza input hidden, pois CSRF_COOKIE_HTTPONLY impede leitura de cookie
+        const input = document.querySelector('#csrfHelperForm input[name="csrfmiddlewaretoken"]');
+        if (input && input.value) return input.value;
+        // Fallback: tenta cookie se disponível (ambientes sem HttpOnly)
+        const name = 'csrftoken';
+        const cookies = document.cookie ? document.cookie.split(';') : [];
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                return decodeURIComponent(cookie.substring(name.length + 1));
             }
         }
-        return cookieValue;
+        return '';
     }
 });
 </script>

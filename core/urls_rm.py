@@ -28,6 +28,7 @@ urlpatterns = [
     path('usuarios/quick-search/', views.rm_user_quick_search, name='user_quick_search'),
     path('usuarios/criar/', views.rm_user_create, name='user_create'),
     path('usuarios/<int:user_id>/editar/', views.rm_user_edit, name='user_edit'),
+    path('usuarios/<int:user_id>/detalhes/', views.rm_user_details, name='user_details'),
     path('usuarios/<int:user_id>/delete/', views.rm_user_delete, name='user_delete'),
     
     # Gestão de mapas (visão global)
