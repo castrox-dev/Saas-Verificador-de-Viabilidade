@@ -11,9 +11,7 @@
     <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
     <link rel="stylesheet" href="{% static 'css/theme_rm.css' %}" />
     <link rel="stylesheet" href="{% static 'css/theme_colors.css' %}" />
-    <link rel="stylesheet" href="{% static 'css/dark-mode.css' %}" />
     <link rel="stylesheet" href="{% static 'css/global.css' %}" />
-    <link rel="stylesheet" href="{% static 'css/optimized.css' %}" />
     <link rel="manifest" href="{% static 'manifest.json' %}" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -126,7 +124,7 @@
     <!-- Skip to main content link for screen readers -->
     <a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
     
-    <header class="topbar" role="banner">
+    <header class="topbar brand-gradient" role="banner">
       <div style="display:flex;align-items:center;gap:10px;">
         <!-- Hamburger Menu Button na navbar - para admins -->
         {% if user.is_authenticated and user.is_company_admin or user.is_rm_admin %}

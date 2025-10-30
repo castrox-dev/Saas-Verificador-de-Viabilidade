@@ -30,11 +30,16 @@
   /* === CORES FUNCIONAIS === */
   --rm-success: #10B981;        /* Verde sucesso */
   --rm-success-dark: #059669;   /* Verde escuro */
+  --rm-success-light: #D1FAE5;  /* Verde claro de fundo */
   --rm-warning: #F59E0B;        /* Amarelo aviso */
-  --rm-warning-dark: #D97706;  /* Amarelo escuro */
+  --rm-warning-dark: #D97706;   /* Amarelo escuro */
+  --rm-warning-light: #FEF3C7;  /* Amarelo claro de fundo */
   --rm-error: #EF4444;          /* Vermelho erro */
   --rm-error-dark: #DC2626;     /* Vermelho escuro */
+  --rm-error-light: #FEE2E2;    /* Vermelho claro de fundo */
   --rm-info: #3B82F6;           /* Azul informação */
+  --rm-info-dark: #1E40AF;      /* Azul escuro */
+  --rm-info-light: #DBEAFE;     /* Azul claro de fundo */
   
   /* === GRADIENTES === */
   --rm-gradient-primary: linear-gradient(135deg, #1D4ED8 0%, #3B82F6 100%);
@@ -90,6 +95,33 @@
   --rm-footer-bg: var(--rm-gray-50);
   --rm-footer-border: var(--rm-gray-200);
   --rm-footer-text: var(--rm-gray-600);
+  
+  /* === ESPAÇAMENTO === */
+  --rm-space-xs: 0.25rem;    /* 4px */
+  --rm-space-sm: 0.5rem;     /* 8px */
+  --rm-space-md: 1rem;       /* 16px */
+  --rm-space-lg: 1.5rem;     /* 24px */
+  --rm-space-xl: 2rem;       /* 32px */
+  --rm-space-2xl: 3rem;      /* 48px */
+  --rm-space-3xl: 4rem;      /* 64px */
+  
+  /* === TIPOGRAFIA === */
+  --rm-font-xs: 0.75rem;     /* 12px */
+  --rm-font-sm: 0.875rem;    /* 14px */
+  --rm-font-base: 1rem;      /* 16px */
+  --rm-font-lg: 1.125rem;    /* 18px */
+  --rm-font-xl: 1.25rem;     /* 20px */
+  --rm-font-2xl: 1.5rem;     /* 24px */
+  --rm-font-3xl: 1.875rem;   /* 30px */
+  --rm-font-4xl: 2.25rem;    /* 36px */
+  
+  /* === BORDAS === */
+  --rm-radius-sm: 0.25rem;   /* 4px */
+  --rm-radius-md: 0.5rem;    /* 8px */
+  --rm-radius-lg: 0.75rem;   /* 12px */
+  --rm-radius-xl: 1rem;      /* 16px */
+  --rm-radius-2xl: 1.5rem;   /* 24px */
+  --rm-radius-full: 9999px;  /* Circular */
 }
 
 /* === MODO ESCURO === */
@@ -135,6 +167,33 @@
   --rm-footer-bg: var(--rm-gray-900);
   --rm-footer-border: var(--rm-gray-700);
   --rm-footer-text: var(--rm-gray-400);
+  
+  /* === ESPAÇAMENTO (mesmo para dark mode) === */
+  --rm-space-xs: 0.25rem;    /* 4px */
+  --rm-space-sm: 0.5rem;     /* 8px */
+  --rm-space-md: 1rem;       /* 16px */
+  --rm-space-lg: 1.5rem;     /* 24px */
+  --rm-space-xl: 2rem;       /* 32px */
+  --rm-space-2xl: 3rem;      /* 48px */
+  --rm-space-3xl: 4rem;      /* 64px */
+  
+  /* === TIPOGRAFIA (mesmo para dark mode) === */
+  --rm-font-xs: 0.75rem;     /* 12px */
+  --rm-font-sm: 0.875rem;    /* 14px */
+  --rm-font-base: 1rem;      /* 16px */
+  --rm-font-lg: 1.125rem;    /* 18px */
+  --rm-font-xl: 1.25rem;     /* 20px */
+  --rm-font-2xl: 1.5rem;     /* 24px */
+  --rm-font-3xl: 1.875rem;   /* 30px */
+  --rm-font-4xl: 2.25rem;    /* 36px */
+  
+  /* === BORDAS (mesmo para dark mode) === */
+  --rm-radius-sm: 0.25rem;   /* 4px */
+  --rm-radius-md: 0.5rem;    /* 8px */
+  --rm-radius-lg: 0.75rem;   /* 12px */
+  --rm-radius-xl: 1rem;      /* 16px */
+  --rm-radius-2xl: 1.5rem;   /* 24px */
+  --rm-radius-full: 9999px;  /* Circular */
 }
 
 /* === TRANSIÇÕES SUAVES === */

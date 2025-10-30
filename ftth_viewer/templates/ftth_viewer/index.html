@@ -24,12 +24,14 @@
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Sincroniza tema com o SaaS principal -->
+    <link rel="stylesheet" href="{% static 'css/theme_colors.css' %}">
     <link rel="stylesheet" href="{% static 'style.css' %}">
     <link rel="stylesheet" href="{% static 'mobile.css' %}">
 
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js" defer></script>
 </head>
-<body>
+<body data-company-slug="{{ company.slug }}">
     <!-- Cabeçalho -->
     <header class="header">
         <div class="header-content">
@@ -114,94 +116,7 @@
                     </div>
                     <h2 class="section-title">CTOs Disponíveis</h2>
                 </div>
-                <div class="cto-grid">
-                    <!-- Arquivos KML -->
-                    <button class="cto-card cto-btn" data-file="Aracatiba.kml" data-type="kml">
-                        <div class="cto-icon kml">
-                            <i class="fas fa-map-marker-alt"></i>
-                        </div>
-                        <div class="cto-info">
-                            <span class="cto-name">Aracatiba</span>
-                            <span class="cto-type">KML</span>
-                        </div>
-                    </button>
-                    <button class="cto-card cto-btn" data-file="Colinas.kml" data-type="kml">
-                        <div class="cto-icon kml">
-                            <i class="fas fa-map-marker-alt"></i>
-                        </div>
-                        <div class="cto-info">
-                            <span class="cto-name">Colinas</span>
-                            <span class="cto-type">KML</span>
-                        </div>
-                    </button>
-                    <button class="cto-card cto-btn" data-file="Itaipuaçu.kml" data-type="kml">
-                        <div class="cto-icon kml">
-                            <i class="fas fa-map-marker-alt"></i>
-                        </div>
-                        <div class="cto-info">
-                            <span class="cto-name">Itaipuaçu</span>
-                            <span class="cto-type">KML</span>
-                        </div>
-                    </button>
-                    <button class="cto-card cto-btn" data-file="Jaconé-Saquarema.kml" data-type="kml">
-                        <div class="cto-icon kml">
-                            <i class="fas fa-map-marker-alt"></i>
-                        </div>
-                        <div class="cto-info">
-                            <span class="cto-name">Jaconé-Saquarema</span>
-                            <span class="cto-type">KML</span>
-                        </div>
-                    </button>
-                    <button class="cto-card cto-btn" data-file="Muqui.kml" data-type="kml">
-                        <div class="cto-icon kml">
-                            <i class="fas fa-map-marker-alt"></i>
-                        </div>
-                        <div class="cto-info">
-                            <span class="cto-name">Muqui</span>
-                            <span class="cto-type">KML</span>
-                        </div>
-                    </button>
-                    <button class="cto-card cto-btn" data-file="Retiro.kml" data-type="kml">
-                        <div class="cto-icon kml">
-                            <i class="fas fa-map-marker-alt"></i>
-                        </div>
-                        <div class="cto-info">
-                            <span class="cto-name">Retiro</span>
-                            <span class="cto-type">KML</span>
-                        </div>
-                    </button>
-                    <button class="cto-card cto-btn" data-file="São Jose.kml" data-type="kml">
-                        <div class="cto-icon kml">
-                            <i class="fas fa-map-marker-alt"></i>
-                        </div>
-                        <div class="cto-info">
-                            <span class="cto-name">São José</span>
-                            <span class="cto-type">KML</span>
-                        </div>
-                    </button>
-                    
-                    <!-- Arquivos KMZ -->
-                    <button class="cto-card cto-btn" data-file="Centro Marica.kmz" data-type="kmz">
-                        <div class="cto-icon kmz">
-                            <i class="fas fa-map-marked-alt"></i>
-                        </div>
-                        <div class="cto-info">
-                            <span class="cto-name">Centro Marica</span>
-                            <span class="cto-type">KMZ</span>
-                        </div>
-                    </button>
-                    <button class="cto-card cto-btn" data-file="Chacara De Inoa.kmz" data-type="kmz">
-                        <div class="cto-icon kmz">
-                            <i class="fas fa-map-marked-alt"></i>
-                        </div>
-                        <div class="cto-info">
-                            <span class="cto-name">Chácara De Inoã</span>
-                            <span class="cto-type">KMZ</span>
-                        </div>
-                    </button>
-                    
-                    <!-- Arquivos serão carregados dinamicamente via JavaScript -->
-                </div>
+                <div class="cto-grid"><!-- preenchido dinamicamente via API: apenas mapas da empresa --></div>
             </section>
         </div>
     </div>

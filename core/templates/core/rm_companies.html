@@ -11,10 +11,7 @@
         background-color: var(--rm-bg-primary);
         color: var(--rm-text-primary);
     }
-    .navbar {
-        background: var(--rm-gradient-primary);
-        box-shadow: var(--rm-shadow);
-    }
+    /* Navbar local removida, usamos a do base.html */
     .sidebar {
         background: var(--rm-sidebar-bg);
         min-height: calc(100vh - 76px);
@@ -39,6 +36,10 @@
         .main-content {
             padding: 30px;
             background-color: var(--rm-bg-primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: calc(100vh - 76px);
         }
         .content-card {
             background: var(--rm-card-bg);
@@ -47,6 +48,9 @@
             box-shadow: var(--rm-card-shadow);
             border: 1px solid var(--rm-card-border);
             color: var(--rm-text-primary);
+            /* Evitar scroll da página - o card passa a rolar internamente se necessário */
+            max-height: calc(100vh - 160px);
+            overflow: auto;
         }
         .btn-primary {
             background: var(--rm-primary);
@@ -78,8 +82,8 @@
             -webkit-overflow-scrolling: touch;
             border-radius: 12px;
             box-shadow: var(--rm-shadow);
-            margin: 0 -15px;
-            padding: 0 15px;
+            margin: 0;
+            padding: 0;
         }
         .table-responsive table {
             min-width: 1000px;
@@ -112,36 +116,17 @@
             background-color: var(--rm-error);
             color: var(--rm-white);
         }
+        .sidebar-col { display: none; }
     </style>
 {% endblock %}
 
 {% block content %}
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="{% url 'rm:admin_dashboard' %}">
-                <!-- Logo removido -->
-            </a>
-            <div class="navbar-nav ms-auto">
-                <div class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                        <i class="fas fa-user-circle me-1"></i>
-                        {{ user.username }}
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{% url 'rm:logout' %}">
-                            <i class="fas fa-sign-out-alt me-2"></i>Sair
-                        </a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </nav>
+    <!-- Navbar local removida (duplicava com base.html) -->
 
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2 px-0">
+            <div class="col-md-3 col-lg-2 px-0 sidebar-col">
                 <div class="sidebar">
                     <nav class="nav flex-column">
                         <a class="nav-link" href="{% url 'rm:admin_dashboard' %}">
@@ -164,7 +149,7 @@
             </div>
 
             <!-- Main Content -->
-            <div class="col-md-9 col-lg-10">
+            <div class="col-12">
                 <div class="main-content">
                     <div class="content-card">
                         <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">

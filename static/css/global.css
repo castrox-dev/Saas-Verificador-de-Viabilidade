@@ -30,6 +30,27 @@ body {
   gap: 1rem;
 }
 
+/* Variante com gradiente de marca para o header */
+.topbar.brand-gradient {
+  background: var(--rm-gradient-primary);
+  border-bottom: none;
+  box-shadow: var(--rm-shadow);
+  position: sticky;
+  top: 0;
+  z-index: 1100;
+}
+
+.topbar.brand-gradient h1,
+.topbar.brand-gradient .app-title,
+.topbar.brand-gradient nav a {
+  color: var(--rm-white);
+}
+
+.topbar.brand-gradient nav a:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: var(--rm-white);
+}
+
 .topbar h1 {
   color: var(--rm-text-primary);
   font-size: 1.125rem;
@@ -104,10 +125,10 @@ body {
 /* === RESPONSIVIDADE MOBILE === */
 @media (max-width: 768px) {
   .topbar {
-    padding: 1rem;
+    padding: var(--rm-space-md);
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.75rem;
+    gap: var(--rm-space-sm);
   }
   
   .topbar nav {
@@ -117,27 +138,27 @@ body {
   }
   
   .topbar nav a {
-    padding: 0.5rem;
-    font-size: 0.875rem;
+    padding: var(--rm-space-sm);
+    font-size: var(--rm-font-sm);
   }
   
   .footer {
-    padding: 1rem;
-    font-size: 0.8rem;
+    padding: var(--rm-space-md);
+    font-size: var(--rm-font-xs);
   }
   
   .messages {
-    padding: 1rem;
+    padding: var(--rm-space-md);
   }
 }
 
 @media (max-width: 480px) {
   .topbar h1 {
-    font-size: 1rem;
+    font-size: var(--rm-font-base);
   }
   
   .topbar nav a {
-    padding: 0.375rem 0.75rem;
-    font-size: 0.8rem;
+    padding: var(--rm-space-xs) var(--rm-space-sm);
+    font-size: var(--rm-font-xs);
   }
 }

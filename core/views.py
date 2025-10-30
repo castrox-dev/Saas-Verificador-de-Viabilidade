@@ -336,8 +336,8 @@ def company_map_upload(request, company_slug):
         if not request.user.can_upload_maps:
             return JsonResponse({'success': False, 'message': 'Sem permissão para upload'}, status=403)
         
-        # Verificar se o usuário pertence à empresa
-        if request.user.company != company:
+        # Verificar se o usuário pertence à empresa (RM pode enviar para qualquer empresa)
+        if not (getattr(request.user, 'is_rm_admin', False) or request.user.company == company):
             return JsonResponse({'success': False, 'message': 'Acesso negado à empresa'}, status=403)
         
         # Verificar se há arquivo no request

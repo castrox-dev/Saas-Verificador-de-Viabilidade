@@ -2,37 +2,24 @@
    ESTILOS PARA PÁGINAS DE LOGIN - DESIGN DA IMAGEM
    ======================================== */
 
-/* === VARIÁVEIS DE CORES BASEADAS NA IMAGEM === */
-:root {
-  /* Cores da imagem */
-  --img-bg-left: #f8f9fa;           /* Cinza muito claro do lado esquerdo */
-  --img-bg-right: #ffffff;          /* Branco do lado direito */
-  --img-text-primary: #2d3748;     /* Cinza escuro para títulos */
-  --img-text-secondary: #718096;   /* Cinza médio para subtítulos */
-  --img-text-light: #a0aec0;       /* Cinza claro para descrições */
-  --img-card-bg: #ffffff;          /* Fundo branco dos cards */
-  --img-card-border: #e2e8f0;      /* Borda cinza clara dos cards */
-  --img-input-bg: #f7fafc;         /* Fundo cinza claro dos inputs */
-  --img-input-bg-blue: #ebf8ff;    /* Fundo azul claro do input senha */
-  --img-button-bg: #4a5568;        /* Cinza escuro do botão */
-  --img-button-text: #ffffff;     /* Texto branco do botão */
-  --img-accent: #3182ce;           /* Azul para links e destaques */
-}
+/* === IMPORTAR SISTEMA DE CORES === */
+@import url('theme_colors.css');
 
-/* Dark mode colors */
-[data-theme="dark"] {
-  --img-bg-left: #1a202c;
-  --img-bg-right: #2d3748;
-  --img-text-primary: #f7fafc;
-  --img-text-secondary: #cbd5e0;
-  --img-text-light: #a0aec0;
-  --img-card-bg: #2d3748;
-  --img-card-border: #4a5568;
-  --img-input-bg: #4a5568;
-  --img-input-bg-blue: #2b6cb0;
-  --img-button-bg: #4a5568;
-  --img-button-text: #f7fafc;
-  --img-accent: #63b3ed;
+/* === VARIÁVEIS ESPECÍFICAS DO LOGIN === */
+:root {
+  /* Mapeamento para compatibilidade com design existente */
+  --img-bg-left: var(--rm-bg-secondary);
+  --img-bg-right: var(--rm-bg-primary);
+  --img-text-primary: var(--rm-text-primary);
+  --img-text-secondary: var(--rm-text-secondary);
+  --img-text-light: var(--rm-text-tertiary);
+  --img-card-bg: var(--rm-card-bg);
+  --img-card-border: var(--rm-card-border);
+  --img-input-bg: var(--rm-input-bg);
+  --img-input-bg-blue: var(--rm-primary-50);
+  --img-button-bg: var(--rm-primary);
+  --img-button-text: var(--rm-white);
+  --img-accent: var(--rm-primary);
 }
 
 /* === LAYOUT BASE === */
@@ -199,6 +186,45 @@ body {
   outline: none;
   border-color: var(--img-accent);
   box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
+  transform: translateY(-1px);
+}
+
+/* === MELHORIAS DE ACESSIBILIDADE === */
+.form-row input:focus-visible {
+  outline: 2px solid var(--img-accent);
+  outline-offset: 2px;
+}
+
+.form-row input:invalid {
+  border-color: var(--rm-error);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.form-row input:valid {
+  border-color: var(--rm-success);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+/* === CONTRASTE MELHORADO === */
+.btn.primary {
+  background: var(--img-button-bg);
+  color: var(--img-button-text);
+  border: 2px solid var(--img-button-bg);
+  font-weight: 600;
+  letter-spacing: 0.025em;
+}
+
+.btn.primary:hover {
+  background: var(--rm-primary-dark);
+  border-color: var(--rm-primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(29, 78, 216, 0.3);
+}
+
+.btn.primary:focus {
+  outline: 2px solid var(--img-accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(49, 130, 206, 0.2);
 }
 
 .remember {

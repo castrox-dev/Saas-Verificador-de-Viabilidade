@@ -1,9 +1,6 @@
 /* RM Systems Theme Components: buttons, badges, tables, alerts, forms */
-:root{
-  --rm-blue-600:#1D4ED8;--rm-blue-700:#1E40AF;--rm-blue-100:#DBEAFE;
-  --rm-green-500:#10b981;--rm-green-600:#059669;--rm-red-500:#ef4444;--rm-red-600:#dc2626;
-  --rm-amber-500:#f59e0b;--rm-slate-900:#0F172A;--rm-slate-600:#475569;--rm-slate-50:#F8FAFC;
-}
+/* Importar sistema de cores principal */
+@import url('theme_colors.css');
 
 /* Buttons */
 .btn{display:inline-flex;align-items:center;gap:.5rem;padding:.6rem 1rem;border-radius:10px;border:1px solid transparent;font-weight:600;font-size:.9rem;cursor:pointer;text-decoration:none;transition:all .2s ease;box-shadow:var(--shadow)}
@@ -11,32 +8,32 @@
 .btn:disabled{opacity:.6;cursor:not-allowed;transform:none;box-shadow:none}
 .btn .fas,.btn .fa{font-size:.9rem}
 
-.btn.primary,.btn-primary{background:var(--primary, var(--rm-blue-600));color:#fff;border-color:var(--primary, var(--rm-blue-600))}
-.btn.primary:hover,.btn-primary:hover{background:var(--primary-hover, var(--rm-blue-700));border-color:var(--primary-hover, var(--rm-blue-700))}
+.btn.primary,.btn-primary{background:var(--rm-primary);color:var(--rm-white);border-color:var(--rm-primary)}
+.btn.primary:hover,.btn-primary:hover{background:var(--rm-primary-dark);border-color:var(--rm-primary-dark)}
 
-.btn-outline,.btn-outline-primary{background:transparent;color:var(--primary, var(--rm-blue-600));border-color:var(--primary, var(--rm-blue-600))}
-.btn-outline:hover,.btn-outline-primary:hover{background:rgba(29,78,216,0.08);color:var(--primary-hover, var(--rm-blue-700));border-color:var(--primary-hover, var(--rm-blue-700))}
+.btn-outline,.btn-outline-primary{background:transparent;color:var(--rm-primary);border-color:var(--rm-primary)}
+.btn-outline:hover,.btn-outline-primary:hover{background:var(--rm-primary-50);color:var(--rm-primary-dark);border-color:var(--rm-primary-dark)}
 
-.btn-danger{background:var(--rm-red-500);color:#fff;border-color:var(--rm-red-500)}
-.btn-danger:hover{background:var(--rm-red-600);border-color:var(--rm-red-600)}
-.btn-outline-danger{background:transparent;color:var(--rm-red-500);border-color:var(--rm-red-500)}
-.btn-outline-danger:hover{background:rgba(239,68,68,.08);color:var(--rm-red-600);border-color:var(--rm-red-600)}
+.btn-danger{background:var(--rm-error);color:var(--rm-white);border-color:var(--rm-error)}
+.btn-danger:hover{background:var(--rm-error-dark);border-color:var(--rm-error-dark)}
+.btn-outline-danger{background:transparent;color:var(--rm-error);border-color:var(--rm-error)}
+.btn-outline-danger:hover{background:var(--rm-error-light);color:var(--rm-error-dark);border-color:var(--rm-error-dark)}
 
-.btn-success{background:var(--rm-green-500);color:#fff;border-color:var(--rm-green-500)}
-.btn-success:hover{background:var(--rm-green-600);border-color:var(--rm-green-600)}
-.btn-outline-success{background:transparent;color:var(--rm-green-500);border-color:var(--rm-green-500)}
-.btn-outline-success:hover{background:rgba(16,185,129,.08);color:var(--rm-green-600);border-color:var(--rm-green-600)}
+.btn-success{background:var(--rm-success);color:var(--rm-white);border-color:var(--rm-success)}
+.btn-success:hover{background:var(--rm-success-dark);border-color:var(--rm-success-dark)}
+.btn-outline-success{background:transparent;color:var(--rm-success);border-color:var(--rm-success)}
+.btn-outline-success:hover{background:var(--rm-success-light);color:var(--rm-success-dark);border-color:var(--rm-success-dark)}
 
 .btn-sm{padding:.4rem .7rem;border-radius:8px;font-size:.82rem}
 .btn-icon{display:inline-block}
 
 /* Badges */
-.badge{display:inline-block;padding:.25rem .5rem;border-radius:999px;font-weight:700;font-size:.75rem}
-.badge-success{background:#dcfce7;color:#166534}
-.badge-danger{background:#fee2e2;color:#7f1d1d}
-.badge-warning{background:#fef3c7;color:#92400e}
-.badge-info{background:#dbeafe;color:#1e40af}
-.badge-secondary{background:#e5e7eb;color:#374151}
+.badge{display:inline-block;padding:var(--rm-space-xs) var(--rm-space-sm);border-radius:var(--rm-radius-full);font-weight:700;font-size:var(--rm-font-xs)}
+.badge-success{background:var(--rm-success-light);color:var(--rm-success-dark)}
+.badge-danger{background:var(--rm-error-light);color:var(--rm-error-dark)}
+.badge-warning{background:var(--rm-warning-light);color:var(--rm-warning-dark)}
+.badge-info{background:var(--rm-info-light);color:var(--rm-info-dark)}
+.badge-secondary{background:var(--rm-gray-200);color:var(--rm-gray-700)}
 
 /* Cards */
 .card{background:var(--rm-card-bg);border:1px solid var(--rm-card-border);border-radius:16px;box-shadow:var(--rm-card-shadow);color:var(--rm-text-primary)}

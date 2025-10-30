@@ -23,51 +23,83 @@ from .models import ViabilidadeCache
 
 @login_required
 def index(request, company_slug):
-    """Página principal do FTTH Viewer"""
-    return render(request, 'ftth_viewer/index.html')
+    """Página principal do FTTH Viewer para uma empresa específica"""
+    from core.models import Company
+    company = Company.objects.get(slug=company_slug)
+    return render(request, 'ftth_viewer/index.html', { 'company': company })
 
 
 @login_required
 @require_http_methods(["GET"])
-def api_arquivos(request, company_slug):
-    """Lista todos os arquivos disponíveis (KML, KMZ, CSV, XLS, XLSX)"""
-    arquivos = []
-    
-    # Mapeamento de extensões para diretórios
-    tipos_map = {
-        '.kml': ('kml', getattr(settings, 'FTTH_KML_DIR', None)),
-        '.kmz': ('kmz', getattr(settings, 'FTTH_KMZ_DIR', None)),
-        '.csv': ('csv', getattr(settings, 'FTTH_CSV_DIR', None)),
-        '.xls': ('xls', getattr(settings, 'FTTH_XLS_DIR', None)),
-        '.xlsx': ('xlsx', getattr(settings, 'FTTH_XLSX_DIR', None)),
-    }
-    
-    for ext, (tipo, diretorio) in tipos_map.items():
-        if diretorio and os.path.exists(diretorio):
-            for arquivo in os.listdir(diretorio):
-                if arquivo.lower().endswith(ext):
-                    arquivos.append({
-                        'nome': arquivo,
-                        'tipo': tipo,
-                        'caminho': os.path.join(diretorio, arquivo)
-                    })
-    
-    return JsonResponse(arquivos, safe=False)
+def api_arquivos(request, company_slug=None):
+    """Lista os arquivos de mapas (CTOMapFile) pertencentes à empresa do slug."""
+    try:
+        if company_slug:
+            # Modo integrado: buscar mapas da empresa específica
+            from core.models import Company, CTOMapFile
+            company = Company.objects.get(slug=company_slug)
+            maps = CTOMapFile.objects.filter(company=company).order_by('-uploaded_at')
+            data = [{
+                'id': m.id,
+                'nome': m.file_name,
+                'tipo': m.file_type,
+                'uploaded_at': m.uploaded_at.isoformat(),
+            } for m in maps]
+        else:
+            # Modo original: buscar arquivos nos diretórios
+            arquivos = []
+            tipos_map = {
+                '.kml': ('kml', getattr(settings, 'FTTH_KML_DIR', None)),
+                '.kmz': ('kmz', getattr(settings, 'FTTH_KMZ_DIR', None)),
+                '.csv': ('csv', getattr(settings, 'FTTH_CSV_DIR', None)),
+                '.xls': ('xls', getattr(settings, 'FTTH_XLS_DIR', None)),
+                '.xlsx': ('xlsx', getattr(settings, 'FTTH_XLSX_DIR', None)),
+            }
+            
+            for ext, (tipo, diretorio) in tipos_map.items():
+                if diretorio and os.path.exists(diretorio):
+                    for arquivo in os.listdir(diretorio):
+                        if arquivo.lower().endswith(ext):
+                            arquivos.append({
+                                'nome': arquivo,
+                                'tipo': tipo,
+                                'caminho': os.path.join(diretorio, arquivo)
+                            })
+            data = arquivos
+        return JsonResponse(data, safe=False)
+    except Exception:
+        return JsonResponse([], safe=False)
 
 
 @login_required
 @require_http_methods(["GET"])
-def api_coordenadas(request, company_slug):
-    """Retorna coordenadas de um arquivo específico"""
+def api_coordenadas(request, company_slug=None):
+    """Retorna coordenadas de um arquivo específico.
+    Aceita dois formatos de entrada:
+    - ?arquivo=nome.ext (busca em diretórios configurados)
+    - ?map_id=123 (busca arquivo armazenado em CTOMapFile da empresa)
+    """
+    map_id = request.GET.get('map_id')
     arquivo = request.GET.get('arquivo')
-    if not arquivo:
-        return JsonResponse({'erro': 'Arquivo não especificado'}, status=400)
-    
-    caminho = get_arquivo_caminho(arquivo)
-    if not caminho or not os.path.exists(caminho):
-        return JsonResponse({'erro': 'Arquivo não encontrado'}, status=404)
-    
-    ext = os.path.splitext(arquivo)[1].lower()
+    caminho = None
+    ext = None
+
+    if map_id and company_slug:
+        try:
+            from core.models import Company, CTOMapFile
+            company = Company.objects.get(slug=company_slug)
+            m = CTOMapFile.objects.get(id=int(map_id), company=company)
+            caminho = m.file.path
+            ext = os.path.splitext(m.file.name)[1].lower()
+        except Exception:
+            return JsonResponse({'erro': 'Mapa não encontrado para esta empresa'}, status=404)
+    else:
+        if not arquivo:
+            return JsonResponse({'erro': 'Arquivo não especificado'}, status=400)
+        caminho = get_arquivo_caminho(arquivo)
+        if not caminho or not os.path.exists(caminho):
+            return JsonResponse({'erro': 'Arquivo não encontrado'}, status=404)
+        ext = os.path.splitext(arquivo)[1].lower()
     
     try:
         if ext == '.kml':
@@ -170,7 +202,7 @@ def api_geocode(request, company_slug):
 
 @login_required
 @require_http_methods(["GET"])
-def api_verificar_viabilidade(request, company_slug):
+def api_verificar_viabilidade(request, company_slug=None):
     """Verifica viabilidade de instalação FTTH"""
     try:
         lat = request.GET.get("lat")
