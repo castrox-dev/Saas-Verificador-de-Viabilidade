@@ -876,16 +876,7 @@ async function searchUnified(query) {
 
     // Buscar coordenadas usando Nominatim
     try {
-        // Usar API do verificador se disponível, senão usar Nominatim diretamente
-        const geocodeUrl = window.verificadorConfig?.apiUrls?.geocode || 
-                          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&countrycodes=br&limit=1`;
-        
-        let response;
-        if (window.verificadorConfig?.apiUrls?.geocode) {
-            response = await fetch(`${geocodeUrl}?endereco=${encodeURIComponent(searchQuery)}`);
-        } else {
-            response = await fetch(geocodeUrl);
-        }
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&countrycodes=br&limit=1`);
         const results = await response.json();
 
         if (results && results.length > 0) {
@@ -1098,10 +1089,7 @@ async function verificarViabilidade(lat, lon, endereco) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 segundos
         
-        // Usar configuração do verificador se disponível
-        const apiUrl = window.verificadorConfig?.apiUrls?.verificarViabilidade || 
-                      `/verificador/${window.verificadorConfig?.companySlug || 'default'}/api/verificar-viabilidade/`;
-        const response = await fetch(`${apiUrl}?lat=${lat}&lon=${lon}`, {
+        const response = await fetch(`/api/verificar-viabilidade?lat=${lat}&lon=${lon}`, {
             signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -1377,10 +1365,7 @@ async function loadKML(filename) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s
 
-    // Usar configuração do verificador se disponível
-    const apiUrl = window.verificadorConfig?.apiUrls?.coordenadas || 
-                  `/verificador/${window.verificadorConfig?.companySlug || 'default'}/api/coordenadas/`;
-    const url = `${apiUrl}?arquivo=${encodeURIComponent(filename)}`;
+    const url = `/api/coordenadas?arquivo=${encodeURIComponent(filename)}`;
     let data;
     try {
         const resp = await fetch(url, { signal: controller.signal });
@@ -2741,10 +2726,7 @@ window.apenasMarcar = function(lat, lng) {
 // Função para carregar arquivos dinamicamente da API
 async function loadCTOFiles() {
     try {
-        // Usar configuração do verificador se disponível
-        const apiUrl = window.verificadorConfig?.apiUrls?.arquivos || 
-                      `/verificador/${window.verificadorConfig?.companySlug || 'default'}/api/arquivos/`;
-        const response = await fetch(apiUrl);
+        const response = await fetch('/api/arquivos');
         const arquivos = await response.json();
         
         const ctoGrid = document.querySelector('.cto-grid');

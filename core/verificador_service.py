@@ -11,9 +11,8 @@ from django.core.files.uploadedfile import UploadedFile
 from django.utils import timezone
 from core.models import CTOMapFile, Company, CustomUser
 from core.audit_logger import AuditLogger
-from verificador.services import VerificadorService as DjangoVerificadorService
-from verificador.geocoding import GeocodingService
-from verificador.file_readers import FileReaderService
+# Substitui integrações antigas do app 'verificador' pelo novo 'ftth_viewer'
+from ftth_viewer import utils as ftth_utils
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +42,25 @@ class VerificadorService:
             temp_path = cls._save_temp_file(uploaded_file)
             file_type = cls._get_file_extension(uploaded_file.name)
             
-            # Usar serviço Django nativo
-            result = DjangoVerificadorService.verificar_arquivo(temp_path, file_type)
+            # Usar serviço Django nativo (ftth_viewer utils)
+            coords = cls._ler_arquivo_por_extensao(temp_path)
+            processing_time = None  # opcional: medição se necessário
+            viability_score = min(100, max(0, 100 - len(coords) * 0.1))
+            result = {
+                'success': True,
+                'results': {
+                    'viability_score': int(viability_score),
+                    'issues': ["Nenhuma coordenada encontrada no arquivo"] if len(coords) == 0 else ([] if len(coords) <= 1000 else ["Muitas coordenadas podem impactar a performance"]),
+                    'recommendations': (["Verifique o formato do arquivo"] if len(coords) == 0 else ([] if len(coords) <= 1000 else ["Considere dividir o arquivo em partes menores"])),
+                    'coordinates_count': len(coords),
+                    'processing_time': processing_time or 0,
+                    'file_info': {
+                        'name': uploaded_file.name,
+                        'type': cls._get_file_extension(uploaded_file.name),
+                        'size': uploaded_file.size,
+                    }
+                }
+            }
             
             # Log da ação
             AuditLogger.log_user_action(
@@ -92,33 +108,81 @@ class VerificadorService:
             Dict com resultados da análise
         """
         try:
-            # Usar serviço Django nativo
-            resultado = DjangoVerificadorService.verificar_viabilidade_coordenada(lat, lon, company)
-            
-            # Log da ação
-            AuditLogger.log_user_action(
-                user=user,
-                action='coordinate_analysis',
-                details={
-                    'coordinates': f'{lat},{lon}',
-                    'company': company.name,
-                    'success': 'erro' not in resultado,
-                    'service': 'django_native'
-                }
-            )
-            
-            # Converter para formato compatível
-            if 'erro' in resultado:
+            # Usar serviço Django nativo (ftth_viewer utils)
+            # Estratégia: semelhante ao ftth_viewer.views.api_verificar_viabilidade
+            ctos = ftth_utils.get_all_ctos()
+            if not ctos:
                 return {
                     'success': False,
-                    'error': resultado['erro'],
+                    'error': 'Nenhum CTO encontrado',
                     'status': 'failed'
                 }
-            
+
+            ctos_com_distancia = []
+            for cto in ctos:
+                try:
+                    cto_lat = float(cto.get('lat'))
+                    cto_lon = float(cto.get('lng'))
+                    distancia_euclidiana = ftth_utils.calcular_distancia(lat, lon, cto_lat, cto_lon)
+                    ctos_com_distancia.append({**cto, 'distancia_euclidiana': distancia_euclidiana})
+                except (ValueError, TypeError, KeyError):
+                    continue
+            if not ctos_com_distancia:
+                return {
+                    'success': False,
+                    'error': 'Nenhum CTO válido encontrado',
+                    'status': 'failed'
+                }
+
+            ctos_com_distancia.sort(key=lambda x: x['distancia_euclidiana'])
+            candidatos = ctos_com_distancia[:min(5, len(ctos_com_distancia))]
+
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+            melhor = None
+            menor_dist = float('inf')
+            melhor_geom = None
+            with ThreadPoolExecutor(max_workers=4) as executor:
+                futures = {
+                    executor.submit(ftth_utils.calcular_rota_ruas_single, lat, lon, float(c.get('lat')), float(c.get('lng')), c): c
+                    for c in candidatos
+                }
+                for future in as_completed(futures):
+                    try:
+                        dist_ruas, geom, cto_info = future.result()
+                        if dist_ruas < menor_dist:
+                            menor_dist = dist_ruas
+                            melhor = cto_info
+                            melhor_geom = geom
+                    except Exception:
+                        continue
+
+            if not melhor:
+                return {
+                    'success': False,
+                    'error': 'Nenhum CTO válido encontrado',
+                    'status': 'failed'
+                }
+
+            viabilidade = ftth_utils.classificar_viabilidade(menor_dist)
+            resultado = {
+                'viabilidade': viabilidade,
+                'cto': {
+                    'nome': melhor.get('nome', 'CTO'),
+                    'lat': float(melhor['lat']),
+                    'lon': float(melhor['lng']),
+                    'arquivo': melhor.get('arquivo', ''),
+                },
+                'distancia': {
+                    'metros': round(menor_dist, 2),
+                    'km': round(menor_dist / 1000, 3),
+                },
+                'rota': {'geometria': melhor_geom},
+            }
+
             return {
                 'success': True,
                 'status': 'completed',
-                'results': resultado
+                'results': resultado,
             }
             
         except Exception as e:
@@ -172,7 +236,7 @@ class VerificadorService:
             mapa = CTOMapFile.objects.filter(file__icontains=arquivo).first()
             
             if mapa and mapa.file and hasattr(mapa.file, 'path'):
-                return FileReaderService.ler_arquivo(mapa.file.path)
+                return cls._ler_arquivo_por_extensao(mapa.file.path)
             
             return []
             
@@ -192,7 +256,7 @@ class VerificadorService:
             Coordenadas do endereço
         """
         try:
-            resultado = GeocodingService.geocodificar(endereco)
+            resultado = cls._geocodificar(endereco)
             
             if resultado:
                 return resultado
@@ -278,6 +342,42 @@ class VerificadorService:
             Extensão do arquivo
         """
         return filename.split('.')[-1].lower() if '.' in filename else ''
+
+    @classmethod
+    def _ler_arquivo_por_extensao(cls, caminho_arquivo: str):
+        ext = cls._get_file_extension(caminho_arquivo).lower()
+        if ext == 'kml':
+            return ftth_utils.ler_kml(caminho_arquivo)
+        if ext == 'kmz':
+            return ftth_utils.ler_kmz(caminho_arquivo)
+        if ext == 'csv':
+            return ftth_utils.ler_csv(caminho_arquivo)
+        if ext in ('xls', 'xlsx'):
+            return ftth_utils.ler_excel(caminho_arquivo)
+        return []
+
+    @classmethod
+    def _geocodificar(cls, endereco: str):
+        # Usa cache persistente do ftth_viewer e fallback para Nominatim
+        cached = ftth_utils.get_cached_geocoding(endereco)
+        if cached:
+            return cached
+        import requests
+        url = "https://nominatim.openstreetmap.org/search"
+        params = { 'q': endereco, 'format': 'json', 'limit': 1, 'countrycodes': 'br' }
+        headers = { 'User-Agent': 'FTTH-Viewer-Django/1.0' }
+        resp = requests.get(url, params=params, headers=headers, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        if not data:
+            return None
+        res = {
+            'lat': float(data[0]['lat']),
+            'lng': float(data[0]['lon']),
+            'endereco_completo': data[0]['display_name'],
+        }
+        ftth_utils.set_cached_geocoding(endereco, res)
+        return res
 
 
 class VerificadorIntegrationManager:

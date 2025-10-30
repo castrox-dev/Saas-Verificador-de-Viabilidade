@@ -1,6 +1,7 @@
-from django.urls import path
+from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from . import views
+from ftth_viewer import views as ftth_views
 
 app_name = 'company'
 
@@ -13,8 +14,10 @@ urlpatterns = [
     # Painel da empresa (para admins)
     path('painel/', views.company_dashboard, name='dashboard'),
     
-    # Verificador de viabilidade (redireciona para app verificador)
-    path('verificador/', views.company_verificador, name='verificador'),
+    # Rota nomeada compatível para links antigos: company:verificador
+    path('verificador/', ftth_views.index, name='verificador'),
+    # Verificador de viabilidade (todas as demais URLs do app)
+    path('verificador/', include(('ftth_viewer.urls', 'ftth_viewer'), namespace='ftth_viewer')),
     
     # Upload de mapas CTO (página de upload)
     path('upload/', views.company_map_upload_page, name='upload'),

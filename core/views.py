@@ -255,10 +255,10 @@ def company_login_view(request, company_slug):
                 return redirect('company:dashboard', company_slug=company_slug)
             elif user.role == 'COMPANY_USER':
                 # Usuários comuns vão direto para o verificador
-                return redirect('company:verificador', company_slug=company_slug)
+                return redirect(f'/{company_slug}/verificador/')
             else:
                 # Fallback para verificador
-                return redirect('company:verificador', company_slug=company_slug)
+                return redirect(f'/{company_slug}/verificador/')
         else:
             logger.warning(f"Failed login attempt for company: {company_slug} - invalid credentials or wrong company")
             messages.error(request, 'Credenciais inválidas para esta empresa.')
@@ -290,7 +290,7 @@ def company_dashboard(request, company_slug):
 def company_verificador(request, company_slug):
     """Verificador - acessível para todos os usuários da empresa"""
     from django.shortcuts import redirect
-    return redirect('verificador:verificador_view', company_slug=company_slug)
+    return redirect('verificador:index')
 
 
 @login_required
@@ -760,7 +760,7 @@ def dashboard_redirect(request):
         if user.role == 'COMPANY_ADMIN':
             return redirect('company:dashboard', company_slug=user.company.slug)
         # Usuários padrão vão para o verificador
-        return redirect('company:verificador', company_slug=user.company.slug)
+        return redirect(f'/{user.company.slug}/verificador/')
 
     # Fallback: se não houver empresa associada, enviar para RM dashboard
     return redirect('rm:admin_dashboard')

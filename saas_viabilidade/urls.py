@@ -15,8 +15,8 @@ urlpatterns = [
     # URLs RM Systems
     path("rm/", include(("core.urls_rm", "rm"), namespace="rm")),
     
-    # URLs do verificador (agora app Django separado)
-    path("verificador/", include(("verificador.urls", "verificador"), namespace="verificador")),
+    # URLs do verificador (novo app FTTH Viewer)
+    path("verificador/", include(("ftth_viewer.urls", "ftth_viewer"), namespace="verificador")),
     
     # URLs específicas por empresa
     re_path(r'^(?P<company_slug>[\w-]+)/', include(("core.urls_company", "company"), namespace="company")),
@@ -30,4 +30,3 @@ urlpatterns = [
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATICFILES_DIRS[0])

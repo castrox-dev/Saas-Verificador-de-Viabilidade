@@ -1,15 +1,7 @@
 from django.db import models
-from django.utils import timezone
 from django.core.cache import cache
 import json
 
-# Por enquanto, o verificador não tem modelos próprios
-# Ele usa os modelos do core (CTOMapFile, Company)
-#
-# Futuramente podem ser adicionados modelos como:
-# - VerificacaoCache
-# - VerificacaoLog
-# etc.
 
 class GeocodingCache(models.Model):
     """Cache de geocodificação persistente"""
@@ -82,3 +74,4 @@ class ViabilidadeCache(models.Model):
     def __str__(self):
         status = self.resultado.get('viabilidade', {}).get('status', 'N/A')
         return f"({self.lat:.6f}, {self.lon:.6f}) - {status}"
+

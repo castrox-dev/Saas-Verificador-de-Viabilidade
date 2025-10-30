@@ -2,6 +2,7 @@
 Configurações de produção para rmsys.com.br
 """
 import os
+import logging
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -171,22 +172,27 @@ BACKUP_RETENTION_DAYS = 30
 # Configurações de monitoramento
 SENTRY_DSN = os.getenv('SENTRY_DSN')
 
+# Inicialização opcional do Sentry: só ativa se DSN existir e pacote estiver instalado
 if SENTRY_DSN:
-    import sentry_sdk
-    from sentry_sdk.integrations.django import DjangoIntegration
-    from sentry_sdk.integrations.logging import LoggingIntegration
-    
-    sentry_logging = LoggingIntegration(
-        level=logging.INFO,        # Capture info and above as breadcrumbs
-        event_level=logging.ERROR  # Send errors as events
-    )
-    
-    sentry_sdk.init(
-        dsn=SENTRY_DSN,
-        integrations=[DjangoIntegration(), sentry_logging],
-        traces_sample_rate=0.1,
-        send_default_pii=True
-    )
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.django import DjangoIntegration
+        from sentry_sdk.integrations.logging import LoggingIntegration
+        
+        sentry_logging = LoggingIntegration(
+            level=logging.INFO,        # Capture info and above as breadcrumbs
+            event_level=logging.ERROR  # Send errors as events
+        )
+        
+        sentry_sdk.init(
+            dsn=SENTRY_DSN,
+            integrations=[DjangoIntegration(), sentry_logging],
+            traces_sample_rate=0.1,
+            send_default_pii=True
+        )
+    except ImportError:
+        # Sentry não instalado; apenas seguir sem inicializar
+        pass
 
 # Middleware de produção
 MIDDLEWARE = [
@@ -210,7 +216,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
     'core',
+    'ftth_viewer',
 ]
 
 # Configurações de templates
