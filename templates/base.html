@@ -185,7 +185,7 @@
           <a class="nav-link {% if 'upload' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'company:upload' company_slug=user.company.slug %}">
             <i class="fas fa-cloud-upload-alt me-2"></i>Upload
           </a>
-          <a class="nav-link {% if 'verificador' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'company:verificador' company_slug=user.company.slug %}">
+          <a class="nav-link {% if 'verificador' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'company:ftth_viewer:index' company_slug=user.company.slug %}">
             <i class="fas fa-search me-2"></i>Verificador
           </a>
           {% if not user.is_company_user %}

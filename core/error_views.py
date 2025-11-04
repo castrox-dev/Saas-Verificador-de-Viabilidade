@@ -11,7 +11,8 @@ def custom_404(request, exception=None):
     """View personalizada para erro 404"""
     try:
         # Forçar uso da página personalizada mesmo em DEBUG
-        return render(request, 'errors/404.html', status=404)
+        # Usar context vazio para evitar erros de reverse em URLs
+        return render(request, 'errors/404.html', {}, status=404)
     except Exception as e:
         logger.error(f"Erro ao renderizar 404: {str(e)}")
         try:

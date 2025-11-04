@@ -84,7 +84,7 @@ def company_access_required(require_admin=False, allow_user_role=True):
             if user.role == 'COMPANY_USER' and not allow_user_role:
                 # Redirecionar para verificador se tentar acessar outras páginas
                 from django.shortcuts import redirect
-                return redirect('company:verificador', company_slug=company_slug)
+                return redirect('company:ftth_viewer:index', company_slug=company_slug)
             
             # Se requer admin, validar
             if require_admin and not getattr(user, 'is_company_admin', False):

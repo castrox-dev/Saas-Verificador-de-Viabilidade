@@ -89,28 +89,37 @@ def company_list(request):
 
 @login_required
 @rm_admin_required
-@cache_page(60 * 15)  # Cache por 15 minutos
 def rm_admin_dashboard(request):
-    """Dashboard administrativo RM com cache"""
-    cache_key = f"rm_dashboard_{request.user.id}"
-    cached_data = cache.get(cache_key)
+    """Dashboard administrativo RM"""
+    from django.utils import timezone
     
-    if cached_data:
-        return render(request, 'core/rm_dashboard.html', cached_data)
-    
+    # Buscar dados do banco
     companies = Company.objects.all()
+    active_companies = companies.filter(is_active=True).count()
     total_users = CustomUser.objects.count()
     total_maps = CTOMapFile.objects.count()
+    
+    # Atividades recentes (últimos uploads e criações)
+    recent_maps = CTOMapFile.objects.select_related('company', 'uploaded_by').order_by('-uploaded_at')[:5]
+    recent_activities = []
+    for map_file in recent_maps:
+        recent_activities.append({
+            'icon': 'map',
+            'description': f"Mapa '{map_file.file_name}' enviado por {map_file.uploaded_by.get_full_name() or map_file.uploaded_by.username}",
+            'timestamp': map_file.uploaded_at,
+            'company': map_file.company.name if map_file.company else 'N/A'
+        })
 
     context = {
         'companies': companies,
         'total_companies': companies.count(),
+        'active_companies': active_companies,
         'total_users': total_users,
         'total_maps': total_maps,
+        'today': timezone.now(),
+        'recent_activities': recent_activities,
     }
     
-    # Cache por 15 minutos
-    cache.set(cache_key, context, 60 * 15)
     return render(request, 'core/rm_dashboard.html', context)
 
 
@@ -316,8 +325,8 @@ def company_dashboard(request, company_slug):
 @company_access_required(require_admin=False, allow_user_role=True)
 def company_verificador(request, company_slug):
     """Verificador - acessível para todos os usuários da empresa"""
-    from django.shortcuts import redirect
-    return redirect('verificador:index')
+    from ftth_viewer.views import index as ftth_index
+    return ftth_index(request, company_slug=company_slug)
 
 
 @login_required
