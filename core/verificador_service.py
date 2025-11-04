@@ -110,7 +110,8 @@ class VerificadorService:
         try:
             # Usar serviço Django nativo (ftth_viewer utils)
             # Estratégia: semelhante ao ftth_viewer.views.api_verificar_viabilidade
-            ctos = ftth_utils.get_all_ctos()
+            # Passar a empresa para filtrar CTOs corretos
+            ctos = ftth_utils.get_all_ctos(company=company)
             if not ctos:
                 return {
                     'success': False,

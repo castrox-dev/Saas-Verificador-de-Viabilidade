@@ -327,59 +327,159 @@ def set_cached_geocoding(endereco, data):
     )
 
 
-def get_all_ctos():
-    """Retorna todos os CTOs de todos os arquivos"""
+def get_all_ctos(company=None):
+    """Retorna todos os CTOs de todos os arquivos do banco de dados ou da pasta media/cto_maps"""
     coords = []
     
-    # KMLs
-    kml_dir = getattr(settings, 'FTTH_KML_DIR', None)
-    if kml_dir and os.path.exists(kml_dir):
-        for arquivo in os.listdir(kml_dir):
-            if arquivo.lower().endswith('.kml'):
-                caminho = os.path.join(kml_dir, arquivo)
-                for coord in ler_kml(caminho):
-                    coord["arquivo"] = arquivo
-                    coords.append(coord)
+    # Primeiro, tentar buscar do banco de dados
+    try:
+        from core.models import CTOMapFile
+        
+        if company:
+            # Filtrar por empresa específica
+            map_files = CTOMapFile.objects.filter(company=company, file__isnull=False)
+        else:
+            # Buscar todos os arquivos
+            map_files = CTOMapFile.objects.filter(file__isnull=False)
+        
+        # Processar cada arquivo do banco
+        for map_file in map_files:
+            try:
+                # Verificar se o arquivo existe fisicamente
+                if not map_file.file or not hasattr(map_file.file, 'path'):
+                    continue
+                
+                caminho = map_file.file.path
+                if not os.path.exists(caminho):
+                    continue
+                
+                # Determinar extensão
+                file_name = map_file.file.name
+                ext = os.path.splitext(file_name)[1].lower().lstrip('.')
+                
+                # Ler coordenadas baseado no tipo
+                try:
+                    if ext == 'kml':
+                        arquivo_coords = ler_kml(caminho)
+                    elif ext == 'kmz':
+                        arquivo_coords = ler_kmz(caminho)
+                    elif ext == 'csv':
+                        arquivo_coords = ler_csv(caminho)
+                    elif ext in ['xls', 'xlsx']:
+                        arquivo_coords = ler_excel(caminho)
+                    else:
+                        continue
+                    
+                    # Adicionar informações do arquivo
+                    for coord in arquivo_coords:
+                        coord["arquivo"] = os.path.basename(file_name)
+                        coord["map_id"] = map_file.id
+                        coords.append(coord)
+                except Exception as e:
+                    # Log erro mas continue processando outros arquivos
+                    print(f"Erro ao processar arquivo {file_name}: {e}")
+                    continue
+            except Exception as e:
+                # Log erro mas continue processando outros arquivos
+                print(f"Erro ao acessar arquivo {map_file.id}: {e}")
+                continue
+    except Exception as e:
+        # Se houver erro ao acessar o banco, continuar para buscar da pasta
+        print(f"Erro ao acessar banco de dados, buscando da pasta: {e}")
     
-    # KMZs
-    kmz_dir = getattr(settings, 'FTTH_KMZ_DIR', None)
-    if kmz_dir and os.path.exists(kmz_dir):
-        for arquivo in os.listdir(kmz_dir):
-            if arquivo.lower().endswith('.kmz'):
-                caminho = os.path.join(kmz_dir, arquivo)
-                for coord in ler_kmz(caminho):
-                    coord["arquivo"] = arquivo
-                    coords.append(coord)
-    
-    # CSVs
-    csv_dir = getattr(settings, 'FTTH_CSV_DIR', None)
-    if csv_dir and os.path.exists(csv_dir):
-        for arquivo in os.listdir(csv_dir):
-            if arquivo.lower().endswith('.csv'):
-                caminho = os.path.join(csv_dir, arquivo)
-                for coord in ler_csv(caminho):
-                    coord["arquivo"] = arquivo
-                    coords.append(coord)
-    
-    # XLS
-    xls_dir = getattr(settings, 'FTTH_XLS_DIR', None)
-    if xls_dir and os.path.exists(xls_dir):
-        for arquivo in os.listdir(xls_dir):
-            if arquivo.lower().endswith('.xls'):
-                caminho = os.path.join(xls_dir, arquivo)
-                for coord in ler_excel(caminho):
-                    coord["arquivo"] = arquivo
-                    coords.append(coord)
-    
-    # XLSX
-    xlsx_dir = getattr(settings, 'FTTH_XLSX_DIR', None)
-    if xlsx_dir and os.path.exists(xlsx_dir):
-        for arquivo in os.listdir(xlsx_dir):
-            if arquivo.lower().endswith('.xlsx'):
-                caminho = os.path.join(xlsx_dir, arquivo)
-                for coord in ler_excel(caminho):
-                    coord["arquivo"] = arquivo
-                    coords.append(coord)
+    # Se não encontrou no banco, buscar da pasta media/cto_maps
+    if not coords:
+        # Determinar pasta da empresa
+        company_slug = None
+        if company:
+            company_slug = company.slug if hasattr(company, 'slug') else str(company)
+        else:
+            # Tentar detectar pelo settings ou usar 'fibramar' como padrão
+            company_slug = getattr(settings, 'DEFAULT_COMPANY_SLUG', 'fibramar')
+        
+        # Caminho base: media/cto_maps/{company_slug}/
+        media_root = getattr(settings, 'MEDIA_ROOT', os.path.join(settings.BASE_DIR, 'media'))
+        company_dir = os.path.join(media_root, 'cto_maps', company_slug)
+        
+        if os.path.exists(company_dir):
+            # Buscar nas subpastas: kml/, kmz/, csv/, xls/, xlsx/
+            subdirs = {
+                'kml': 'kml',
+                'kmz': 'kmz',
+                'csv': 'csv',
+                'xls': 'xls',
+                'xlsx': 'xlsx'
+            }
+            
+            for ext, subdir in subdirs.items():
+                subdir_path = os.path.join(company_dir, subdir)
+                if os.path.exists(subdir_path):
+                    try:
+                        for arquivo in os.listdir(subdir_path):
+                            if arquivo.lower().endswith(f'.{ext}'):
+                                caminho = os.path.join(subdir_path, arquivo)
+                                try:
+                                    if ext == 'kml':
+                                        arquivo_coords = ler_kml(caminho)
+                                    elif ext == 'kmz':
+                                        arquivo_coords = ler_kmz(caminho)
+                                    elif ext == 'csv':
+                                        arquivo_coords = ler_csv(caminho)
+                                    elif ext in ['xls', 'xlsx']:
+                                        arquivo_coords = ler_excel(caminho)
+                                    else:
+                                        continue
+                                    
+                                    for coord in arquivo_coords:
+                                        coord["arquivo"] = arquivo
+                                        coords.append(coord)
+                                except Exception as e:
+                                    print(f"Erro ao processar arquivo {arquivo}: {e}")
+                                    continue
+                    except Exception as e:
+                        print(f"Erro ao acessar diretório {subdir_path}: {e}")
+                        continue
+        
+        # Fallback para diretórios do sistema (se configurados)
+        if not coords:
+            # KMLs
+            kml_dir = getattr(settings, 'FTTH_KML_DIR', None)
+            if kml_dir and os.path.exists(kml_dir):
+                for arquivo in os.listdir(kml_dir):
+                    if arquivo.lower().endswith('.kml'):
+                        caminho = os.path.join(kml_dir, arquivo)
+                        try:
+                            for coord in ler_kml(caminho):
+                                coord["arquivo"] = arquivo
+                                coords.append(coord)
+                        except:
+                            continue
+            
+            # KMZs
+            kmz_dir = getattr(settings, 'FTTH_KMZ_DIR', None)
+            if kmz_dir and os.path.exists(kmz_dir):
+                for arquivo in os.listdir(kmz_dir):
+                    if arquivo.lower().endswith('.kmz'):
+                        caminho = os.path.join(kmz_dir, arquivo)
+                        try:
+                            for coord in ler_kmz(caminho):
+                                coord["arquivo"] = arquivo
+                                coords.append(coord)
+                        except:
+                            continue
+            
+            # CSVs
+            csv_dir = getattr(settings, 'FTTH_CSV_DIR', None)
+            if csv_dir and os.path.exists(csv_dir):
+                for arquivo in os.listdir(csv_dir):
+                    if arquivo.lower().endswith('.csv'):
+                        caminho = os.path.join(csv_dir, arquivo)
+                        try:
+                            for coord in ler_csv(caminho):
+                                coord["arquivo"] = arquivo
+                                coords.append(coord)
+                        except:
+                            continue
     
     return coords
 

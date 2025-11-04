@@ -31,62 +31,112 @@ def index(request, company_slug=None):
 @login_required
 @require_http_methods(["GET"])
 def api_arquivos(request, company_slug=None):
-    """Lista todos os arquivos disponíveis (KML, KMZ, CSV, XLS, XLSX) do banco de dados, agrupados por empresa"""
+    """Lista todos os arquivos disponíveis (KML, KMZ, CSV, XLS, XLSX) do banco de dados ou da pasta media/cto_maps"""
     user = request.user
     
-    # Determinar quais empresas o usuário pode ver
-    if user.is_rm_admin or user.is_superuser:
-        # RM Admin vê todas as empresas, agrupadas
-        if company_slug:
-            # Se especificou empresa, mostrar apenas essa
-            try:
-                company = Company.objects.get(slug=company_slug)
-                maps = CTOMapFile.objects.filter(company=company).select_related('company').order_by('-uploaded_at')
-            except Company.DoesNotExist:
-                return JsonResponse({'erro': 'Empresa não encontrada'}, status=404)
+    # Determinar empresa a ser listada
+    target_company_slug = company_slug
+    if not target_company_slug:
+        if user.is_rm_admin or user.is_superuser:
+            # RM Admin sem company_slug: tentar usar 'fibramar' como padrão
+            target_company_slug = getattr(settings, 'DEFAULT_COMPANY_SLUG', 'fibramar')
         else:
-            # Mostrar todas as empresas agrupadas
-            maps = CTOMapFile.objects.all().select_related('company').order_by('company__name', '-uploaded_at')
-            # Agrupar por empresa
-            empresas_map = {}
-            for mapa in maps:
-                empresa_nome = mapa.company.name
-                if empresa_nome not in empresas_map:
-                    empresas_map[empresa_nome] = []
-                empresas_map[empresa_nome].append({
+            # Usuário normal usa empresa dele
+            if not user.company:
+                return JsonResponse({'erro': 'Usuário não está associado a uma empresa'}, status=403)
+            target_company_slug = user.company.slug
+    
+    # Verificar permissões
+    if not user.is_rm_admin and not user.is_superuser:
+        if not user.company:
+            return JsonResponse({'erro': 'Usuário não está associado a uma empresa'}, status=403)
+        if target_company_slug != user.company.slug:
+            return JsonResponse({'erro': 'Acesso negado à empresa'}, status=403)
+    
+    arquivos = []
+    
+    # Primeiro, tentar buscar do banco de dados
+    try:
+        if user.is_rm_admin or user.is_superuser:
+            if target_company_slug:
+                try:
+                    company = Company.objects.get(slug=target_company_slug)
+                    maps = CTOMapFile.objects.filter(company=company).select_related('company').order_by('-uploaded_at')
+                except Company.DoesNotExist:
+                    maps = CTOMapFile.objects.none()
+            else:
+                maps = CTOMapFile.objects.all().select_related('company').order_by('company__name', '-uploaded_at')
+                # Se for múltiplas empresas, retornar agrupado
+                if maps.exists():
+                    empresas_map = {}
+                    for mapa in maps:
+                        empresa_nome = mapa.company.name if mapa.company else 'Sem empresa'
+                        if empresa_nome not in empresas_map:
+                            empresas_map[empresa_nome] = []
+                        empresas_map[empresa_nome].append({
+                            'nome': mapa.file_name,
+                            'tipo': mapa.file_type,
+                            'caminho': mapa.file.path if mapa.file else None,
+                            'empresa': empresa_nome,
+                            'empresa_slug': mapa.company.slug if mapa.company else None,
+                            'id': mapa.id
+                        })
+                    return JsonResponse({
+                        'agrupado': True,
+                        'empresas': empresas_map
+                    }, safe=False)
+        else:
+            if not user.company:
+                return JsonResponse({'erro': 'Usuário não está associado a uma empresa'}, status=403)
+            maps = CTOMapFile.objects.filter(company=user.company).order_by('-uploaded_at')
+        
+        # Processar arquivos do banco
+        for mapa in maps:
+            if mapa.file:
+                arquivos.append({
                     'nome': mapa.file_name,
                     'tipo': mapa.file_type,
                     'caminho': mapa.file.path if mapa.file else None,
-                    'empresa': empresa_nome,
-                    'empresa_slug': mapa.company.slug,
                     'id': mapa.id
                 })
-            
-            # Retornar com separação por empresa
-            return JsonResponse({
-                'agrupado': True,
-                'empresas': empresas_map
-            }, safe=False)
-    else:
-        # Usuário normal vê apenas mapas da sua empresa
-        if not user.company:
-            return JsonResponse({'erro': 'Usuário não está associado a uma empresa'}, status=403)
-        
-        # Verificar se o company_slug corresponde à empresa do usuário
-        if company_slug and company_slug != user.company.slug:
-            return JsonResponse({'erro': 'Acesso negado à empresa'}, status=403)
-        
-        maps = CTOMapFile.objects.filter(company=user.company).order_by('-uploaded_at')
+    except Exception as e:
+        # Se houver erro ao acessar o banco, continuar para buscar da pasta
+        print(f"Erro ao acessar banco de dados, buscando da pasta: {e}")
     
-    # Formato simples (uma lista de arquivos)
-    arquivos = []
-    for mapa in maps:
-        arquivos.append({
-            'nome': mapa.file_name,
-            'tipo': mapa.file_type,
-            'caminho': mapa.file.path if mapa.file else None,
-            'id': mapa.id
-        })
+    # Se não encontrou no banco, buscar da pasta media/cto_maps
+    if not arquivos:
+        media_root = getattr(settings, 'MEDIA_ROOT', os.path.join(settings.BASE_DIR, 'media'))
+        company_dir = os.path.join(media_root, 'cto_maps', target_company_slug)
+        
+        if os.path.exists(company_dir):
+            # Buscar arquivos nas subpastas
+            subdirs = {
+                'kml': 'kml',
+                'kmz': 'kmz',
+                'csv': 'csv',
+                'xls': 'xls',
+                'xlsx': 'xlsx'
+            }
+            
+            for ext, subdir in subdirs.items():
+                subdir_path = os.path.join(company_dir, subdir)
+                if os.path.exists(subdir_path):
+                    try:
+                        for arquivo in os.listdir(subdir_path):
+                            if arquivo.lower().endswith(f'.{ext}'):
+                                arquivo_path = os.path.join(subdir_path, arquivo)
+                                arquivos.append({
+                                    'nome': arquivo,
+                                    'tipo': ext,
+                                    'caminho': arquivo_path,
+                                    'id': None  # Não tem ID do banco
+                                })
+                    except Exception as e:
+                        print(f"Erro ao listar arquivos em {subdir_path}: {e}")
+                        continue
+            
+            # Ordenar por nome
+            arquivos.sort(key=lambda x: x['nome'].lower())
     
     return JsonResponse(arquivos, safe=False)
 
@@ -94,7 +144,7 @@ def api_arquivos(request, company_slug=None):
 @login_required
 @require_http_methods(["GET"])
 def api_coordenadas(request, company_slug=None):
-    """Retorna coordenadas de um arquivo específico do banco de dados"""
+    """Retorna coordenadas de um arquivo específico do banco de dados ou da pasta media/cto_maps"""
     arquivo_nome = request.GET.get('arquivo')
     map_id = request.GET.get('id')  # ID do mapa no banco de dados
     
@@ -102,15 +152,31 @@ def api_coordenadas(request, company_slug=None):
         return JsonResponse({'erro': 'Arquivo não especificado'}, status=400)
     
     user = request.user
+    caminho = None
+    ext = None
     
-    # Buscar o arquivo no banco de dados
+    # Determinar empresa
+    target_company_slug = company_slug
+    if not target_company_slug:
+        if user.is_rm_admin or user.is_superuser:
+            target_company_slug = getattr(settings, 'DEFAULT_COMPANY_SLUG', 'fibramar')
+        else:
+            if not user.company:
+                return JsonResponse({'erro': 'Usuário não está associado a uma empresa'}, status=403)
+            target_company_slug = user.company.slug
+    
+    # Primeiro, tentar buscar do banco de dados
     try:
         if map_id:
             # Buscar por ID (preferencial)
             mapa = CTOMapFile.objects.get(id=map_id)
-        else:
+            caminho = mapa.file.path if hasattr(mapa.file, 'path') else None
+            # Verificar permissões
+            if not user.is_rm_admin and not user.is_superuser:
+                if not user.company or user.company != mapa.company:
+                    return JsonResponse({'erro': 'Acesso negado ao arquivo'}, status=403)
+        elif arquivo_nome:
             # Buscar por nome do arquivo
-            # Filtrar por empresa do usuário (a menos que seja RM Admin)
             if user.is_rm_admin or user.is_superuser:
                 mapa = CTOMapFile.objects.filter(file__icontains=arquivo_nome).first()
             else:
@@ -120,69 +186,76 @@ def api_coordenadas(request, company_slug=None):
                     company=user.company,
                     file__icontains=arquivo_nome
                 ).first()
-        
-        if not mapa or not mapa.file:
-            return JsonResponse({'erro': 'Arquivo não encontrado'}, status=404)
-        
-        # Verificar permissões (usuário deve ter acesso à empresa do mapa)
-        if not user.is_rm_admin and not user.is_superuser:
-            if not user.company or user.company != mapa.company:
-                return JsonResponse({'erro': 'Acesso negado ao arquivo'}, status=403)
-        
-        # Obter caminho do arquivo no sistema
-        caminho = mapa.file.path if hasattr(mapa.file, 'path') else None
-        if not caminho or not os.path.exists(caminho):
-            return JsonResponse({'erro': 'Arquivo físico não encontrado'}, status=404)
-        
-        # Determinar extensão do tipo do arquivo (prioridade: nome do arquivo > file_type)
-        # Extrair extensão do nome do arquivo (mais confiável)
-        file_name_ext = os.path.splitext(mapa.file.name)[1].lower().lstrip('.')
-        file_type_ext = (mapa.file_type.lower() if mapa.file_type else '').lstrip('.')
-        
-        # Usar extensão do nome do arquivo como prioridade, fallback para file_type
-        ext = file_name_ext if file_name_ext else file_type_ext
-        
-        # Se ainda não tiver extensão, tentar detectar pelo conteúdo
-        if not ext:
-            # Tentar ler primeiros bytes para detectar tipo
+            
+            if mapa and mapa.file:
+                caminho = mapa.file.path if hasattr(mapa.file, 'path') else None
+                # Verificar permissões
+                if not user.is_rm_admin and not user.is_superuser:
+                    if not user.company or user.company != mapa.company:
+                        return JsonResponse({'erro': 'Acesso negado ao arquivo'}, status=403)
+    except CTOMapFile.DoesNotExist:
+        pass
+    except Exception as e:
+        print(f"Erro ao buscar arquivo no banco: {e}")
+    
+    # Se não encontrou no banco, buscar da pasta
+    if not caminho or not os.path.exists(caminho):
+        if arquivo_nome:
+            media_root = getattr(settings, 'MEDIA_ROOT', os.path.join(settings.BASE_DIR, 'media'))
+            company_dir = os.path.join(media_root, 'cto_maps', target_company_slug)
+            
+            # Buscar o arquivo nas subpastas
+            subdirs = ['kml', 'kmz', 'csv', 'xls', 'xlsx']
+            for subdir in subdirs:
+                subdir_path = os.path.join(company_dir, subdir)
+                if os.path.exists(subdir_path):
+                    arquivo_path = os.path.join(subdir_path, arquivo_nome)
+                    if os.path.exists(arquivo_path):
+                        caminho = arquivo_path
+                        ext = subdir  # A extensão é a subpasta
+                        break
+    
+    if not caminho or not os.path.exists(caminho):
+        return JsonResponse({'erro': 'Arquivo físico não encontrado'}, status=404)
+    
+    # Determinar extensão se não foi definida
+    if not ext:
+        file_name_ext = os.path.splitext(caminho)[1].lower().lstrip('.')
+        if file_name_ext:
+            ext = file_name_ext
+        else:
+            # Tentar detectar pelo conteúdo
             try:
                 with open(caminho, 'rb') as f:
                     first_bytes = f.read(4)
-                    # KMZ é um arquivo ZIP (começa com PK)
                     if first_bytes[:2] == b'PK':
                         ext = 'kmz'
-                    # KML é XML (começa com <? ou <)
                     elif first_bytes.startswith(b'<?') or first_bytes.startswith(b'<'):
                         ext = 'kml'
             except:
                 pass
+    
+    if not ext:
+        return JsonResponse({'erro': 'Tipo de arquivo não identificado'}, status=400)
+    
+    try:
+        # Normalizar extensão
+        ext = ext.lstrip('.').lower()
         
-        if not ext:
-            return JsonResponse({'erro': 'Tipo de arquivo não identificado'}, status=400)
+        if ext == 'kml':
+            coords = ler_kml(caminho)
+        elif ext == 'kmz':
+            coords = ler_kmz(caminho)
+        elif ext == 'csv':
+            coords = ler_csv(caminho)
+        elif ext in ['xls', 'xlsx']:
+            coords = ler_excel(caminho)
+        else:
+            return JsonResponse({'erro': f'Tipo de arquivo não suportado: {ext}'}, status=400)
         
-        try:
-            # Normalizar extensão (remover ponto se houver)
-            ext = ext.lstrip('.').lower()
-            
-            if ext == 'kml':
-                coords = ler_kml(caminho)
-            elif ext == 'kmz':
-                coords = ler_kmz(caminho)
-            elif ext == 'csv':
-                coords = ler_csv(caminho)
-            elif ext in ['xls', 'xlsx']:
-                coords = ler_excel(caminho)
-            else:
-                return JsonResponse({'erro': f'Tipo de arquivo não suportado: {ext}'}, status=400)
-            
-            return JsonResponse(coords, safe=False)
-        except Exception as e:
-            return JsonResponse({'erro': f'Erro ao processar arquivo: {str(e)}'}, status=500)
-            
-    except CTOMapFile.DoesNotExist:
-        return JsonResponse({'erro': 'Arquivo não encontrado no banco de dados'}, status=404)
+        return JsonResponse(coords, safe=False)
     except Exception as e:
-        return JsonResponse({'erro': f'Erro ao buscar arquivo: {str(e)}'}, status=500)
+        return JsonResponse({'erro': f'Erro ao processar arquivo: {str(e)}'}, status=500)
 
 
 @login_required
@@ -291,8 +364,22 @@ def api_verificar_viabilidade(request, company_slug=None):
         except ViabilidadeCache.DoesNotExist:
             pass
         
+        # Determinar empresa para filtrar CTOs
+        company = None
+        user = request.user
+        if company_slug:
+            # Buscar empresa pelo slug
+            try:
+                company = Company.objects.get(slug=company_slug, is_active=True)
+            except Company.DoesNotExist:
+                pass
+        elif user.is_authenticated and user.company:
+            # Usar empresa do usuário
+            company = user.company
+        # Se for RM admin ou superuser, buscar todos os CTOs (company=None)
+        
         # Buscar CTOs
-        ctos = get_all_ctos()
+        ctos = get_all_ctos(company=company)
         if not ctos:
             return JsonResponse({"erro": "Nenhum CTO encontrado"}, status=404)
         
