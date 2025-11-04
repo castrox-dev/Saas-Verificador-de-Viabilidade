@@ -105,8 +105,9 @@ def rm_admin_dashboard(request):
         total_maps = CTOMapFile.objects.only('id').count()
         
         # Atividades recentes (últimos uploads e criações) - usar select_related
+        # Note: file_name é uma propriedade (@property), não um campo do banco, então não pode estar no .only()
         recent_maps = CTOMapFile.objects.select_related('company', 'uploaded_by').only(
-            'file_name', 'uploaded_at', 'company__name', 'uploaded_by__first_name', 
+            'file', 'uploaded_at', 'company__name', 'uploaded_by__first_name', 
             'uploaded_by__last_name', 'uploaded_by__username'
         ).order_by('-uploaded_at')[:5]
         
@@ -742,12 +743,39 @@ def company_map_admin(request, company_slug):
 @login_required
 @rm_admin_required
 def rm_map_list(request):
-    """Lista de todos os mapas (visão RM), com filtro por empresa via ?company=slug"""
-    company_slug = request.GET.get('company')
-    maps = CTOMapFile.objects.all().select_related('company', 'uploaded_by').order_by('-uploaded_at')
-    if company_slug:
-        maps = maps.filter(company__slug=company_slug)
-    return render(request, 'rm/maps/list.html', {'maps': maps})
+    """Lista de todos os mapas (visão RM), agrupados por empresa"""
+    from django.db.models import Count, Prefetch
+    
+    # Buscar todas as empresas com seus mapas, ordenadas por nome
+    # O related_name é 'cto_maps', não 'ctomapfile'
+    companies = Company.objects.annotate(
+        map_count=Count('cto_maps')
+    ).filter(map_count__gt=0).order_by('name')
+    
+    # Agrupar mapas por empresa
+    companies_with_maps = []
+    for company in companies:
+        maps = CTOMapFile.objects.filter(company=company).select_related(
+            'uploaded_by'
+        ).order_by('-uploaded_at')
+        companies_with_maps.append({
+            'company': company,
+            'maps': maps,
+            'count': maps.count()
+        })
+    
+    # Empresas sem mapas (se necessário)
+    companies_without_maps = Company.objects.annotate(
+        map_count=Count('cto_maps')
+    ).filter(map_count=0).order_by('name')
+    
+    context = {
+        'companies_with_maps': companies_with_maps,
+        'companies_without_maps': companies_without_maps,
+        'total_companies': len(companies_with_maps),
+    }
+    
+    return render(request, 'rm/maps/list.html', context)
 
 
 @login_required

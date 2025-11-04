@@ -1,67 +1,319 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Mapas CTO (RM){% endblock %}
 
 {% block content %}
+<style>
+    .sidebar-col { display: none; }
+    .main-content { 
+        padding: 30px; 
+        background-color: var(--rm-bg-primary);
+        display: flex; 
+        justify-content: center; 
+        align-items: flex-start; 
+        min-height: calc(100vh - 76px);
+    }
+    .content-card { 
+        width: 100%; 
+        max-width: 1400px; 
+        margin: 0 auto; 
+    }
+
+    /* Dropdown Styles - Adaptado para o tema */
+    .dropdown-wrapper {
+        position: relative;
+        margin-bottom: 12px;
+    }
+
+    .dropdown-wrapper:first-child {
+        margin-top: 20px;
+    }
+
+    .dropdown-trigger {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 12px 20px;
+        width: 100%;
+        background: var(--rm-card-bg);
+        border: 1px solid var(--rm-border-primary);
+        border-radius: var(--rm-border-radius-md);
+        color: var(--rm-text-primary);
+        font-size: 0.95rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .dropdown-trigger:hover {
+        border-color: var(--rm-primary);
+        box-shadow: 0 0 10px rgba(33, 150, 243, 0.2);
+    }
+
+    .dropdown-wrapper.active .dropdown-trigger {
+        border-color: var(--rm-primary);
+        box-shadow: 0 0 10px rgba(33, 150, 243, 0.3);
+    }
+
+    .chevron-icon {
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        width: 16px;
+        height: 16px;
+        color: var(--rm-text-secondary);
+    }
+
+    .dropdown-wrapper.active .chevron-icon {
+        transform: rotate(180deg);
+    }
+
+    .company-info {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        padding-right: 20px;
+    }
+
+    .company-name {
+        font-size: 0.95rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .map-count-badge {
+        color: var(--rm-text-secondary);
+        font-size: 0.875rem;
+        font-weight: 400;
+    }
+
+    .dropdown-menu {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        right: 0;
+        width: 100%;
+        background: var(--rm-card-bg);
+        border: 1px solid var(--rm-border-primary);
+        border-radius: var(--rm-border-radius-md);
+        padding: 8px;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-10px);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        z-index: 1000;
+        max-height: 600px;
+        overflow-y: auto;
+    }
+
+    .dropdown-wrapper.active .dropdown-menu {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+
+    .dropdown-body {
+        padding: 8px;
+    }
+
+    .table {
+        background: transparent;
+        color: var(--rm-text-primary);
+        margin-bottom: 0;
+        width: 100%;
+    }
+
+    .table thead {
+        background: transparent;
+        color: var(--rm-text-secondary);
+    }
+
+    .table thead th {
+        border-bottom: 1px solid var(--rm-border-primary);
+        padding: 10px 12px;
+        font-weight: 500;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .table tbody tr {
+        border-bottom: 1px solid var(--rm-border-primary);
+        transition: background 0.2s ease;
+    }
+
+    .table tbody tr:hover {
+        background: var(--rm-bg-secondary);
+    }
+
+    .table tbody td {
+        padding: 12px;
+        vertical-align: middle;
+        font-size: 0.9rem;
+    }
+
+    .badge {
+        padding: 4px 8px;
+        border-radius: 3px;
+        font-weight: 400;
+        font-size: 0.8rem;
+        display: inline-block;
+    }
+
+    .badge-success {
+        background: transparent;
+        color: var(--rm-success);
+        border: 1px solid var(--rm-success);
+    }
+
+    .badge-secondary {
+        background: transparent;
+        color: var(--rm-text-secondary);
+        border: 1px solid var(--rm-text-secondary);
+    }
+
+    .btn-sm {
+        padding: 4px 8px;
+        font-size: 0.8rem;
+        border-radius: 3px;
+        border: 1px solid var(--rm-border-primary);
+        background: transparent;
+        transition: all 0.2s ease;
+    }
+
+    .btn-outline-primary {
+        border-color: var(--rm-border-primary);
+        color: var(--rm-text-primary);
+    }
+
+    .btn-outline-primary:hover {
+        background: var(--rm-bg-secondary);
+        border-color: var(--rm-primary);
+        color: var(--rm-primary);
+    }
+
+    .btn-outline-danger {
+        border-color: var(--rm-border-primary);
+        color: var(--rm-text-secondary);
+    }
+
+    .btn-outline-danger:hover {
+        background: var(--rm-bg-secondary);
+        border-color: var(--rm-error);
+        color: var(--rm-error);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--rm-text-secondary);
+    }
+
+    .empty-state i {
+        font-size: 2.5rem;
+        margin-bottom: 16px;
+        opacity: 0.3;
+    }
+
+    h2 {
+        color: var(--rm-text-primary);
+        font-weight: 500;
+        font-size: 1.5rem;
+    }
+
+    @media (max-width: 768px) {
+        .dropdown-menu {
+            position: relative;
+            top: 0;
+            margin-top: 8px;
+        }
+    }
+</style>
+
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2>Mapas CTO (Visão RM)</h2>
-                <a href="{% url 'rm:map_by_company' %}" class="btn btn-primary">
+                <a href="{% url 'rm:map_by_company' %}" class="btn" style="background: var(--rm-button-primary); color: var(--rm-white);">
                     <i class="fas fa-upload"></i> Upload de Mapa
                 </a>
             </div>
 
-            {% if maps %}
-            <div class="card">
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Nome do Arquivo</th>
-                                    <th>Descrição</th>
-                                    <th>Empresa</th>
-                                    <th>Enviado por</th>
-                                    <th>Data de Upload</th>
-                                    <th>Status</th>
-                                    <th>Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for map in maps %}
-                                <tr>
-                                    <td>{{ map.file_name }}</td>
-                                    <td>{{ map.description|default:"-" }}</td>
-                                    <td>{{ map.company.name|default:"-" }}</td>
-                                    <td>{{ map.uploaded_by.get_full_name|default:map.uploaded_by.username }}</td>
-                                    <td>{{ map.uploaded_at|date:"d/m/Y H:i" }}</td>
-                                    <td>
-                                        <span class="badge {% if map.is_processed %}badge-success{% else %}badge-secondary{% endif %}">
-                                            {% if map.is_processed %}Processado{% else %}Pendente{% endif %}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <a href="{% url 'rm:map_download' map.id %}" class="btn btn-sm btn-outline-primary">
-                                            <i class="fas fa-download"></i> Download
-                                        </a>
-                                        <button type="button" 
-                                                class="btn btn-sm btn-outline-danger js-delete-map" 
-                                                data-map-id="{{ map.id }}">
-                                            <i class="fas fa-trash"></i> Excluir
-                                        </button>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+            {% if companies_with_maps %}
+            <div class="dropdowns-container">
+                {% for item in companies_with_maps %}
+                <div class="dropdown-wrapper {% if forloop.first %}active{% endif %}">
+                    <button class="dropdown-trigger" type="button">
+                        <div class="company-info">
+                            <span class="company-name">{{ item.company.name }}</span>
+                            <span class="map-count-badge">{{ item.count }} mapa{{ item.count|pluralize }}</span>
+                        </div>
+                        <svg class="chevron-icon" viewBox="0 0 24 24" width="16" height="16">
+                            <path d="M7 10l5 5 5-5z" fill="currentColor"></path>
+                        </svg>
+                    </button>
+                    
+                    <div class="dropdown-menu">
+                        <div class="dropdown-body">
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Nome do Arquivo</th>
+                                            <th>Descrição</th>
+                                            <th>Enviado por</th>
+                                            <th>Data de Upload</th>
+                                            <th>Status</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for map in item.maps %}
+                                        <tr>
+                                            <td>{{ map.file_name }}</td>
+                                            <td>{{ map.description|default:"-" }}</td>
+                                            <td>{{ map.uploaded_by.get_full_name|default:map.uploaded_by.username }}</td>
+                                            <td>{{ map.uploaded_at|date:"d/m/Y H:i" }}</td>
+                                            <td>
+                                                <span class="badge {% if map.is_processed %}badge-success{% else %}badge-secondary{% endif %}">
+                                                    {% if map.is_processed %}Processado{% else %}Pendente{% endif %}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <a href="{% url 'rm:map_download' map.id %}" 
+                                                   class="btn btn-sm btn-outline-primary me-2" 
+                                                   title="Download">
+                                                    <i class="fas fa-download"></i>
+                                                </a>
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-outline-danger js-delete-map" 
+                                                        data-map-id="{{ map.id }}"
+                                                        title="Excluir">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
+                {% endfor %}
             </div>
             {% else %}
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle"></i> Nenhum mapa CTO encontrado.
+            <div class="empty-state">
+                <i class="fas fa-map-marked-alt"></i>
+                <h4>Nenhum mapa encontrado</h4>
+                <p>Nenhum mapa CTO foi enviado ainda.</p>
+                <a href="{% url 'rm:map_by_company' %}" class="btn mt-3" style="background: var(--rm-button-primary); color: var(--rm-white);">
+                    <i class="fas fa-upload me-2"></i>Fazer primeiro upload
+                </a>
             </div>
             {% endif %}
         </div>
@@ -69,6 +321,74 @@
 </div>
 
 <script>
+class ModernDropdown {
+    constructor(element, options = {}) {
+        this.wrapper = element;
+        this.trigger = element.querySelector('.dropdown-trigger');
+        this.menu = element.querySelector('.dropdown-menu');
+        this.options = {
+            openOnHover: false, // Sempre usar click no nosso caso
+            closeOnClickOutside: true,
+            animation: true,
+            ...options
+        };
+        
+        this.init();
+    }
+    
+    init() {
+        // Click events
+        this.trigger.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.toggle();
+        });
+        
+        // Close on click outside
+        if (this.options.closeOnClickOutside) {
+            document.addEventListener('click', (e) => {
+                if (!this.wrapper.contains(e.target)) {
+                    this.close();
+                }
+            });
+        }
+    }
+    
+    open() {
+        // Fechar outros dropdowns
+        document.querySelectorAll('.dropdown-wrapper').forEach(wrapper => {
+            if (wrapper !== this.wrapper && wrapper.classList.contains('active')) {
+                wrapper.classList.remove('active');
+            }
+        });
+        
+        this.wrapper.classList.add('active');
+        if (this.menu) {
+            this.menu.setAttribute('aria-expanded', 'true');
+        }
+    }
+    
+    close() {
+        this.wrapper.classList.remove('active');
+        if (this.menu) {
+            this.menu.setAttribute('aria-expanded', 'false');
+        }
+    }
+    
+    toggle() {
+        this.wrapper.classList.contains('active') ? this.close() : this.open();
+    }
+}
+
+// Initialize dropdowns
+document.addEventListener('DOMContentLoaded', () => {
+    const dropdowns = document.querySelectorAll('.dropdown-wrapper');
+    dropdowns.forEach(dropdown => {
+        new ModernDropdown(dropdown);
+    });
+});
+
+// Delete map functionality
 (function() {
   function getCookie(name) {
     const value = `; ${document.cookie}`;
@@ -91,12 +411,25 @@
         });
         const data = await resp.json();
         if (data.success) {
-          location.reload();
+          if (window.showSuccess) {
+            window.showSuccess('Mapa excluído com sucesso!');
+          } else {
+            alert('Mapa excluído com sucesso!');
+          }
+          setTimeout(() => location.reload(), 500);
         } else {
-          alert(data.message || 'Erro ao excluir mapa.');
+          if (window.showError) {
+            window.showError(data.message || 'Erro ao excluir mapa.');
+          } else {
+            alert(data.message || 'Erro ao excluir mapa.');
+          }
         }
       } catch (e) {
-        alert('Erro ao excluir mapa.');
+        if (window.showError) {
+          window.showError('Erro ao excluir mapa.');
+        } else {
+          alert('Erro ao excluir mapa.');
+        }
       }
     });
   });

@@ -1,6 +1,6 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views
-from . import views, test_views
+from . import views
 
 app_name = 'rm'
 
@@ -40,14 +40,4 @@ urlpatterns = [
     # Relatórios RM
     path('relatorios/', views.rm_reports, name='reports'),
     path('relatorios/exportar/csv/', views.rm_reports_export_csv, name='reports_export_csv'),
-    
-    # Páginas de teste de erro (apenas em DEBUG)
-    path('test/404/', test_views.test_404, name='test_404'),
-    path('test/500/', test_views.test_500, name='test_500'),
-    path('test/403/', test_views.test_403, name='test_403'),
-    path('test/400/', test_views.test_400, name='test_400'),
-    
-    # URL para forçar 404 e testar página personalizada
-    path('test-404/', test_views.force_404, name='force_404'),
-    path('show-404/', test_views.show_404_page, name='show_404'),
 ]
