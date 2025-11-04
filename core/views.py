@@ -93,31 +93,50 @@ def rm_admin_dashboard(request):
     """Dashboard administrativo RM"""
     from django.utils import timezone
     
-    # Buscar dados do banco
-    companies = Company.objects.all()
-    active_companies = companies.filter(is_active=True).count()
-    total_users = CustomUser.objects.count()
-    total_maps = CTOMapFile.objects.count()
+    # Usar cache para estatísticas que não mudam frequentemente
+    cache_key = f'rm_dashboard_stats_{request.user.id}'
+    cached_stats = cache.get(cache_key)
     
-    # Atividades recentes (últimos uploads e criações)
-    recent_maps = CTOMapFile.objects.select_related('company', 'uploaded_by').order_by('-uploaded_at')[:5]
-    recent_activities = []
-    for map_file in recent_maps:
-        recent_activities.append({
-            'icon': 'map',
-            'description': f"Mapa '{map_file.file_name}' enviado por {map_file.uploaded_by.get_full_name() or map_file.uploaded_by.username}",
-            'timestamp': map_file.uploaded_at,
-            'company': map_file.company.name if map_file.company else 'N/A'
-        })
-
+    if cached_stats is None:
+        # Buscar dados do banco com otimizações
+        companies = Company.objects.all().only('id', 'name', 'slug', 'is_active')
+        active_companies = companies.filter(is_active=True).count()
+        total_users = CustomUser.objects.only('id').count()
+        total_maps = CTOMapFile.objects.only('id').count()
+        
+        # Atividades recentes (últimos uploads e criações) - usar select_related
+        recent_maps = CTOMapFile.objects.select_related('company', 'uploaded_by').only(
+            'file_name', 'uploaded_at', 'company__name', 'uploaded_by__first_name', 
+            'uploaded_by__last_name', 'uploaded_by__username'
+        ).order_by('-uploaded_at')[:5]
+        
+        recent_activities = []
+        for map_file in recent_maps:
+            recent_activities.append({
+                'icon': 'map',
+                'description': f"Mapa '{map_file.file_name}' enviado por {map_file.uploaded_by.get_full_name() or map_file.uploaded_by.username}",
+                'timestamp': map_file.uploaded_at,
+                'company': map_file.company.name if map_file.company else 'N/A'
+            })
+        
+        cached_stats = {
+            'total_companies': companies.count(),
+            'active_companies': active_companies,
+            'total_users': total_users,
+            'total_maps': total_maps,
+            'recent_activities': recent_activities,
+        }
+        # Cache por 5 minutos
+        cache.set(cache_key, cached_stats, 300)
+    
     context = {
-        'companies': companies,
-        'total_companies': companies.count(),
-        'active_companies': active_companies,
-        'total_users': total_users,
-        'total_maps': total_maps,
+        'companies': Company.objects.all().only('id', 'name', 'slug', 'is_active'),
+        'total_companies': cached_stats['total_companies'],
+        'active_companies': cached_stats['active_companies'],
+        'total_users': cached_stats['total_users'],
+        'total_maps': cached_stats['total_maps'],
         'today': timezone.now(),
-        'recent_activities': recent_activities,
+        'recent_activities': cached_stats['recent_activities'],
     }
     
     return render(request, 'core/rm_dashboard.html', context)
@@ -151,7 +170,10 @@ def rm_company_login_check(request, company_slug):
 @rm_admin_required
 def rm_user_list(request):
     q = request.GET.get('q', '').strip()
-    users = CustomUser.objects.all().select_related('company').order_by('username')
+    users = CustomUser.objects.select_related('company').only(
+        'id', 'username', 'email', 'first_name', 'last_name', 'role', 
+        'is_active', 'company__name', 'company__slug'
+    ).order_by('username')
     if q:
         users = users.filter(Q(username__icontains=q) | Q(email__icontains=q) | Q(first_name__icontains=q) | Q(last_name__icontains=q))
     return render(request, 'rm/users/list.html', {'users': users, 'q': q})
@@ -400,6 +422,30 @@ def company_map_upload(request, company_slug):
                 from .audit_logger import log_map_upload
                 map_file = CTOMapFile.objects.get(id=result['cto_file_id'])
                 log_map_upload(request.user, map_file, company)
+                
+                # Invalidar cache de arquivos após upload - para TODOS os usuários da empresa
+                # Buscar todos os usuários da empresa para invalidar seus caches
+                from core.models import CustomUser
+                company_users = CustomUser.objects.filter(company=company).values_list('id', flat=True)
+                
+                # Invalidar cache para todos os usuários da empresa
+                cache_keys_to_delete = [f'rm_dashboard_stats_{request.user.id}']
+                for user_id in company_users:
+                    cache_keys_to_delete.extend([
+                        f'api_arquivos_{user_id}_{company.slug}',
+                        f'api_arquivos_{user_id}_none',
+                    ])
+                
+                # Invalidar também para RM admins (que podem ver todas as empresas)
+                if request.user.is_rm_admin or request.user.is_superuser:
+                    cache_keys_to_delete.extend([
+                        f'api_arquivos_{request.user.id}_{company.slug}',
+                        f'api_arquivos_{request.user.id}_none',
+                    ])
+                
+                # Deletar todos os caches relacionados
+                if cache_keys_to_delete:
+                    cache.delete_many(cache_keys_to_delete)
             except Exception as log_error:
                 logger.warning(f"Erro no log de upload: {str(log_error)}")
             
@@ -721,10 +767,37 @@ def rm_map_download(request, pk):
 @require_http_methods(["POST"])
 def rm_map_delete(request, pk):
     map_file = get_object_or_404(CTOMapFile, pk=pk)
+    company_slug = map_file.company.slug if map_file.company else None
     try:
         if map_file.file and os.path.exists(map_file.file.path):
             os.remove(map_file.file.path)
         map_file.delete()
+        
+        # Invalidar cache de arquivos - para TODOS os usuários da empresa
+        if map_file.company:
+            from core.models import CustomUser
+            company_users = CustomUser.objects.filter(company=map_file.company).values_list('id', flat=True)
+            
+            cache_keys_to_delete = []
+            for user_id in company_users:
+                cache_keys_to_delete.extend([
+                    f'api_arquivos_{user_id}_{company_slug}',
+                    f'api_arquivos_{user_id}_none',
+                    f'api_coordenadas_{map_file.id}_{company_slug}',
+                    f'api_coordenadas_{map_file.file_name}_{company_slug}',
+                ])
+            
+            # Invalidar também para RM admins
+            if request.user.is_rm_admin or request.user.is_superuser:
+                cache_keys_to_delete.extend([
+                    f'api_arquivos_{request.user.id}_{company_slug}',
+                    f'api_arquivos_{request.user.id}_none',
+                    f'api_coordenadas_{map_file.id}_{company_slug}',
+                    f'api_coordenadas_{map_file.file_name}_{company_slug}',
+                ])
+            
+            if cache_keys_to_delete:
+                cache.delete_many(cache_keys_to_delete)
         return JsonResponse({'success': True})
     except Exception:
         return JsonResponse({'success': False, 'message': 'Falha ao excluir'}, status=500)

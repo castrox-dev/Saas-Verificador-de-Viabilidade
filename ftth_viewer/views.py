@@ -31,8 +31,19 @@ def index(request, company_slug=None):
 @login_required
 @require_http_methods(["GET"])
 def api_arquivos(request, company_slug=None):
-    """Lista todos os arquivos disponíveis (KML, KMZ, CSV, XLS, XLSX) do banco de dados ou da pasta media/cto_maps"""
+    """Lista todos os arquivos disponíveis apenas do banco de dados (enviados via upload)"""
     user = request.user
+    
+    # Permitir bypass do cache com parâmetro refresh
+    force_refresh = request.GET.get('refresh', 'false').lower() == 'true'
+    
+    # Cache baseado no usuário e empresa
+    cache_key = f'api_arquivos_{user.id}_{company_slug or (user.company.slug if user.company else "none")}'
+    
+    if not force_refresh:
+        cached_result = cache.get(cache_key)
+        if cached_result is not None:
+            return JsonResponse(cached_result, safe=False)
     
     # Determinar empresa a ser listada
     target_company_slug = company_slug
@@ -60,35 +71,22 @@ def api_arquivos(request, company_slug=None):
         if user.is_rm_admin or user.is_superuser:
             if target_company_slug:
                 try:
-                    company = Company.objects.get(slug=target_company_slug)
+                    company = Company.objects.only('id', 'name', 'slug').get(slug=target_company_slug)
                     maps = CTOMapFile.objects.filter(company=company).select_related('company').order_by('-uploaded_at')
                 except Company.DoesNotExist:
                     maps = CTOMapFile.objects.none()
             else:
-                maps = CTOMapFile.objects.all().select_related('company').order_by('company__name', '-uploaded_at')
-                # Se for múltiplas empresas, retornar agrupado
-                if maps.exists():
-                    empresas_map = {}
-                    for mapa in maps:
-                        empresa_nome = mapa.company.name if mapa.company else 'Sem empresa'
-                        if empresa_nome not in empresas_map:
-                            empresas_map[empresa_nome] = []
-                        empresas_map[empresa_nome].append({
-                            'nome': mapa.file_name,
-                            'tipo': mapa.file_type,
-                            'caminho': mapa.file.path if mapa.file else None,
-                            'empresa': empresa_nome,
-                            'empresa_slug': mapa.company.slug if mapa.company else None,
-                            'id': mapa.id
-                        })
-                    return JsonResponse({
-                        'agrupado': True,
-                        'empresas': empresas_map
-                    }, safe=False)
+                # RM Admin sem company_slug específico: retornar apenas mapas da empresa do usuário (se tiver)
+                # OU retornar erro se não tiver empresa associada
+                if user.company:
+                    maps = CTOMapFile.objects.filter(company=user.company).select_related('company').order_by('-uploaded_at')
+                else:
+                    # RM Admin sem empresa: não retornar mapas (precisa especificar empresa)
+                    maps = CTOMapFile.objects.none()
         else:
             if not user.company:
                 return JsonResponse({'erro': 'Usuário não está associado a uma empresa'}, status=403)
-            maps = CTOMapFile.objects.filter(company=user.company).order_by('-uploaded_at')
+            maps = CTOMapFile.objects.filter(company=user.company).select_related('company').order_by('-uploaded_at')
         
         # Processar arquivos do banco
         for mapa in maps:
@@ -100,96 +98,88 @@ def api_arquivos(request, company_slug=None):
                     'id': mapa.id
                 })
     except Exception as e:
-        # Se houver erro ao acessar o banco, continuar para buscar da pasta
-        print(f"Erro ao acessar banco de dados, buscando da pasta: {e}")
+        # Se houver erro ao acessar o banco, logar mas não buscar de pastas antigas
+        print(f"Erro ao acessar banco de dados: {e}")
+        # Não buscar mais de pastas antigas - apenas do banco de dados
     
-    # Se não encontrou no banco, buscar da pasta media/cto_maps
-    if not arquivos:
-        media_root = getattr(settings, 'MEDIA_ROOT', os.path.join(settings.BASE_DIR, 'media'))
-        company_dir = os.path.join(media_root, 'cto_maps', target_company_slug)
-        
-        if os.path.exists(company_dir):
-            # Buscar arquivos nas subpastas
-            subdirs = {
-                'kml': 'kml',
-                'kmz': 'kmz',
-                'csv': 'csv',
-                'xls': 'xls',
-                'xlsx': 'xlsx'
-            }
-            
-            for ext, subdir in subdirs.items():
-                subdir_path = os.path.join(company_dir, subdir)
-                if os.path.exists(subdir_path):
-                    try:
-                        for arquivo in os.listdir(subdir_path):
-                            if arquivo.lower().endswith(f'.{ext}'):
-                                arquivo_path = os.path.join(subdir_path, arquivo)
-                                arquivos.append({
-                                    'nome': arquivo,
-                                    'tipo': ext,
-                                    'caminho': arquivo_path,
-                                    'id': None  # Não tem ID do banco
-                                })
-                    except Exception as e:
-                        print(f"Erro ao listar arquivos em {subdir_path}: {e}")
-                        continue
-            
-            # Ordenar por nome
-            arquivos.sort(key=lambda x: x['nome'].lower())
+    # Cachear resultado por 2 minutos
+    result = arquivos
+    cache.set(cache_key, result, 120)
     
-    return JsonResponse(arquivos, safe=False)
+    return JsonResponse(result, safe=False)
 
 
 @login_required
 @require_http_methods(["GET"])
 def api_coordenadas(request, company_slug=None):
-    """Retorna coordenadas de um arquivo específico do banco de dados ou da pasta media/cto_maps"""
+    """Retorna coordenadas de um arquivo específico apenas do banco de dados"""
     arquivo_nome = request.GET.get('arquivo')
     map_id = request.GET.get('id')  # ID do mapa no banco de dados
     
     if not arquivo_nome and not map_id:
         return JsonResponse({'erro': 'Arquivo não especificado'}, status=400)
     
+    # Cache de coordenadas (arquivos não mudam frequentemente)
+    cache_key = f'api_coordenadas_{map_id or arquivo_nome}_{company_slug or "none"}'
+    cached_coords = cache.get(cache_key)
+    if cached_coords is not None:
+        return JsonResponse(cached_coords, safe=False)
+    
     user = request.user
     caminho = None
     ext = None
     
-    # Determinar empresa
-    target_company_slug = company_slug
-    if not target_company_slug:
-        if user.is_rm_admin or user.is_superuser:
-            target_company_slug = getattr(settings, 'DEFAULT_COMPANY_SLUG', 'fibramar')
-        else:
+    # Determinar empresa - SEMPRE exigir empresa
+    target_company = None
+    if company_slug:
+        try:
+            target_company = Company.objects.get(slug=company_slug, is_active=True)
+        except Company.DoesNotExist:
+            return JsonResponse({'erro': 'Empresa não encontrada'}, status=404)
+    elif user.is_authenticated:
+        # Para usuários normais, SEMPRE usar a empresa deles
+        if not user.is_rm_admin and not user.is_superuser:
             if not user.company:
                 return JsonResponse({'erro': 'Usuário não está associado a uma empresa'}, status=403)
-            target_company_slug = user.company.slug
+            target_company = user.company
+        # RM Admins: se não tiver company_slug, usar empresa do usuário se existir
+        elif user.company:
+            target_company = user.company
+        else:
+            return JsonResponse({'erro': 'É necessário especificar a empresa'}, status=400)
+    else:
+        return JsonResponse({'erro': 'Usuário não autenticado'}, status=401)
     
-    # Primeiro, tentar buscar do banco de dados
+    if not target_company:
+        return JsonResponse({'erro': 'Empresa não especificada'}, status=400)
+    
+    # Buscar do banco de dados - SEMPRE filtrar por empresa
     try:
         if map_id:
-            # Buscar por ID (preferencial)
-            mapa = CTOMapFile.objects.get(id=map_id)
+            # Buscar por ID (preferencial) - SEMPRE verificar se pertence à empresa
+            try:
+                mapa = CTOMapFile.objects.get(id=map_id, company=target_company)
+            except CTOMapFile.DoesNotExist:
+                return JsonResponse({'erro': 'Arquivo não encontrado ou não pertence à empresa'}, status=404)
+            
             caminho = mapa.file.path if hasattr(mapa.file, 'path') else None
-            # Verificar permissões
+            # Verificar permissões adicionais (RM Admins podem ver, mas ainda precisa filtrar por empresa)
             if not user.is_rm_admin and not user.is_superuser:
                 if not user.company or user.company != mapa.company:
                     return JsonResponse({'erro': 'Acesso negado ao arquivo'}, status=403)
         elif arquivo_nome:
-            # Buscar por nome do arquivo
-            if user.is_rm_admin or user.is_superuser:
-                mapa = CTOMapFile.objects.filter(file__icontains=arquivo_nome).first()
-            else:
-                if not user.company:
-                    return JsonResponse({'erro': 'Usuário não está associado a uma empresa'}, status=403)
-                mapa = CTOMapFile.objects.filter(
-                    company=user.company,
-                    file__icontains=arquivo_nome
-                ).first()
+            # Buscar por nome do arquivo - SEMPRE filtrar por empresa
+            mapa = CTOMapFile.objects.filter(
+                company=target_company,
+                file__icontains=arquivo_nome
+            ).first()
+            
+            if not mapa:
+                return JsonResponse({'erro': 'Arquivo não encontrado na empresa especificada'}, status=404)
             
             if mapa and mapa.file:
                 caminho = mapa.file.path if hasattr(mapa.file, 'path') else None
-                # Verificar permissões
+                # Verificar permissões adicionais
                 if not user.is_rm_admin and not user.is_superuser:
                     if not user.company or user.company != mapa.company:
                         return JsonResponse({'erro': 'Acesso negado ao arquivo'}, status=403)
@@ -198,25 +188,9 @@ def api_coordenadas(request, company_slug=None):
     except Exception as e:
         print(f"Erro ao buscar arquivo no banco: {e}")
     
-    # Se não encontrou no banco, buscar da pasta
+    # Não buscar mais de pastas antigas - apenas do banco de dados
     if not caminho or not os.path.exists(caminho):
-        if arquivo_nome:
-            media_root = getattr(settings, 'MEDIA_ROOT', os.path.join(settings.BASE_DIR, 'media'))
-            company_dir = os.path.join(media_root, 'cto_maps', target_company_slug)
-            
-            # Buscar o arquivo nas subpastas
-            subdirs = ['kml', 'kmz', 'csv', 'xls', 'xlsx']
-            for subdir in subdirs:
-                subdir_path = os.path.join(company_dir, subdir)
-                if os.path.exists(subdir_path):
-                    arquivo_path = os.path.join(subdir_path, arquivo_nome)
-                    if os.path.exists(arquivo_path):
-                        caminho = arquivo_path
-                        ext = subdir  # A extensão é a subpasta
-                        break
-    
-    if not caminho or not os.path.exists(caminho):
-        return JsonResponse({'erro': 'Arquivo físico não encontrado'}, status=404)
+        return JsonResponse({'erro': 'Arquivo não encontrado no banco de dados'}, status=404)
     
     # Determinar extensão se não foi definida
     if not ext:
@@ -252,6 +226,9 @@ def api_coordenadas(request, company_slug=None):
             coords = ler_excel(caminho)
         else:
             return JsonResponse({'erro': f'Tipo de arquivo não suportado: {ext}'}, status=400)
+        
+        # Cachear coordenadas por 1 hora (arquivos não mudam frequentemente)
+        cache.set(cache_key, coords, 3600)
         
         return JsonResponse(coords, safe=False)
     except Exception as e:
@@ -405,28 +382,44 @@ def api_verificar_viabilidade(request, company_slug=None):
         except (ValueError, TypeError):
             return JsonResponse({"erro": "Coordenadas inválidas"}, status=400)
         
-        # Verificar cache de viabilidade
+        # Determinar empresa ANTES de verificar cache (para cache separado por empresa)
+        company = None
+        user = request.user
+        
+        # Se company_slug foi fornecido, usar ele (prioridade)
+        if company_slug:
+            try:
+                company = Company.objects.get(slug=company_slug, is_active=True)
+            except Company.DoesNotExist:
+                return JsonResponse({"erro": "Empresa não encontrada"}, status=404)
+        elif user.is_authenticated:
+            # Para usuários normais, SEMPRE usar a empresa deles
+            if not user.is_rm_admin and not user.is_superuser:
+                if not user.company:
+                    return JsonResponse({"erro": "Usuário não está associado a uma empresa"}, status=403)
+                company = user.company
+            # RM Admins e superusers: se não tiver company_slug, usar empresa do usuário se existir
+            elif user.company:
+                company = user.company
+            # Se RM Admin não tem empresa e não forneceu slug, não pode verificar sem especificar empresa
+            else:
+                return JsonResponse({"erro": "É necessário especificar a empresa para verificação"}, status=400)
+        else:
+            return JsonResponse({"erro": "Usuário não autenticado"}, status=401)
+        
+        if not company:
+            return JsonResponse({"erro": "Empresa não especificada"}, status=400)
+        
+        # Verificar cache de viabilidade - SEMPRE incluir empresa no cache
         try:
-            cache_obj = ViabilidadeCache.objects.get(lat=lat, lon=lon)
+            cache_obj = ViabilidadeCache.objects.get(lat=lat, lon=lon, company=company)
             return JsonResponse(cache_obj.resultado)
         except ViabilidadeCache.DoesNotExist:
             pass
         
-        # Determinar empresa para filtrar CTOs
-        company = None
-        user = request.user
-        if company_slug:
-            # Buscar empresa pelo slug
-            try:
-                company = Company.objects.get(slug=company_slug, is_active=True)
-            except Company.DoesNotExist:
-                pass
-        elif user.is_authenticated and user.company:
-            # Usar empresa do usuário
-            company = user.company
-        # Se for RM admin ou superuser, buscar todos os CTOs (company=None)
+        # Company já foi determinado acima (antes de verificar cache)
         
-        # Buscar CTOs
+        # Buscar CTOs APENAS da empresa especificada
         ctos = get_all_ctos(company=company)
         if not ctos:
             return JsonResponse({"erro": "Nenhum CTO encontrado"}, status=404)
@@ -509,10 +502,11 @@ def api_verificar_viabilidade(request, company_slug=None):
             }
         }
         
-        # Salvar no cache
+        # Salvar no cache - SEMPRE incluir empresa para separar caches
         ViabilidadeCache.objects.update_or_create(
             lat=lat,
             lon=lon,
+            company=company,  # Incluir empresa no cache
             defaults={'resultado': resultado}
         )
         

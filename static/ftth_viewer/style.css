@@ -1530,6 +1530,48 @@ body {
     font-weight: 600;
     margin: 0;
     letter-spacing: -0.025em;
+    flex: 1;
+}
+
+.refresh-maps-btn {
+    background: transparent;
+    border: 1px solid var(--rm-border-primary);
+    border-radius: var(--rm-border-radius-sm);
+    color: var(--rm-text-secondary);
+    cursor: pointer;
+    padding: 4px 8px;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+}
+
+.refresh-maps-btn:hover {
+    background: var(--rm-bg-secondary);
+    border-color: var(--rm-primary);
+    color: var(--rm-primary);
+    transform: rotate(180deg);
+}
+
+.refresh-maps-btn:active {
+    transform: rotate(360deg);
+}
+
+.refresh-maps-btn i {
+    transition: transform 0.3s ease;
+}
+
+.refresh-maps-btn.loading i {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
 }
 
 /* Analytics Grid */

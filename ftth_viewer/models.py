@@ -57,21 +57,29 @@ class CTOFile(models.Model):
 
 
 class ViabilidadeCache(models.Model):
-    """Cache de verificações de viabilidade"""
+    """Cache de verificações de viabilidade - separado por empresa"""
     lat = models.FloatField()
     lon = models.FloatField()
+    company = models.ForeignKey(
+        'core.Company',
+        on_delete=models.CASCADE,
+        related_name='viability_caches',
+        null=False,  # Obrigatório - sempre deve ter empresa
+        verbose_name="Empresa"
+    )
     resultado = models.JSONField()
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
         verbose_name = 'Cache de Viabilidade'
         verbose_name_plural = 'Cache de Viabilidades'
-        unique_together = ['lat', 'lon']
+        unique_together = [['lat', 'lon', 'company']]  # Cache único por coordenada E empresa
         indexes = [
-            models.Index(fields=['lat', 'lon']),
+            models.Index(fields=['lat', 'lon', 'company']),
         ]
     
     def __str__(self):
         status = self.resultado.get('viabilidade', {}).get('status', 'N/A')
-        return f"({self.lat:.6f}, {self.lon:.6f}) - {status}"
+        company_name = self.company.name if self.company else 'N/A'
+        return f"({self.lat:.6f}, {self.lon:.6f}) - {company_name} - {status}"
 

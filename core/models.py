@@ -228,9 +228,11 @@ class CTOMapFile(models.Model):
                 if not self.uploaded_by.company or self.uploaded_by.company != self.company:
                     raise ValidationError("Usuário não pertence à empresa especificada.")
         
-        # Determinar tipo de arquivo automaticamente
-        if self.file and not self.file_type:
+        # Determinar tipo de arquivo automaticamente baseado no nome do arquivo
+        # Sempre detectar baseado no nome real, mesmo se file_type já estiver definido
+        if self.file:
             file_name = self.file.name.lower()
+            # Detectar extensão do arquivo
             if file_name.endswith('.kml'):
                 self.file_type = 'kml'
             elif file_name.endswith('.kmz'):
@@ -241,6 +243,9 @@ class CTOMapFile(models.Model):
                 self.file_type = 'xls'
             elif file_name.endswith('.xlsx'):
                 self.file_type = 'xlsx'
+            # Se não detectou nenhuma extensão conhecida e file_type está vazio, usar default
+            elif not self.file_type:
+                self.file_type = 'csv'  # Fallback para o default
     
     def save(self, *args, **kwargs):
         self.clean()

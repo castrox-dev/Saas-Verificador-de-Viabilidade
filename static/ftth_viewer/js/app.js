@@ -923,7 +923,14 @@ function initializeMainSearch() {
         }
     });
 
+    // Debounce para pesquisa - evitar muitas requisições
+    let searchTimeout = null;
     searchInput.addEventListener('input', (e) => {
+        // Limpar timeout anterior
+        if (searchTimeout) {
+            clearTimeout(searchTimeout);
+        }
+        
         const query = e.target.value.trim();
         if (query.length === 0) {
             if (clearSearchBtn) {
@@ -2841,9 +2848,29 @@ window.apenasMarcar = function(lat, lng) {
 
 
 // Função para carregar arquivos dinamicamente da API
-async function loadCTOFiles() {
+async function loadCTOFiles(forceRefresh = false) {
+    const refreshBtn = document.getElementById('refresh-maps-btn');
+    
     try {
-        const response = await fetch(`${API_BASE}/arquivos`);
+        // Mostrar indicador de loading no botão
+        if (refreshBtn) {
+            refreshBtn.classList.add('loading');
+            refreshBtn.disabled = true;
+        }
+        
+        // Adicionar parâmetro refresh para bypass do cache se necessário
+        const url = forceRefresh ? `${API_BASE}/arquivos?refresh=true` : `${API_BASE}/arquivos`;
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            console.error('Erro ao carregar arquivos:', response.status, response.statusText);
+            if (refreshBtn) {
+                refreshBtn.classList.remove('loading');
+                refreshBtn.disabled = false;
+            }
+            return;
+        }
+        
         const data = await response.json();
         
         const ctoGrid = document.querySelector('.cto-grid');
@@ -2920,10 +2947,52 @@ async function loadCTOFiles() {
             
             console.log(`✅ ${arquivos.length} arquivos carregados dinamicamente`);
         }
+        
+        // Se não encontrou nenhum arquivo, mostrar mensagem
+        if ((data.agrupado && Object.keys(data.empresas).length === 0) || 
+            (!data.agrupado && (!Array.isArray(data) || data.length === 0))) {
+            const ctoGrid = document.querySelector('.cto-grid');
+            if (ctoGrid && ctoGrid.children.length === 0) {
+                ctoGrid.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: var(--rm-text-secondary);">
+                        <i class="fas fa-map" style="font-size: 2rem; margin-bottom: 10px; opacity: 0.5;"></i>
+                        <p>Nenhum mapa disponível</p>
+                        <p style="font-size: 0.85rem; margin-top: 5px;">Faça upload de um mapa para começar</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Remover loading do botão
+        if (refreshBtn) {
+            refreshBtn.classList.remove('loading');
+            refreshBtn.disabled = false;
+        }
     } catch (error) {
         console.error('Erro ao carregar arquivos:', error);
+        const ctoGrid = document.querySelector('.cto-grid');
+        if (ctoGrid) {
+            ctoGrid.innerHTML = `
+                <div style="text-align: center; padding: 20px; color: var(--rm-error);">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 10px;"></i>
+                    <p>Erro ao carregar mapas</p>
+                    <button onclick="loadCTOFiles(true)" style="margin-top: 10px; padding: 5px 10px; cursor: pointer;">
+                        Tentar novamente
+                    </button>
+                </div>
+            `;
+        }
+        
+        // Remover loading do botão em caso de erro
+        if (refreshBtn) {
+            refreshBtn.classList.remove('loading');
+            refreshBtn.disabled = false;
+        }
     }
 }
+
+// Tornar função global para poder ser chamada de botões
+window.loadCTOFiles = loadCTOFiles;
 
 // ===== INICIALIZAÇÃO DO SISTEMA =====
 document.addEventListener('DOMContentLoaded', function() {

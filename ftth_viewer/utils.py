@@ -328,19 +328,20 @@ def set_cached_geocoding(endereco, data):
 
 
 def get_all_ctos(company=None):
-    """Retorna todos os CTOs de todos os arquivos do banco de dados ou da pasta media/cto_maps"""
+    """Retorna todos os CTOs apenas dos arquivos enviados via upload (banco de dados)"""
     coords = []
     
     # Primeiro, tentar buscar do banco de dados
     try:
         from core.models import CTOMapFile
         
-        if company:
-            # Filtrar por empresa específica
-            map_files = CTOMapFile.objects.filter(company=company, file__isnull=False)
-        else:
-            # Buscar todos os arquivos
-            map_files = CTOMapFile.objects.filter(file__isnull=False)
+        # IMPORTANTE: Sempre exigir empresa - nunca retornar todos os arquivos
+        if not company:
+            # Se não foi fornecida empresa, não retornar nada
+            return []
+        
+        # Filtrar APENAS por empresa específica
+        map_files = CTOMapFile.objects.filter(company=company, file__isnull=False)
         
         # Processar cada arquivo do banco
         for map_file in map_files:
@@ -384,102 +385,12 @@ def get_all_ctos(company=None):
                 print(f"Erro ao acessar arquivo {map_file.id}: {e}")
                 continue
     except Exception as e:
-        # Se houver erro ao acessar o banco, continuar para buscar da pasta
-        print(f"Erro ao acessar banco de dados, buscando da pasta: {e}")
+        # Se houver erro ao acessar o banco, logar mas não buscar de pastas antigas
+        print(f"Erro ao acessar banco de dados: {e}")
+        # Não buscar mais de pastas antigas - apenas do banco de dados
     
-    # Se não encontrou no banco, buscar da pasta media/cto_maps
-    if not coords:
-        # Determinar pasta da empresa
-        company_slug = None
-        if company:
-            company_slug = company.slug if hasattr(company, 'slug') else str(company)
-        else:
-            # Tentar detectar pelo settings ou usar 'fibramar' como padrão
-            company_slug = getattr(settings, 'DEFAULT_COMPANY_SLUG', 'fibramar')
-        
-        # Caminho base: media/cto_maps/{company_slug}/
-        media_root = getattr(settings, 'MEDIA_ROOT', os.path.join(settings.BASE_DIR, 'media'))
-        company_dir = os.path.join(media_root, 'cto_maps', company_slug)
-        
-        if os.path.exists(company_dir):
-            # Buscar nas subpastas: kml/, kmz/, csv/, xls/, xlsx/
-            subdirs = {
-                'kml': 'kml',
-                'kmz': 'kmz',
-                'csv': 'csv',
-                'xls': 'xls',
-                'xlsx': 'xlsx'
-            }
-            
-            for ext, subdir in subdirs.items():
-                subdir_path = os.path.join(company_dir, subdir)
-                if os.path.exists(subdir_path):
-                    try:
-                        for arquivo in os.listdir(subdir_path):
-                            if arquivo.lower().endswith(f'.{ext}'):
-                                caminho = os.path.join(subdir_path, arquivo)
-                                try:
-                                    if ext == 'kml':
-                                        arquivo_coords = ler_kml(caminho)
-                                    elif ext == 'kmz':
-                                        arquivo_coords = ler_kmz(caminho)
-                                    elif ext == 'csv':
-                                        arquivo_coords = ler_csv(caminho)
-                                    elif ext in ['xls', 'xlsx']:
-                                        arquivo_coords = ler_excel(caminho)
-                                    else:
-                                        continue
-                                    
-                                    for coord in arquivo_coords:
-                                        coord["arquivo"] = arquivo
-                                        coords.append(coord)
-                                except Exception as e:
-                                    print(f"Erro ao processar arquivo {arquivo}: {e}")
-                                    continue
-                    except Exception as e:
-                        print(f"Erro ao acessar diretório {subdir_path}: {e}")
-                        continue
-        
-        # Fallback para diretórios do sistema (se configurados)
-        if not coords:
-            # KMLs
-            kml_dir = getattr(settings, 'FTTH_KML_DIR', None)
-            if kml_dir and os.path.exists(kml_dir):
-                for arquivo in os.listdir(kml_dir):
-                    if arquivo.lower().endswith('.kml'):
-                        caminho = os.path.join(kml_dir, arquivo)
-                        try:
-                            for coord in ler_kml(caminho):
-                                coord["arquivo"] = arquivo
-                                coords.append(coord)
-                        except:
-                            continue
-            
-            # KMZs
-            kmz_dir = getattr(settings, 'FTTH_KMZ_DIR', None)
-            if kmz_dir and os.path.exists(kmz_dir):
-                for arquivo in os.listdir(kmz_dir):
-                    if arquivo.lower().endswith('.kmz'):
-                        caminho = os.path.join(kmz_dir, arquivo)
-                        try:
-                            for coord in ler_kmz(caminho):
-                                coord["arquivo"] = arquivo
-                                coords.append(coord)
-                        except:
-                            continue
-            
-            # CSVs
-            csv_dir = getattr(settings, 'FTTH_CSV_DIR', None)
-            if csv_dir and os.path.exists(csv_dir):
-                for arquivo in os.listdir(csv_dir):
-                    if arquivo.lower().endswith('.csv'):
-                        caminho = os.path.join(csv_dir, arquivo)
-                        try:
-                            for coord in ler_csv(caminho):
-                                coord["arquivo"] = arquivo
-                                coords.append(coord)
-                        except:
-                            continue
+    # Não buscar mais de pastas antigas ou diretórios do sistema
+    # Apenas usar mapas que foram enviados via upload (banco de dados)
     
     return coords
 
