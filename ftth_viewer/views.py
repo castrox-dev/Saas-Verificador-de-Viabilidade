@@ -299,10 +299,58 @@ def api_contar_pontos(request, company_slug=None):
 @login_required
 @require_http_methods(["GET"])
 def api_geocode(request, company_slug=None):
-    """Geocodificação usando OpenStreetMap Nominatim com cache"""
+    """Geocodificação direta (endereço -> coordenadas) e reversa (coordenadas -> endereço) usando OpenStreetMap Nominatim com cache"""
     endereco = request.GET.get('endereco')
+    lat = request.GET.get('lat')
+    lon = request.GET.get('lon')
+    
+    # Geocodificação reversa (coordenadas -> endereço)
+    if lat and lon:
+        try:
+            lat_float = float(lat)
+            lon_float = float(lon)
+            
+            # Verificar cache primeiro (usar coordenadas como chave)
+            cache_key = f"{lat_float:.6f},{lon_float:.6f}"
+            cached_result = get_cached_geocoding(cache_key)
+            if cached_result:
+                return JsonResponse(cached_result)
+            
+            # Fazer geocodificação reversa via Nominatim
+            url = "https://nominatim.openstreetmap.org/reverse"
+            params = {
+                'lat': lat_float,
+                'lon': lon_float,
+                'format': 'json',
+                'addressdetails': 1,
+                'accept-language': 'pt-BR,pt,en'
+            }
+            headers = {'User-Agent': 'FTTH-Viewer-Django/1.0'}
+            
+            response = requests.get(url, params=params, headers=headers, timeout=10)
+            response.raise_for_status()
+            
+            data = response.json()
+            if data and 'display_name' in data:
+                geocoding_result = {
+                    'lat': lat_float,
+                    'lng': lon_float,
+                    'endereco_completo': data['display_name']
+                }
+                # Armazenar no cache usando coordenadas como chave
+                set_cached_geocoding(cache_key, geocoding_result)
+                return JsonResponse(geocoding_result)
+            else:
+                return JsonResponse({'erro': 'Endereço não encontrado para estas coordenadas'}, status=404)
+                
+        except ValueError:
+            return JsonResponse({'erro': 'Coordenadas inválidas'}, status=400)
+        except Exception as e:
+            return JsonResponse({'erro': f'Erro na geocodificação reversa: {str(e)}'}, status=500)
+    
+    # Geocodificação direta (endereço -> coordenadas)
     if not endereco:
-        return JsonResponse({'erro': 'Endereço não especificado'}, status=400)
+        return JsonResponse({'erro': 'Endereço ou coordenadas não especificados'}, status=400)
     
     # Verificar cache primeiro
     cached_result = get_cached_geocoding(endereco)

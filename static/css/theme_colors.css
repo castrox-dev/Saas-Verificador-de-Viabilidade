@@ -48,6 +48,13 @@
   --rm-shadow-lg: 0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 10px 10px -5px rgba(15, 23, 42, 0.04);
   --rm-shadow-xl: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
   
+  /* === BORDER RADIUS === */
+  --rm-border-radius-sm: 0.25rem;    /* 4px */
+  --rm-border-radius-md: 0.5rem;     /* 8px */
+  --rm-border-radius-lg: 0.75rem;    /* 12px */
+  --rm-border-radius-xl: 1rem;       /* 16px */
+  --rm-border-radius-full: 9999px;    /* Totalmente arredondado */
+  
   /* === MODO CLARO (PADRÃO) === */
   --rm-bg-primary: var(--rm-white);
   --rm-bg-secondary: var(--rm-gray-50);

@@ -468,6 +468,14 @@ html {
 }
 
 /* Estilos para popups customizados */
+.viability-popup {
+    background: var(--rm-card-bg);
+    border: 1px solid var(--rm-card-border);
+    border-radius: var(--rm-border-radius-md);
+    box-shadow: var(--rm-card-shadow);
+    padding: clamp(8px, 2vw, 12px);
+}
+
 .viability-popup-title {
     margin: 0 0 8px 0;
     font-size: 14px;
@@ -483,8 +491,8 @@ html {
 }
 
 .confirm-verify-btn {
-    background: linear-gradient(135deg, #27ae60, #2ecc71);
-    color: #fff;
+    background: var(--rm-success);
+    color: var(--rm-white);
     border: none;
     padding: clamp(6px, 2vw, 10px) clamp(12px, 3vw, 20px);
     border-radius: clamp(4px, 1.5vw, 8px);
@@ -496,11 +504,18 @@ html {
     transition: all 0.2s;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
+    box-shadow: var(--rm-shadow-sm);
+}
+
+.confirm-verify-btn:hover {
+    background: var(--rm-success-dark);
+    box-shadow: var(--rm-shadow);
+    transform: translateY(-1px);
 }
 
 .cancel-verify-btn {
-    background: linear-gradient(135deg, #e74c3c, #ff6b6b);
-    color: #fff;
+    background: var(--rm-error);
+    color: var(--rm-white);
     border: none;
     padding: clamp(6px, 2vw, 10px) clamp(12px, 3vw, 20px);
     border-radius: clamp(4px, 1.5vw, 8px);
@@ -512,10 +527,13 @@ html {
     transition: all 0.2s;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
+    box-shadow: var(--rm-shadow-sm);
 }
 
 .cancel-verify-btn:hover {
-    background: linear-gradient(135deg, #c0392b, #e74c3c);
+    background: var(--rm-error-dark);
+    box-shadow: var(--rm-shadow);
+    transform: translateY(-1px);
 }
 
 /* Estilos específicos para o popup do mapa clicado */
@@ -528,49 +546,50 @@ html {
 }
 
 [data-theme="dark"] .viability-popup {
-    background: var(--dark-bg-tertiary) !important;
-    color: var(--dark-text-primary) !important;
+    background: var(--rm-card-bg) !important;
+    border-color: var(--rm-card-border) !important;
+    color: var(--rm-text-primary) !important;
 }
 
 [data-theme="dark"] .viability-popup-title {
-    color: var(--dark-text-primary) !important;
+    color: var(--rm-text-primary) !important;
 }
 
 [data-theme="dark"] .loading-popup {
-    background: var(--dark-bg-tertiary) !important;
-    color: var(--dark-text-primary) !important;
+    background: var(--rm-card-bg) !important;
+    color: var(--rm-text-primary) !important;
 }
 
 /* Botões inline nos popups */
 [data-theme="dark"] .leaflet-popup-content button:not(.confirm-verify-btn):not(.cancel-verify-btn) {
-    background: var(--dark-bg-tertiary) !important;
-    border: 1px solid var(--dark-border) !important;
-    color: var(--dark-text-primary) !important;
+    background: var(--rm-card-bg) !important;
+    border: 1px solid var(--rm-card-border) !important;
+    color: var(--rm-text-primary) !important;
 }
 
 [data-theme="dark"] .leaflet-popup-content button:not(.confirm-verify-btn):not(.cancel-verify-btn):hover {
-    background: var(--dark-bg-primary) !important;
+    background: var(--rm-bg-secondary) !important;
     border-color: var(--rm-primary) !important;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3) !important;
+    box-shadow: var(--rm-card-shadow) !important;
 }
 
 [data-theme="dark"] .confirm-verify-btn {
-    background: linear-gradient(135deg, #27ae60, #2ecc71) !important;
+    background: var(--rm-success) !important;
     border: none !important;
 }
 
 [data-theme="dark"] .confirm-verify-btn:hover {
-    background: linear-gradient(135deg, #229954, #27ae60) !important;
+    background: var(--rm-success-dark) !important;
 }
 
 [data-theme="dark"] .cancel-verify-btn {
-    background: linear-gradient(135deg, #e74c3c, #ff6b6b) !important;
+    background: var(--rm-error) !important;
     border: none !important;
-    color: #fff !important;
+    color: var(--rm-white) !important;
 }
 
 [data-theme="dark"] .cancel-verify-btn:hover {
-    background: linear-gradient(135deg, #c0392b, #e74c3c) !important;
+    background: var(--rm-error-dark) !important;
 }
 
 /* Estilos para o popup de resultado da viabilidade */
@@ -580,6 +599,10 @@ html {
     min-width: clamp(140px, 35vw, 180px);
     max-width: min(80vw, 280px);
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--rm-card-bg);
+    border: 1px solid var(--rm-card-border);
+    border-radius: var(--rm-border-radius-md);
+    box-shadow: var(--rm-card-shadow);
 }
 
 .viability-result-popup h4 {
@@ -590,12 +613,13 @@ html {
 }
 
 .viability-result-details {
-    background: #f8f9fa;
+    background: var(--rm-bg-secondary);
     padding: 3px;
-    border-radius: 3px;
+    border-radius: var(--rm-border-radius-sm);
     margin-bottom: 3px;
     text-align: left;
     line-height: 1.0;
+    border: 1px solid var(--rm-border-primary);
 }
 
 .viability-result-details p {
@@ -605,6 +629,7 @@ html {
     justify-content: space-between;
     align-items: center;
     padding: 1px 0;
+    color: var(--rm-text-primary);
 }
 
 .viability-result-details p:last-child {
@@ -615,11 +640,12 @@ html {
     font-weight: 600;
     min-width: 45px;
     margin-right: 3px;
+    color: var(--rm-text-secondary);
 }
 
 .viability-close-btn {
-    background: linear-gradient(135deg, #ff6600 0%, #e55a00 100%);
-    color: white;
+    background: var(--rm-button-primary);
+    color: var(--rm-white);
     border: none;
     padding: clamp(4px, 1.5vw, 6px) clamp(8px, 2.5vw, 12px);
     border-radius: clamp(3px, 1vw, 6px);
@@ -627,7 +653,7 @@ html {
     font-size: clamp(0.625rem, 2vw, 0.75rem);
     font-weight: 500;
     transition: all 0.2s ease;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: var(--rm-shadow-sm);
     min-height: clamp(24px, 6vw, 32px);
     min-width: clamp(40px, 15vw, 60px);
     touch-action: manipulation;
@@ -635,31 +661,42 @@ html {
 }
 
 .viability-close-btn:hover {
+    background: var(--rm-button-primary-hover);
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    box-shadow: var(--rm-shadow);
 }
 
 /* Estilos para modo escuro */
+[data-theme="dark"] .viability-result-popup {
+    background: var(--rm-card-bg) !important;
+    border-color: var(--rm-card-border) !important;
+}
+
 [data-theme="dark"] .viability-result-popup h4 {
-    color: var(--dark-text-primary) !important;
+    color: var(--rm-text-primary) !important;
 }
 
 [data-theme="dark"] .viability-result-details {
-    background: var(--dark-bg-tertiary) !important;
-    border: 1px solid var(--dark-border) !important;
+    background: var(--rm-bg-secondary) !important;
+    border-color: var(--rm-border-primary) !important;
 }
 
 [data-theme="dark"] .viability-result-details p {
-    color: var(--dark-text-primary) !important;
+    color: var(--rm-text-primary) !important;
+}
+
+[data-theme="dark"] .viability-result-details strong {
+    color: var(--rm-text-secondary) !important;
 }
 
 [data-theme="dark"] .viability-close-btn {
-    background: linear-gradient(135deg, var(--fibramar-orange) 0%, var(--fibramar-orange-dark) 100%) !important;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
+    background: var(--rm-button-primary) !important;
+    box-shadow: var(--rm-shadow-sm) !important;
 }
 
 [data-theme="dark"] .viability-close-btn:hover {
-    box-shadow: 0 4px 8px rgba(0,0,0,0.4) !important;
+    background: var(--rm-button-primary-hover) !important;
+    box-shadow: var(--rm-shadow) !important;
 }
 
 /* ===== DARK MODE PARA BOTÕES DE UPLOAD E OUTROS ===== */

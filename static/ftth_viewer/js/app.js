@@ -691,32 +691,136 @@ function showNotification(message, type = 'info') {
     }
 }
 
-// Parse coordinates from query, supports "lat, lon" or "lat lon"
+// Parse coordinates from query, supports "lat, lon" or "lat lon" e DMS
 function parseCoordinatesFromQuery(query) {
     const q = (query || '').trim();
     if (!q) return null;
 
-    // 1) Tenta DMS com letras de hemisfério (ex.: 22°54'59.5"S 42°48'35.2"W)
+    // 1) Tenta DMS com letras de hemisfério (ex.: 22°57'57.5"S 42°57'10.2"W ou 22°54'59.5"S 42°48'35.2"W)
+    // Melhorado para suportar diferentes formatos: graus antes ou depois, hemisfério antes ou depois das aspas
     const dmsTokens = [];
-    const dmsRegex = /(-?\d+(?:\.\d+)?)\s*[°º]?\s*(\d{1,2})?\s*['′’]?\s*(\d+(?:\.\d+)?)?\s*["″”]?\s*([NnSsEeWwOo])/g;
+    
+    // Regex melhorado que captura:
+    // - Graus (obrigatório): \d+(?:\.\d+)?
+    // - Minutos (opcional): \d{1,2}
+    // - Segundos (opcional): \d+(?:\.\d+)?
+    // - Hemisfério (obrigatório): N, S, E, W, O
+    // Suporta formatos: "22°57'57.5"S", "S 22°57'57.5", "22° 57' 57.5\" S", etc.
+    const dmsRegex = /(?:^|\s)([NnSsEeWwOo])?\s*(\d+(?:\.\d+)?)\s*[°º]\s*(\d{1,2})?\s*['′'′]?\s*(\d+(?:\.\d+)?)?\s*["″""]?\s*([NnSsEeWwOo])?/g;
     let m;
     while ((m = dmsRegex.exec(q)) !== null) {
-        const deg = parseFloat(m[1]);
-        const min = m[2] ? parseFloat(m[2]) : 0;
-        const sec = m[3] ? parseFloat(m[3]) : 0;
-        let hemi = m[4].toUpperCase();
+        // Hemisfério pode estar antes ou depois
+        let hemi = (m[1] || m[5] || '').toUpperCase();
+        if (!hemi) continue; // Pula se não tiver hemisfério
+        
         // Português: 'O' (Oeste) equivale a 'W'
         if (hemi === 'O') hemi = 'W';
+        
+        const deg = parseFloat(m[2]);
+        const min = m[3] ? parseFloat(m[3]) : 0;
+        const sec = m[4] ? parseFloat(m[4]) : 0;
+        
+        // Converter para decimal
         const dec = Math.abs(deg) + (min / 60) + (sec / 3600);
         const signed = (hemi === 'S' || hemi === 'W') ? -dec : dec;
+        
         dmsTokens.push({ value: signed, hemi });
     }
+    
+    // Se encontrou pelo menos 2 tokens DMS
     if (dmsTokens.length >= 2) {
         // Prefere NS para latitude e EW para longitude
         const latToken = dmsTokens.find(t => t.hemi === 'N' || t.hemi === 'S') || dmsTokens[0];
         const lonToken = dmsTokens.find(t => t.hemi === 'E' || t.hemi === 'W') || dmsTokens[1];
         const lat = latToken?.value;
         const lon = lonToken?.value;
+        if (isFinite(lat) && isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+            return { lat, lon };
+        }
+    }
+    
+    // Tentativa alternativa: formato mais flexível para DMS
+    // Exemplo: "22°57'57.5\"S 42°57'10.2\"W" ou "22°57'57.5\"S 42°57'10.2\"W"
+    // Suporta aspas simples, duplas e diferentes tipos de aspas Unicode
+    const dmsAltRegex = /(\d+(?:\.\d+)?)\s*[°º]\s*(\d{1,2})\s*['′'′]\s*(\d+(?:\.\d+)?)\s*["″""]?\s*([NnSsEeWwOo])\s+(\d+(?:\.\d+)?)\s*[°º]\s*(\d{1,2})\s*['′'′]\s*(\d+(?:\.\d+)?)\s*["″""]?\s*([NnSsEeWwOo])/i;
+    const altMatch = q.match(dmsAltRegex);
+    if (altMatch) {
+        // Primeira coordenada (latitude)
+        const latDeg = parseFloat(altMatch[1]);
+        const latMin = parseFloat(altMatch[2]);
+        const latSec = parseFloat(altMatch[3]);
+        let latHemi = altMatch[4].toUpperCase();
+        if (latHemi === 'O') latHemi = 'W';
+        const latDec = Math.abs(latDeg) + (latMin / 60) + (latSec / 3600);
+        const lat = (latHemi === 'S') ? -latDec : latDec;
+        
+        // Segunda coordenada (longitude)
+        const lonDeg = parseFloat(altMatch[5]);
+        const lonMin = parseFloat(altMatch[6]);
+        const lonSec = parseFloat(altMatch[7]);
+        let lonHemi = altMatch[8].toUpperCase();
+        if (lonHemi === 'O') lonHemi = 'W';
+        const lonDec = Math.abs(lonDeg) + (lonMin / 60) + (lonSec / 3600);
+        const lon = (lonHemi === 'W') ? -lonDec : lonDec;
+        
+        if (isFinite(lat) && isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+            return { lat, lon };
+        }
+    }
+    
+    // Tentativa final: formato específico com aspas duplas e hemisfério depois das aspas
+    // Exemplo: "22°57'57.5\"S 42°57'10.2\"W" ou "22°57'57.5"S 42°57'10.2"W"
+    // Regex mais simples e direto que captura o padrão exato
+    const dmsQuotedRegex = /(\d+(?:\.\d+)?)\s*[°º]\s*(\d{1,2})\s*['′'′]\s*(\d+(?:\.\d+)?)\s*["″""]?\s*([NnSsEeWwOo])\s+(\d+(?:\.\d+)?)\s*[°º]\s*(\d{1,2})\s*['′'′]\s*(\d+(?:\.\d+)?)\s*["″""]?\s*([NnSsEeWwOo])/i;
+    const quotedMatch = q.match(dmsQuotedRegex);
+    if (quotedMatch) {
+        // Primeira coordenada (latitude)
+        const latDeg = parseFloat(quotedMatch[1]);
+        const latMin = parseFloat(quotedMatch[2]);
+        const latSec = parseFloat(quotedMatch[3]);
+        let latHemi = quotedMatch[4].toUpperCase();
+        if (latHemi === 'O') latHemi = 'W';
+        const latDec = Math.abs(latDeg) + (latMin / 60) + (latSec / 3600);
+        const lat = (latHemi === 'S') ? -latDec : latDec;
+        
+        // Segunda coordenada (longitude)
+        const lonDeg = parseFloat(quotedMatch[5]);
+        const lonMin = parseFloat(quotedMatch[6]);
+        const lonSec = parseFloat(quotedMatch[7]);
+        let lonHemi = quotedMatch[8].toUpperCase();
+        if (lonHemi === 'O') lonHemi = 'W';
+        const lonDec = Math.abs(lonDeg) + (lonMin / 60) + (lonSec / 3600);
+        const lon = (lonHemi === 'W') ? -lonDec : lonDec;
+        
+        if (isFinite(lat) && isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+            return { lat, lon };
+        }
+    }
+    
+    // Última tentativa: regex mais permissivo que tenta capturar qualquer formato DMS
+    // Remove caracteres especiais e tenta encontrar padrões DMS
+    const cleanQ = q.replace(/["″""]/g, '').trim();
+    const dmsFlexibleRegex = /(\d+(?:\.\d+)?)\s*[°º]\s*(\d{1,2})\s*['′'′]\s*(\d+(?:\.\d+)?)\s*([NnSsEeWwOo])\s+(\d+(?:\.\d+)?)\s*[°º]\s*(\d{1,2})\s*['′'′]\s*(\d+(?:\.\d+)?)\s*([NnSsEeWwOo])/i;
+    const flexibleMatch = cleanQ.match(dmsFlexibleRegex);
+    if (flexibleMatch) {
+        // Primeira coordenada (latitude)
+        const latDeg = parseFloat(flexibleMatch[1]);
+        const latMin = parseFloat(flexibleMatch[2]);
+        const latSec = parseFloat(flexibleMatch[3]);
+        let latHemi = flexibleMatch[4].toUpperCase();
+        if (latHemi === 'O') latHemi = 'W';
+        const latDec = Math.abs(latDeg) + (latMin / 60) + (latSec / 3600);
+        const lat = (latHemi === 'S') ? -latDec : latDec;
+        
+        // Segunda coordenada (longitude)
+        const lonDeg = parseFloat(flexibleMatch[5]);
+        const lonMin = parseFloat(flexibleMatch[6]);
+        const lonSec = parseFloat(flexibleMatch[7]);
+        let lonHemi = flexibleMatch[8].toUpperCase();
+        if (lonHemi === 'O') lonHemi = 'W';
+        const lonDec = Math.abs(lonDeg) + (lonMin / 60) + (lonSec / 3600);
+        const lon = (lonHemi === 'W') ? -lonDec : lonDec;
+        
         if (isFinite(lat) && isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
             return { lat, lon };
         }
@@ -979,17 +1083,42 @@ async function markLocationWithConfirmation(lat, lng, addressText) {
         
         if (cancelBtn && !cancelBtn.hasAttribute('data-connected')) {
             cancelBtn.setAttribute('data-connected', 'true');
-            cancelBtn.addEventListener('click', (e) => {
+            cancelBtn.addEventListener('click', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
+                e.stopImmediatePropagation();
                 console.log('Botão Não clicado');
                 
-                // Simplesmente remove o marcador e mantém o mapa como estava
-                if (window.searchMarker && map.hasLayer(window.searchMarker)) {
-                    map.removeLayer(window.searchMarker);
+                // Fechar o popup e remover o marcador
+                const closeAndRemove = () => {
+                    // Fechar popup do marcador se existir
+                    if (window.searchMarker) {
+                        try {
+                            window.searchMarker.closePopup();
+                        } catch (err) {
+                            // Ignorar erro se o método não existir
+                        }
+                    }
+                    
+                    // Fechar qualquer popup aberto no mapa
+                    try {
+                        map.closePopup();
+                    } catch (err) {
+                        // Ignorar erro
+                    }
+                    
+                    // Remover o marcador
+                    if (window.searchMarker && map.hasLayer(window.searchMarker)) {
+                        map.removeLayer(window.searchMarker);
+                    }
                     window.searchMarker = null;
-                }
-                // Remover notificação desnecessária
+                };
+                
+                // Executar imediatamente e também com um pequeno delay para garantir
+                closeAndRemove();
+                setTimeout(closeAndRemove, 50);
+                
+                return false;
             });
         }
     };
@@ -1013,35 +1142,13 @@ async function displaySearchResults(results) {
             <div class="search-result-address">${result.display_name || 'Endereço não disponível'}</div>
         `;
         
-        item.addEventListener('click', () => {
+        item.addEventListener('click', async () => {
             const lat = parseFloat(result.lat);
             const lng = parseFloat(result.lon);
-            map.setView([lat, lng], 16);
+            const addressText = result.display_name || 'Local selecionado';
             
-            // Remover marcador anterior se existir
-            if (window.searchMarker && map.hasLayer(window.searchMarker)) {
-                map.removeLayer(window.searchMarker);
-            }
-            
-            // Criar ícone do marcador de pesquisa
-            const searchIcon = L.divIcon({
-                className: 'search-marker',
-                html: '<div style="background-color: #ff4444; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(255,68,68,0.8); position: relative;"><div style="position: absolute; top: -2px; left: -2px; width: 20px; height: 20px; border-radius: 50%; background-color: rgba(255,68,68,0.4); animation: pulse 1s infinite;"></div></div>',
-                iconSize: [22, 22],
-                iconAnchor: [11, 11]
-            });
-            
-            // Adicionar marcador
-            window.searchMarker = L.marker([lat, lng], { icon: searchIcon }).addTo(map);
-            
-            // Mostrar popup de carregamento
-            window.searchMarker.bindPopup('<div class="loading-popup">Verificando viabilidade...</div>').openPopup();
-            
-            // Verificar viabilidade automaticamente com tratamento de erro
-            verificarViabilidade(lat, lng, result.display_name).catch(error => {
-                console.error('Erro na verificação de viabilidade:', error);
-                showNotification('Erro ao verificar viabilidade', 'error');
-            });
+            // Usar o mesmo método de marcação com confirmação que funciona no mapa
+            await markLocationWithConfirmation(lat, lng, addressText);
             
             searchInput.value = result.display_name && typeof result.display_name === 'string' ? result.display_name.split(',')[0] : 'Local';
             hideSearchResults();
@@ -1095,7 +1202,7 @@ function hideViabilityLoading() {
 }
 
 // Função para verificar viabilidade
-async function verificarViabilidade(lat, lon, endereco) {
+async function verificarViabilidade(lat, lon, endereco = '') {
     try {
         // Remover notificação desnecessária
         showViabilityLoading(); // Mostrar loading screen
@@ -1612,7 +1719,7 @@ function processKMLData(data, filename) {
                             <h4>${nome}</h4>
                             <p><strong>Arquivo:</strong> ${filename}</p>
                             <p><strong>Coordenadas:</strong> ${lat.toFixed(6)}, ${lng.toFixed(6)}</p>
-                            <button onclick="verificarViabilidade(${lat}, ${lng}, '${nome}')" class="btn-verificar-optimized">
+                            <button onclick="window.marcarEVerificar(${lat}, ${lng}, '${nome}')" class="btn-verificar-optimized">
                                 Verificar Viabilidade
                             </button>
                         </div>
@@ -2632,41 +2739,23 @@ async function onMapClick(e) {
     const lat = e.latlng.lat;
     const lng = e.latlng.lng;
     
-    // Remover marcador anterior se existir
-    if (window.searchMarker) {
-        map.removeLayer(window.searchMarker);
+    // Tentar obter endereço via geocodificação reversa
+    let addressText = `Coordenadas: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    try {
+        const geoResponse = await fetch(`${API_BASE}/geocode?lat=${lat}&lon=${lng}`);
+        if (geoResponse.ok) {
+            const geoData = await geoResponse.json();
+            if (geoData.endereco_completo) {
+                addressText = geoData.endereco_completo;
+            }
+        }
+    } catch (error) {
+        // Ignorar erro de geocodificação, usar coordenadas como fallback
+        console.warn('Erro ao geocodificar coordenadas:', error);
     }
     
-    // Adicionar marcador no local clicado
-    window.searchMarker = L.marker([lat, lng], {
-        icon: L.divIcon({
-            className: 'custom-marker',
-            html: '<i class="fas fa-map-pin" style="color: #e74c3c; font-size: 24px;"></i>',
-            iconSize: [24, 24],
-            iconAnchor: [12, 24]
-        })
-    }).addTo(map);
-    
-    // Mostrar popup simples diretamente
-    const simplePopupContent = `
-        <div class="viability-popup map-click-popup">
-            <h4 class="viability-popup-title">Verificar Viabilidade?</h4>
-            <div class="popup-actions">
-                <button onclick="verificarViabilidade(${lat}, ${lng})" class="confirm-verify-btn">
-                    Sim
-                </button>
-                <button onclick="apenasMarcar(${lat}, ${lng})" class="cancel-verify-btn">
-                    Não
-                </button>
-            </div>
-        </div>
-    `;
-    
-    window.searchMarker.bindPopup(simplePopupContent, {
-        closeOnClick: false,
-        autoClose: false,
-        className: 'custom-popup'
-    }).openPopup();
+    // Usar o mesmo método de marcação com confirmação que funciona em todas as pesquisas
+    await markLocationWithConfirmation(lat, lng, addressText);
     
     // Voltar para modo navegação após marcar
     setTimeout(() => {
@@ -2717,6 +2806,11 @@ window.fecharVerificacao = function() {
     } catch (err) {
         console.error('Erro ao fechar verificação:', err);
     }
+};
+
+// Função global para marcar e verificar (usado em popups inline)
+window.marcarEVerificar = async function(lat, lng, endereco = '') {
+    await markLocationWithConfirmation(lat, lng, endereco || `Coordenadas: ${lat}, ${lng}`);
 };
 
 // Função para apenas marcar o local sem verificar viabilidade
