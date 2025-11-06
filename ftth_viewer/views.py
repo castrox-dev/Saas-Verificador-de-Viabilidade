@@ -12,6 +12,7 @@ from django.core.cache import cache
 from django.utils import timezone
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import ensure_csrf_cookie
 
 from .utils import (
     ler_kml, ler_kmz, ler_csv, ler_excel, filtrar_coordenadas_brasil,
@@ -551,4 +552,107 @@ def api_cache_geocoding_clear(request, company_slug=None):
     count = GeocodingCache.objects.count()
     GeocodingCache.objects.all().delete()
     return JsonResponse({'mensagem': f'Cache de geocodificação limpo ({count} entradas removidas)'})
+
+
+@ensure_csrf_cookie
+@require_http_methods(["POST"])
+def api_adicionar_cto(request, company_slug=None):
+    """Adiciona um novo CTO a um mapa existente - apenas para COMPANY_ADMIN e RM"""
+    from .utils import adicionar_cto_ao_mapa
+    from django.core.cache import cache
+    
+    # Verificar autenticação manualmente para retornar JSON em vez de redirecionar
+    if not request.user.is_authenticated:
+        return JsonResponse({'erro': 'Usuário não autenticado'}, status=401)
+    
+    user = request.user
+    
+    # Verificar se é admin da empresa ou RM
+    if not (user.is_company_admin or user.is_rm_admin or user.is_superuser):
+        return JsonResponse({'erro': 'Apenas administradores podem adicionar CTOs'}, status=403)
+    
+    # Obter dados do POST
+    try:
+        import json
+        data = json.loads(request.body) if request.body else {}
+        nome_cto = data.get('nome_cto', '').strip()
+        lat = data.get('lat')
+        lon = data.get('lon')
+        map_id = data.get('map_id')
+    except json.JSONDecodeError:
+        return JsonResponse({'erro': 'Dados inválidos'}, status=400)
+    
+    # Validar dados
+    if not nome_cto:
+        return JsonResponse({'erro': 'Nome do CTO é obrigatório'}, status=400)
+    
+    if lat is None or lon is None:
+        return JsonResponse({'erro': 'Coordenadas são obrigatórias'}, status=400)
+    
+    try:
+        lat = float(lat)
+        lon = float(lon)
+    except (ValueError, TypeError):
+        return JsonResponse({'erro': 'Coordenadas inválidas'}, status=400)
+    
+    if not map_id:
+        return JsonResponse({'erro': 'ID do mapa é obrigatório'}, status=400)
+    
+    # Buscar mapa
+    try:
+        mapa = CTOMapFile.objects.get(id=map_id)
+    except CTOMapFile.DoesNotExist:
+        return JsonResponse({'erro': 'Mapa não encontrado'}, status=404)
+    
+    # Verificar se o usuário tem acesso ao mapa
+    if not user.is_rm_admin and not user.is_superuser:
+        if not user.company or user.company != mapa.company:
+            return JsonResponse({'erro': 'Acesso negado ao mapa'}, status=403)
+    
+    # Verificar se o arquivo existe
+    if not mapa.file or not hasattr(mapa.file, 'path'):
+        return JsonResponse({'erro': 'Arquivo do mapa não encontrado'}, status=404)
+    
+    caminho_arquivo = mapa.file.path
+    if not os.path.exists(caminho_arquivo):
+        return JsonResponse({'erro': 'Arquivo do mapa não existe no sistema de arquivos'}, status=404)
+    
+    # Adicionar CTO ao arquivo
+    try:
+        sucesso = adicionar_cto_ao_mapa(
+            caminho_arquivo,
+            nome_cto,
+            lat,
+            lon,
+            file_type=mapa.file_type
+        )
+        
+        if not sucesso:
+            return JsonResponse({'erro': 'Erro ao adicionar CTO ao arquivo'}, status=500)
+        
+        # Invalidar caches relacionados
+        cache_keys_to_delete = [
+            f'api_arquivos_{user.id}_{company_slug or (user.company.slug if user.company else "none")}',
+            f'api_coordenadas_{map_id}_{company_slug or "none"}',
+        ]
+        cache.delete_many(cache_keys_to_delete)
+        
+        # Atualizar contador de coordenadas do mapa (opcional)
+        # Isso pode ser feito em background ou na próxima leitura
+        
+        return JsonResponse({
+            'sucesso': True,
+            'mensagem': f'CTO "{nome_cto}" adicionado com sucesso ao mapa',
+            'cto': {
+                'nome': nome_cto,
+                'lat': lat,
+                'lon': lon
+            }
+        })
+        
+    except Exception as e:
+        import traceback
+        print(f"Erro ao adicionar CTO: {e}")
+        print(f"Traceback: {traceback.format_exc()}")
+        return JsonResponse({'erro': f'Erro interno: {str(e)}'}, status=500)
 

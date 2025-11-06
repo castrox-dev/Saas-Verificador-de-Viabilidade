@@ -3010,6 +3010,7 @@ document.addEventListener('DOMContentLoaded', function() {
         loadCTOFiles(); // Carregar arquivos dinamicamente e adicionar novos botões
         initializeCursorToggle();
         initializeMenuToggle();
+        initializeAddCTO(); // Inicializar funcionalidade de adicionar CTO (apenas para admins)
         
         console.log('✅ Sistema inicializado com sucesso!');
         console.log('💡 Dica: Use Ctrl+Shift+P para ver estatísticas de performance');
@@ -3030,4 +3031,306 @@ if (document.readyState === 'loading') {
 } else {
     console.log('📄 DOM já pronto, inicializando tema imediatamente...');
     initializeThemeToggle();
+}
+
+// ===== FUNCIONALIDADE ADICIONAR CTO (APENAS PARA ADMINS) =====
+let isAddCTOMode = false;
+let addCTOMarker = null;
+let addCTOClickHandler = null;
+
+function initializeAddCTO() {
+    const addCTOBtn = document.getElementById('add-cto-toggle-btn');
+    const addCTOPopup = document.getElementById('add-cto-popup');
+    
+    if (!addCTOBtn || !addCTOPopup) {
+        // Funcionalidade não disponível (usuário não é admin)
+        return;
+    }
+    
+    const map = window.map;
+    if (!map) {
+        console.error('❌ Mapa não encontrado para adicionar CTO!');
+        return;
+    }
+    
+    // Carregar lista de mapas no select
+    loadMapsForAddCTO();
+    
+    // Toggle do botão
+    addCTOBtn.addEventListener('click', function() {
+        toggleAddCTOMode();
+    });
+    
+    // Fechar popup
+    const closeBtn = document.getElementById('close-add-cto-popup');
+    const cancelBtn = document.getElementById('cancel-add-cto');
+    
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeAddCTOPopup);
+    }
+    
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', closeAddCTOPopup);
+    }
+    
+    // Fechar ao clicar fora
+    addCTOPopup.addEventListener('click', function(e) {
+        if (e.target === addCTOPopup) {
+            closeAddCTOPopup();
+        }
+    });
+    
+    // Submit do formulário
+    const form = document.getElementById('add-cto-form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            saveCTO();
+        });
+    }
+}
+
+function toggleAddCTOMode() {
+    const addCTOBtn = document.getElementById('add-cto-toggle-btn');
+    const map = window.map;
+    
+    if (!addCTOBtn || !map) return;
+    
+    isAddCTOMode = !isAddCTOMode;
+    
+    if (isAddCTOMode) {
+        // Ativar modo adicionar CTO
+        addCTOBtn.classList.add('active');
+        addCTOBtn.querySelector('.add-cto-mode-text').textContent = 'Cancelar';
+        document.getElementById('map').style.cursor = 'crosshair';
+        
+        // Desabilitar navegação do mapa
+        map.dragging.disable();
+        map.scrollWheelZoom.disable();
+        map.doubleClickZoom.disable();
+        map.touchZoom.disable();
+        map.boxZoom.disable();
+        map.keyboard.disable();
+        
+        // Adicionar handler de clique
+        addCTOClickHandler = function(e) {
+            const { lat, lng } = e.latlng;
+            openAddCTOPopup(lat, lng);
+        };
+        map.on('click', addCTOClickHandler);
+        
+        showNotification('Modo adicionar CTO ativado - Clique no mapa para adicionar', 'info');
+    } else {
+        // Desativar modo
+        addCTOBtn.classList.remove('active');
+        addCTOBtn.querySelector('.add-cto-mode-text').textContent = 'Adicionar CTO';
+        document.getElementById('map').style.cursor = '';
+        
+        // Reabilitar navegação
+        map.dragging.enable();
+        map.scrollWheelZoom.enable();
+        map.doubleClickZoom.enable();
+        map.touchZoom.enable();
+        map.boxZoom.enable();
+        map.keyboard.enable();
+        
+        // Remover handler
+        if (addCTOClickHandler) {
+            map.off('click', addCTOClickHandler);
+            addCTOClickHandler = null;
+        }
+        
+        // Remover marcador temporário
+        if (addCTOMarker) {
+            map.removeLayer(addCTOMarker);
+            addCTOMarker = null;
+        }
+        
+        closeAddCTOPopup();
+    }
+}
+
+function openAddCTOPopup(lat, lng) {
+    const popup = document.getElementById('add-cto-popup');
+    const latDisplay = document.getElementById('cto-lat-display');
+    const lonDisplay = document.getElementById('cto-lon-display');
+    const map = window.map;
+    
+    if (!popup || !latDisplay || !lonDisplay || !map) return;
+    
+    // Atualizar coordenadas
+    latDisplay.textContent = lat.toFixed(6);
+    lonDisplay.textContent = lng.toFixed(6);
+    
+    // Armazenar coordenadas no formulário
+    popup.dataset.lat = lat;
+    popup.dataset.lng = lng;
+    
+    // Adicionar marcador temporário
+    if (addCTOMarker) {
+        map.removeLayer(addCTOMarker);
+    }
+    
+    addCTOMarker = L.marker([lat, lng], {
+        icon: L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        })
+    }).addTo(map);
+    
+    // Mostrar popup
+    popup.style.display = 'flex';
+}
+
+function closeAddCTOPopup() {
+    const popup = document.getElementById('add-cto-popup');
+    const map = window.map;
+    
+    if (popup) {
+        popup.style.display = 'none';
+    }
+    
+    // Remover marcador temporário
+    if (addCTOMarker && map) {
+        map.removeLayer(addCTOMarker);
+        addCTOMarker = null;
+    }
+    
+    // Limpar formulário
+    const form = document.getElementById('add-cto-form');
+    if (form) {
+        form.reset();
+    }
+    
+    // Não desativar o modo automaticamente - o usuário pode querer adicionar mais CTOs
+}
+
+async function loadMapsForAddCTO() {
+    const select = document.getElementById('cto-map');
+    if (!select) return;
+    
+    try {
+        const response = await fetch(`${API_BASE}/arquivos?refresh=true`);
+        if (!response.ok) throw new Error('Erro ao carregar mapas');
+        
+        const arquivos = await response.json();
+        
+        // Limpar opções
+        select.innerHTML = '<option value="">Selecione um mapa...</option>';
+        
+        // Adicionar mapas
+        arquivos.forEach(arquivo => {
+            const option = document.createElement('option');
+            option.value = arquivo.id || '';
+            option.textContent = `${arquivo.nome} (${arquivo.tipo.toUpperCase()})`;
+            select.appendChild(option);
+        });
+        
+        if (arquivos.length === 0) {
+            select.innerHTML = '<option value="">Nenhum mapa disponível</option>';
+        }
+    } catch (error) {
+        console.error('Erro ao carregar mapas:', error);
+        select.innerHTML = '<option value="">Erro ao carregar mapas</option>';
+    }
+}
+
+// Função auxiliar para obter CSRF token
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+}
+
+async function saveCTO() {
+    const popup = document.getElementById('add-cto-popup');
+    const form = document.getElementById('add-cto-form');
+    const saveBtn = document.getElementById('save-cto');
+    
+    if (!popup || !form || !saveBtn) return;
+    
+    const nomeCTO = document.getElementById('cto-name').value.trim();
+    const mapId = document.getElementById('cto-map').value;
+    const lat = parseFloat(popup.dataset.lat);
+    const lon = parseFloat(popup.dataset.lng);
+    
+    // Validação
+    if (!nomeCTO) {
+        showNotification('Por favor, informe o nome do CTO', 'error');
+        return;
+    }
+    
+    if (!mapId) {
+        showNotification('Por favor, selecione um mapa', 'error');
+        return;
+    }
+    
+    if (isNaN(lat) || isNaN(lon)) {
+        showNotification('Coordenadas inválidas', 'error');
+        return;
+    }
+    
+    // Desabilitar botão
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Salvando...';
+    
+    // Obter CSRF token (tentar do window primeiro, depois do cookie)
+    const csrftoken = window.csrfToken || getCookie('csrftoken');
+    
+    try {
+        const response = await fetch(`${API_BASE}/adicionar-cto`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken || '',
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                nome_cto: nomeCTO,
+                lat: lat,
+                lon: lon,
+                map_id: parseInt(mapId)
+            })
+        });
+        
+        // Verificar se a resposta é JSON antes de tentar parsear
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('Resposta não é JSON:', text.substring(0, 200));
+            throw new Error(`Erro do servidor (${response.status}): ${text.substring(0, 100)}`);
+        }
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.erro || 'Erro ao salvar CTO');
+        }
+        
+        // Sucesso
+        showNotification(data.mensagem || 'CTO adicionado com sucesso!', 'success');
+        
+        // Fechar popup e desativar modo
+        closeAddCTOPopup();
+        if (isAddCTOMode) {
+            toggleAddCTOMode();
+        }
+        
+        // Recarregar mapas para mostrar o novo CTO
+        setTimeout(() => {
+            loadCTOFiles(true);
+        }, 500);
+        
+    } catch (error) {
+        console.error('Erro ao salvar CTO:', error);
+        showNotification(error.message || 'Erro ao salvar CTO', 'error');
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Salvar CTO';
+    }
 }

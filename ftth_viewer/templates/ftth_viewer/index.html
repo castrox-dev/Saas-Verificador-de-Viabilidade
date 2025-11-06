@@ -81,6 +81,16 @@
             </button>
         </div>
 
+        <!-- Botão de Adicionar CTO (apenas para admins) -->
+        {% if user.is_authenticated and user.is_company_admin or user.is_authenticated and user.is_rm_admin %}
+        <div class="add-cto-toggle-container">
+            <button id="add-cto-toggle-btn" class="add-cto-toggle-btn" title="Adicionar CTO no mapa">
+                <i class="fas fa-map-marker-alt"></i>
+                <span class="add-cto-mode-text">Adicionar CTO</span>
+            </button>
+        </div>
+        {% endif %}
+
         <!-- Botão de Dark Mode -->
         <div class="theme-toggle-container">
             <button id="theme-toggle-btn" class="theme-toggle-btn" title="Alternar tema">
@@ -130,6 +140,42 @@
     <!-- Mapa em tela cheia -->
     <div id="map"></div>
 
+    <!-- Popup de Adicionar CTO (apenas para admins) -->
+    {% if user.is_authenticated and user.is_company_admin or user.is_authenticated and user.is_rm_admin %}
+    <div id="add-cto-popup" class="add-cto-popup" style="display: none;">
+        <div class="add-cto-popup-content">
+            <div class="add-cto-popup-header">
+                <h3>Adicionar CTO</h3>
+                <button id="close-add-cto-popup" class="close-add-cto-btn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="add-cto-form" class="add-cto-form">
+                <div class="form-group">
+                    <label for="cto-name">Nome do CTO *</label>
+                    <input type="text" id="cto-name" name="nome_cto" required placeholder="Ex: CTO Centro">
+                </div>
+                <div class="form-group">
+                    <label for="cto-map">Selecione o Mapa *</label>
+                    <select id="cto-map" name="map_id" required>
+                        <option value="">Carregando mapas...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Coordenadas</label>
+                    <div class="coords-display">
+                        <span id="cto-lat-display">-</span>, <span id="cto-lon-display">-</span>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="cancel-add-cto" class="btn-cancel">Cancelar</button>
+                    <button type="submit" id="save-cto" class="btn-save">Salvar CTO</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Loading Screen -->
     <div id="loading-overlay" class="loading-overlay">
         <div class="loading-content">
@@ -146,6 +192,10 @@
     </div>
 
     <!-- JavaScript separado -->
+    <script>
+        // Disponibilizar CSRF token globalmente
+        window.csrfToken = '{{ csrf_token }}';
+    </script>
     <script src="{% static 'ftth_viewer/js/app.js' %}" defer></script>
     
     <!-- Script de teste inline para dark mode -->

@@ -2909,3 +2909,320 @@ Dark Mode Colors:
 
 /* Estilos PWA removidos */
 
+/* ===== BOTÃO ADICIONAR CTO ===== */
+.add-cto-toggle-container {
+    display: flex;
+    align-items: center;
+    margin-left: var(--spacing-sm);
+}
+
+.add-cto-toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: clamp(0.25rem, 1vw, var(--spacing-sm));
+    padding: clamp(8px, 2vw, 12px) clamp(12px, 3vw, 20px);
+    background: var(--bg-primary);
+    border: 2px solid var(--gray-200);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    transition: var(--transition-fast);
+    font-family: var(--font-family-primary);
+    font-size: clamp(var(--font-size-xs), 2vw, var(--font-size-sm));
+    font-weight: 500;
+    color: var(--rm-text-primary);
+    position: relative;
+    overflow: hidden;
+    min-height: clamp(40px, 10vw, 48px);
+    min-width: 0;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.add-cto-toggle-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transition: var(--transition-normal);
+}
+
+.add-cto-toggle-btn:hover {
+    background: var(--gray-50);
+    border-color: var(--secondary-color);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.add-cto-toggle-btn:hover::before {
+    left: 100%;
+}
+
+.add-cto-toggle-btn:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+}
+
+.add-cto-toggle-btn:focus {
+    outline: none;
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 0 4px rgba(40, 167, 69, 0.1);
+}
+
+.add-cto-toggle-btn.active {
+    background: var(--secondary-color);
+    border-color: var(--secondary-color);
+    color: white;
+    box-shadow: var(--shadow-lg);
+}
+
+.add-cto-toggle-btn.active:hover {
+    background: var(--secondary-dark);
+    border-color: var(--secondary-dark);
+}
+
+.add-cto-toggle-btn i {
+    font-size: 16px;
+    transition: var(--transition-fast);
+}
+
+.add-cto-toggle-btn.active i {
+    color: white;
+}
+
+.add-cto-mode-text {
+    font-weight: 500;
+    letter-spacing: 0.025em;
+    transition: var(--transition-fast);
+}
+
+[data-theme="dark"] .add-cto-toggle-btn {
+    background: var(--dark-bg-secondary);
+    border-color: var(--dark-border);
+    color: var(--dark-text-primary);
+}
+
+[data-theme="dark"] .add-cto-toggle-btn:hover {
+    background: var(--dark-bg-tertiary);
+    border-color: var(--secondary-color);
+}
+
+[data-theme="dark"] .add-cto-toggle-btn.active {
+    background: var(--secondary-color);
+    border-color: var(--secondary-color);
+    color: white;
+}
+
+/* ===== POPUP ADICIONAR CTO ===== */
+.add-cto-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    backdrop-filter: blur(4px);
+}
+
+.add-cto-popup-content {
+    background: var(--bg-primary);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-xl);
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: clamp(16px, 4vw, 24px);
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.add-cto-popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: clamp(16px, 4vw, 24px);
+    padding-bottom: clamp(12px, 3vw, 16px);
+    border-bottom: 2px solid var(--gray-200);
+}
+
+.add-cto-popup-header h3 {
+    margin: 0;
+    font-size: clamp(18px, 4vw, 24px);
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.close-add-cto-btn {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: var(--border-radius-sm);
+    transition: var(--transition-fast);
+}
+
+.close-add-cto-btn:hover {
+    background: var(--gray-100);
+    color: var(--text-primary);
+}
+
+.add-cto-form {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(16px, 4vw, 20px);
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    font-weight: 500;
+    color: var(--text-primary);
+    font-size: clamp(14px, 3vw, 16px);
+}
+
+.form-group input,
+.form-group select {
+    padding: clamp(10px, 2.5vw, 12px);
+    border: 2px solid var(--gray-200);
+    border-radius: var(--border-radius-md);
+    font-size: clamp(14px, 3vw, 16px);
+    transition: var(--transition-fast);
+    font-family: var(--font-family-primary);
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+}
+
+.coords-display {
+    padding: clamp(10px, 2.5vw, 12px);
+    background: var(--gray-50);
+    border: 2px solid var(--gray-200);
+    border-radius: var(--border-radius-md);
+    font-family: 'Courier New', monospace;
+    font-size: clamp(13px, 3vw, 15px);
+    color: var(--text-secondary);
+}
+
+.form-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+    justify-content: flex-end;
+}
+
+.btn-cancel,
+.btn-save {
+    padding: clamp(10px, 2.5vw, 12px) clamp(20px, 5vw, 24px);
+    border: none;
+    border-radius: var(--border-radius-md);
+    font-size: clamp(14px, 3vw, 16px);
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.btn-cancel {
+    background: var(--gray-200);
+    color: var(--text-primary);
+}
+
+.btn-cancel:hover {
+    background: var(--gray-300);
+}
+
+.btn-save {
+    background: var(--secondary-color);
+    color: white;
+}
+
+.btn-save:hover {
+    background: var(--secondary-dark);
+}
+
+.btn-save:disabled {
+    background: var(--gray-400);
+    cursor: not-allowed;
+}
+
+[data-theme="dark"] .add-cto-popup-content {
+    background: var(--dark-bg-secondary);
+    border: 1px solid var(--dark-border);
+}
+
+[data-theme="dark"] .add-cto-popup-header {
+    border-bottom-color: var(--dark-border);
+}
+
+[data-theme="dark"] .add-cto-popup-header h3 {
+    color: var(--dark-text-primary);
+}
+
+[data-theme="dark"] .close-add-cto-btn {
+    color: var(--dark-text-secondary);
+}
+
+[data-theme="dark"] .close-add-cto-btn:hover {
+    background: var(--dark-bg-tertiary);
+    color: var(--dark-text-primary);
+}
+
+[data-theme="dark"] .form-group label {
+    color: var(--dark-text-primary);
+}
+
+[data-theme="dark"] .form-group input,
+[data-theme="dark"] .form-group select {
+    background: var(--dark-bg-tertiary);
+    border-color: var(--dark-border);
+    color: var(--dark-text-primary);
+}
+
+[data-theme="dark"] .form-group input:focus,
+[data-theme="dark"] .form-group select:focus {
+    border-color: var(--secondary-color);
+}
+
+[data-theme="dark"] .coords-display {
+    background: var(--dark-bg-tertiary);
+    border-color: var(--dark-border);
+    color: var(--dark-text-secondary);
+}
+
+[data-theme="dark"] .btn-cancel {
+    background: var(--dark-bg-tertiary);
+    color: var(--dark-text-primary);
+    border: 1px solid var(--dark-border);
+}
+
+[data-theme="dark"] .btn-cancel:hover {
+    background: var(--dark-bg-primary);
+}
+

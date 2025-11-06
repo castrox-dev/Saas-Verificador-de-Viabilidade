@@ -18,5 +18,6 @@ urlpatterns = [
     path('api/verificar-viabilidade', views.api_verificar_viabilidade, name='api_verificar_viabilidade'),
     path('api/cache/geocoding/stats', views.api_cache_geocoding_stats, name='api_cache_geocoding_stats'),
     path('api/cache/geocoding/clear', views.api_cache_geocoding_clear, name='api_cache_geocoding_clear'),
+    path('api/adicionar-cto', views.api_adicionar_cto, name='api_adicionar_cto'),
 ]
 

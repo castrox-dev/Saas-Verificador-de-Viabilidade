@@ -412,3 +412,203 @@ def get_arquivo_caminho(arquivo):
         return os.path.join(diretorio, arquivo)
     return None
 
+
+def adicionar_cto_kml(caminho_kml, nome_cto, lat, lng):
+    """Adiciona um CTO a um arquivo KML"""
+    try:
+        # Ler arquivo existente
+        tree = ET.parse(caminho_kml)
+        root = tree.getroot()
+        
+        ns = {'kml': 'http://www.opengis.net/kml/2.2'}
+        
+        # Encontrar ou criar Document
+        document = root.find('.//kml:Document', ns)
+        if document is None:
+            # Se não houver Document, criar um
+            document = ET.SubElement(root, '{http://www.opengis.net/kml/2.2}Document')
+        
+        # Criar novo Placemark
+        placemark = ET.SubElement(document, '{http://www.opengis.net/kml/2.2}Placemark')
+        
+        # Adicionar nome
+        name_elem = ET.SubElement(placemark, '{http://www.opengis.net/kml/2.2}name')
+        name_elem.text = nome_cto
+        
+        # Adicionar Point com coordenadas
+        point = ET.SubElement(placemark, '{http://www.opengis.net/kml/2.2}Point')
+        coords_elem = ET.SubElement(point, '{http://www.opengis.net/kml/2.2}coordinates')
+        coords_elem.text = f"{lng:.6f},{lat:.6f},0"
+        
+        # Salvar arquivo
+        tree.write(caminho_kml, encoding='utf-8', xml_declaration=True)
+        return True
+    except Exception as e:
+        print(f"Erro ao adicionar CTO em KML {caminho_kml}: {e}")
+        return False
+
+
+def adicionar_cto_kmz(caminho_kmz, nome_cto, lat, lng):
+    """Adiciona um CTO a um arquivo KMZ"""
+    import tempfile
+    import shutil
+    try:
+        # Criar diretório temporário
+        temp_dir = tempfile.mkdtemp()
+        
+        # Extrair KMZ
+        with zipfile.ZipFile(caminho_kmz, 'r') as kmz:
+            kmz.extractall(temp_dir)
+        
+        # Encontrar arquivo KML dentro do KMZ
+        kml_file = None
+        for arquivo in os.listdir(temp_dir):
+            if arquivo.endswith('.kml'):
+                kml_file = os.path.join(temp_dir, arquivo)
+                break
+        
+        if not kml_file:
+            # Se não houver KML, criar um novo
+            kml_file = os.path.join(temp_dir, 'doc.kml')
+            root = ET.Element('{http://www.opengis.net/kml/2.2}kml')
+            document = ET.SubElement(root, '{http://www.opengis.net/kml/2.2}Document')
+            tree = ET.ElementTree(root)
+            tree.write(kml_file, encoding='utf-8', xml_declaration=True)
+        
+        # Adicionar CTO ao KML
+        if not adicionar_cto_kml(kml_file, nome_cto, lat, lng):
+            shutil.rmtree(temp_dir)
+            return False
+        
+        # Recriar KMZ
+        with zipfile.ZipFile(caminho_kmz, 'w', zipfile.ZIP_DEFLATED) as kmz:
+            for root, dirs, files in os.walk(temp_dir):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    arcname = os.path.relpath(file_path, temp_dir)
+                    kmz.write(file_path, arcname)
+        
+        # Limpar diretório temporário
+        shutil.rmtree(temp_dir)
+        return True
+    except Exception as e:
+        print(f"Erro ao adicionar CTO em KMZ {caminho_kmz}: {e}")
+        return False
+
+
+def adicionar_cto_csv(caminho_csv, nome_cto, lat, lng):
+    """Adiciona um CTO a um arquivo CSV"""
+    try:
+        # Ler CSV existente para detectar delimitador e colunas
+        with open(caminho_csv, 'r', encoding='utf-8') as f:
+            sample = f.read(1024)
+            f.seek(0)
+            sniffer = csv.Sniffer()
+            delimiter = sniffer.sniff(sample).delimiter
+            reader = csv.DictReader(f, delimiter=delimiter)
+            fieldnames = reader.fieldnames
+        
+        # Se não houver colunas de nome, lat, lng, criar padrão
+        if not fieldnames:
+            fieldnames = ['nome', 'lat', 'lng']
+        
+        # Garantir que existam colunas necessárias
+        if 'nome' not in fieldnames:
+            fieldnames.insert(0, 'nome')
+        if 'lat' not in fieldnames:
+            fieldnames.append('lat')
+        if 'lng' not in fieldnames:
+            fieldnames.append('lng')
+        
+        # Ler todos os dados existentes
+        f.seek(0)
+        reader = csv.DictReader(f, delimiter=delimiter)
+        rows = list(reader)
+        
+        # Adicionar novo CTO
+        new_row = {}
+        for field in fieldnames:
+            if field == 'nome':
+                new_row[field] = nome_cto
+            elif field == 'lat':
+                new_row[field] = str(lat)
+            elif field == 'lng':
+                new_row[field] = str(lng)
+            else:
+                new_row[field] = ''
+        
+        rows.append(new_row)
+        
+        # Escrever CSV atualizado
+        with open(caminho_csv, 'w', encoding='utf-8', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter=delimiter)
+            writer.writeheader()
+            writer.writerows(rows)
+        
+        return True
+    except Exception as e:
+        print(f"Erro ao adicionar CTO em CSV {caminho_csv}: {e}")
+        return False
+
+
+def adicionar_cto_excel(caminho_excel, nome_cto, lat, lng):
+    """Adiciona um CTO a um arquivo Excel"""
+    try:
+        # Ler Excel existente
+        df = pd.read_excel(caminho_excel)
+        
+        # Verificar se existem colunas de nome, lat, lng
+        nome_cols = [col for col in df.columns if any(keyword in col.lower() for keyword in ['nome', 'name', 'id', 'cto'])]
+        lat_cols = [col for col in df.columns if any(keyword in col.lower() for keyword in ['lat', 'latitude', 'y'])]
+        lng_cols = [col for col in df.columns if any(keyword in col.lower() for keyword in ['lng', 'lon', 'longitude', 'x'])]
+        
+        # Se não houver colunas apropriadas, criar novas
+        if not nome_cols:
+            df['nome'] = ''
+        if not lat_cols:
+            df['lat'] = None
+        if not lng_cols:
+            df['lng'] = None
+        
+        # Usar primeira coluna encontrada ou criar padrão
+        nome_col = nome_cols[0] if nome_cols else 'nome'
+        lat_col = lat_cols[0] if lat_cols else 'lat'
+        lng_col = lng_cols[0] if lng_cols else 'lng'
+        
+        # Adicionar nova linha
+        new_row = df.iloc[0].copy() if len(df) > 0 else pd.Series()
+        new_row[nome_col] = nome_cto
+        new_row[lat_col] = lat
+        new_row[lng_col] = lng
+        
+        # Adicionar ao DataFrame
+        df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+        
+        # Salvar Excel
+        df.to_excel(caminho_excel, index=False)
+        return True
+    except Exception as e:
+        print(f"Erro ao adicionar CTO em Excel {caminho_excel}: {e}")
+        return False
+
+
+def adicionar_cto_ao_mapa(caminho_arquivo, nome_cto, lat, lng, file_type=None):
+    """Adiciona um CTO a um arquivo de mapa baseado no tipo"""
+    if not file_type:
+        ext = os.path.splitext(caminho_arquivo)[1].lower().lstrip('.')
+        file_type = ext
+    
+    file_type = file_type.lower()
+    
+    if file_type == 'kml':
+        return adicionar_cto_kml(caminho_arquivo, nome_cto, lat, lng)
+    elif file_type == 'kmz':
+        return adicionar_cto_kmz(caminho_arquivo, nome_cto, lat, lng)
+    elif file_type == 'csv':
+        return adicionar_cto_csv(caminho_arquivo, nome_cto, lat, lng)
+    elif file_type in ['xls', 'xlsx']:
+        return adicionar_cto_excel(caminho_arquivo, nome_cto, lat, lng)
+    else:
+        print(f"Tipo de arquivo não suportado para adicionar CTO: {file_type}")
+        return False
+
