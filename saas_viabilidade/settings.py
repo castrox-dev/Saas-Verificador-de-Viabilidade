@@ -60,22 +60,20 @@ WSGI_APPLICATION = "saas_viabilidade.wsgi.application"
 DATABASE_URL = os.getenv("DATABASE_URL")
 DB_CONN_MAX_AGE = int(os.getenv("DB_CONN_MAX_AGE", "0"))
 
-if DATABASE_URL:
-    requires_ssl = not DATABASE_URL.startswith("sqlite")
-    DATABASES = {
-        "default": dj_database_url.parse(
-            DATABASE_URL,
-            conn_max_age=DB_CONN_MAX_AGE,
-            ssl_require=requires_ssl,
-        )
-    }
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
+if not DATABASE_URL:
+    raise RuntimeError(
+        "DATABASE_URL não está configurada. Defina a string de conexão (ex.: Neon) no arquivo .env."
+    )
+
+requires_ssl = not DATABASE_URL.startswith("postgresql://localhost") and not DATABASE_URL.startswith("postgres://localhost")
+
+DATABASES = {
+    "default": dj_database_url.parse(
+        DATABASE_URL,
+        conn_max_age=DB_CONN_MAX_AGE,
+        ssl_require=requires_ssl,
+    )
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},

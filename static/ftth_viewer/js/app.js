@@ -1176,17 +1176,17 @@ async function markLocationWithConfirmation(lat, lng, addressText) {
         if (!popupNode) {
             return;
         }
-
+        
         const confirmBtn = popupNode.querySelector('.confirm-verify-btn');
         const cancelBtn = popupNode.querySelector('.cancel-verify-btn');
-
+        
         if (confirmBtn && !confirmBtn.hasAttribute('data-connected')) {
             confirmBtn.setAttribute('data-connected', 'true');
             confirmBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 console.log('Botão Sim clicado');
-
+                
                 if (window.searchMarker && typeof window.searchMarker.setPopupContent === 'function') {
                     window.searchMarker.setPopupContent('<div class="loading-popup">Verificando viabilidade...</div>');
                 }
@@ -1196,7 +1196,7 @@ async function markLocationWithConfirmation(lat, lng, addressText) {
                 });
             });
         }
-
+        
         if (cancelBtn && !cancelBtn.hasAttribute('data-connected')) {
             cancelBtn.setAttribute('data-connected', 'true');
             cancelBtn.addEventListener('click', function(e) {
@@ -1204,7 +1204,7 @@ async function markLocationWithConfirmation(lat, lng, addressText) {
                 e.stopPropagation();
                 e.stopImmediatePropagation();
                 console.log('Botão Não clicado');
-
+                
                 const closeAndRemove = () => {
                     if (window.searchMarker) {
                         try {
@@ -1212,21 +1212,21 @@ async function markLocationWithConfirmation(lat, lng, addressText) {
                         } catch (err) {
                         }
                     }
-
+                    
                     try {
                         map.closePopup();
                     } catch (err) {
                     }
-
+                    
                     if (window.searchMarker && map.hasLayer(window.searchMarker)) {
                         map.removeLayer(window.searchMarker);
                     }
                     window.searchMarker = null;
                 };
-
+                
                 closeAndRemove();
                 setTimeout(closeAndRemove, 50);
-
+                
                 return false;
             });
         }
@@ -1692,7 +1692,7 @@ async function removerCtoAtual(details = null) {
 function setupCTOButtonListeners() {
     const ctoGrid = document.querySelector('.cto-grid');
     if (!ctoGrid) return;
-
+    
     ctoGrid.addEventListener('change', async (event) => {
         const checkbox = event.target.closest('.cto-checkbox-input');
         if (!checkbox) return;
@@ -1706,7 +1706,7 @@ function setupCTOButtonListeners() {
             console.error('Chave do mapa não encontrada para o item selecionado.');
             return;
         }
-
+        
         if (checkbox.checked) {
             card?.classList.add('loading');
             checkbox.disabled = true;
@@ -1714,21 +1714,21 @@ function setupCTOButtonListeners() {
                 await loadKML(filename, mapId, { append: true });
                 setCheckboxStateForKey(mapKey, true);
                 lastLoadedLayerKey = mapKey;
-
-                // Fechar sidebar em dispositivos móveis
-                const sidebar = document.getElementById('sidebar');
-                const overlay = document.getElementById('overlay');
-                if (sidebar && window.innerWidth <= 768) {
-                    sidebar.classList.remove('active');
-                    if (overlay) overlay.classList.remove('active');
-                    document.body.classList.remove('no-scroll');
-                }
-            } catch (error) {
+            
+            // Fechar sidebar em dispositivos móveis
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('overlay');
+            if (sidebar && window.innerWidth <= 768) {
+                sidebar.classList.remove('active');
+                if (overlay) overlay.classList.remove('active');
+                document.body.classList.remove('no-scroll');
+            }
+        } catch (error) {
                 console.error('Erro ao carregar mapa selecionado:', error);
                 showNotification(`Erro ao carregar mapa: ${filename}`, 'error');
                 checkbox.checked = false;
                 setCheckboxStateForKey(mapKey, false);
-            } finally {
+        } finally {
                 checkbox.disabled = false;
                 card?.classList.remove('loading');
             }
@@ -1860,21 +1860,21 @@ function processKMLData(data, filename, mapId = null, options = {}) {
 
     const batchSize = 50;
     let processed = 0;
-
+    
     function processBatch(startIndex) {
         const endIndex = Math.min(startIndex + batchSize, data.length);
-
+        
         for (let i = startIndex; i < endIndex; i++) {
             const coord = data[i];
             try {
                 if (coord.tipo === 'point' && (coord.lat !== undefined && coord.lng !== undefined)) {
                     let lat = typeof coord.lat === 'string' ? parseFloat(coord.lat.replace(',', '.')) : coord.lat;
                     let lng = typeof coord.lng === 'string' ? parseFloat(coord.lng.replace(',', '.')) : coord.lng;
-
+                    
                     if (isNaN(lat) || isNaN(lng) || !isFinite(lat) || !isFinite(lng)) {
                         continue;
                     }
-
+                    
                     if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
                         continue;
                     }
@@ -1945,7 +1945,7 @@ function processKMLData(data, filename, mapId = null, options = {}) {
                 }
             }
         }
-
+        
         if (endIndex < data.length) {
             setTimeout(() => processBatch(endIndex), 5);
         } else {
@@ -1965,13 +1965,13 @@ function processKMLData(data, filename, mapId = null, options = {}) {
 
                 if (!skipFit) {
                     focusMapOnCurrentLayers();
-                }
-
-                console.log(`✅ ${processed} CTOs carregados do arquivo ${filename}`);
-
-                if (typeof showNotification === 'function') {
-                    const base = filename.replace(/\.(kml|kmz|csv|xls|xlsx)$/i, '');
-                    showNotification(`${base} carregado! (${processed} pontos)`, 'success');
+            }
+            
+            console.log(`✅ ${processed} CTOs carregados do arquivo ${filename}`);
+            
+            if (typeof showNotification === 'function') {
+                const base = filename.replace(/\.(kml|kmz|csv|xls|xlsx)$/i, '');
+                showNotification(`${base} carregado! (${processed} pontos)`, 'success');
                 }
             } else {
                 console.warn(`Arquivo ${filename} não possui pontos válidos.`);
@@ -3173,7 +3173,7 @@ async function loadCTOFiles(forceRefresh = false) {
                     <span class="cto-name">${nomeDisplay}</span>
                 </div>
             `;
-
+            
             const checkbox = card.querySelector('.cto-checkbox-input');
             if (activeMapLayers.has(mapKey)) {
                 checkbox.checked = true;
