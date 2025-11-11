@@ -45,6 +45,12 @@
         <button id="menu-toggle" class="menu-toggle">
             <i class="fas fa-bars"></i>
         </button>
+        {% if user.is_authenticated and user.is_company_admin or user.is_authenticated and user.is_rm_admin or user.is_authenticated and user.is_superuser %}
+        <a class="menu-admin-link" href="{% if user.is_rm_admin or user.is_superuser %}/rm/admin/{% else %}/{{ company_slug }}/painel/{% endif %}">
+            <i class="fas fa-tachometer-alt"></i>
+            <span>Ir para o Painel</span>
+        </a>
+        {% endif %}
         
         <!-- Barra de pesquisa principal -->
         <div class="search-container">
@@ -195,6 +201,8 @@
     <script>
         // Disponibilizar CSRF token globalmente
         window.csrfToken = '{{ csrf_token }}';
+        window.IS_ADMIN = {% if user.is_authenticated and user.is_company_admin or user.is_authenticated and user.is_rm_admin or user.is_authenticated and user.is_superuser %}true{% else %}false{% endif %};
+        window.COMPANY_SLUG = '{{ company_slug|default_if_none:"" }}';
     </script>
     <script src="{% static 'ftth_viewer/js/app.js' %}" defer></script>
     

@@ -37,6 +37,13 @@ cp env.example .env
 # Edite o arquivo .env com suas configurações
 ```
 
+Para usar PostgreSQL (ex.: Neon):
+
+```env
+DATABASE_URL=postgresql://neondb_owner:senha@host-do-neon/neondb?sslmode=require&channel_binding=require
+DB_CONN_MAX_AGE=600  # Opcional: mantém conexões abertas
+```
+
 ### 4. Execute as migrações
 ```bash
 python manage.py migrate

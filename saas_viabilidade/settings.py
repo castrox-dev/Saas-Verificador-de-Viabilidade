@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -56,12 +57,25 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "saas_viabilidade.wsgi.application"
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+DATABASE_URL = os.getenv("DATABASE_URL")
+DB_CONN_MAX_AGE = int(os.getenv("DB_CONN_MAX_AGE", "0"))
+
+if DATABASE_URL:
+    requires_ssl = not DATABASE_URL.startswith("sqlite")
+    DATABASES = {
+        "default": dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=DB_CONN_MAX_AGE,
+            ssl_require=requires_ssl,
+        )
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -129,9 +143,6 @@ DEBUG_PROPAGATE_EXCEPTIONS = True
 
 # Desabilitar debug toolbar e outras ferramentas de debug que podem interferir
 INTERNAL_IPS = []
-
-# Forçar uso das páginas de erro personalizadas
-DEBUG = True
 
 # ===== CONFIGURAÇÕES FTTH VERIFICADOR =====
 # Baseado no Verificador-De-Viabilidade-main

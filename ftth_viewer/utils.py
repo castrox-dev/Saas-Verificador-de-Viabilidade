@@ -17,6 +17,29 @@ from django.core.cache import cache
 from .models import GeocodingCache, ViabilidadeCache
 
 
+def _normalize_decimal(value):
+    """Converte valores numéricos que podem estar em string para float."""
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    try:
+        value_str = str(value).strip()
+        if not value_str:
+            return None
+        value_str = value_str.replace(',', '.')
+        return float(value_str)
+    except (ValueError, TypeError):
+        return None
+
+
+def _coords_match(lat1, lon1, lat2, lon2, tolerance=1e-5):
+    """Verifica se duas coordenadas são equivalentes dentro de uma tolerância."""
+    if None in (lat1, lon1, lat2, lon2):
+        return False
+    return abs(lat1 - lat2) <= tolerance and abs(lon1 - lon2) <= tolerance
+
+
 def get_base_path():
     """Retorna o caminho base do projeto"""
     return Path(settings.BASE_DIR)
@@ -611,4 +634,217 @@ def adicionar_cto_ao_mapa(caminho_arquivo, nome_cto, lat, lng, file_type=None):
     else:
         print(f"Tipo de arquivo não suportado para adicionar CTO: {file_type}")
         return False
+
+
+def remover_cto_kml(caminho_kml, lat, lng, nome_cto=None, tolerance=1e-5):
+    """Remove um CTO de um arquivo KML"""
+    try:
+        tree = ET.parse(caminho_kml)
+        root = tree.getroot()
+
+        ns = {'kml': 'http://www.opengis.net/kml/2.2'}
+        candidatos = root.findall('.//kml:Document', ns) + root.findall('.//kml:Folder', ns)
+        if not candidatos:
+            candidatos = [root]
+
+        removed = False
+        target_name = nome_cto.strip().lower() if nome_cto else None
+
+        for parent in candidatos:
+            for placemark in list(parent.findall('kml:Placemark', ns)):
+                coords_elem = placemark.find('.//kml:Point/kml:coordinates', ns)
+                if coords_elem is None or not coords_elem.text:
+                    continue
+
+                coords = coords_elem.text.strip().split(',')
+                if len(coords) < 2:
+                    continue
+
+                try:
+                    coord_lng = float(coords[0])
+                    coord_lat = float(coords[1])
+                except ValueError:
+                    continue
+
+                name_elem = placemark.find('kml:name', ns)
+                name_text = name_elem.text.strip().lower() if name_elem is not None and name_elem.text else ''
+
+                matches = _coords_match(coord_lat, coord_lng, lat, lng, tolerance)
+                if target_name:
+                    matches = matches or (name_text == target_name)
+
+                if matches:
+                    parent.remove(placemark)
+                    removed = True
+
+        if removed:
+            tree.write(caminho_kml, encoding='utf-8', xml_declaration=True)
+        return removed
+    except Exception as e:
+        print(f"Erro ao remover CTO em KML {caminho_kml}: {e}")
+        return False
+
+
+def remover_cto_kmz(caminho_kmz, lat, lng, nome_cto=None, tolerance=1e-5):
+    """Remove um CTO de um arquivo KMZ"""
+    import tempfile
+    import shutil
+
+    try:
+        temp_dir = tempfile.mkdtemp()
+        with zipfile.ZipFile(caminho_kmz, 'r') as kmz:
+            kmz.extractall(temp_dir)
+
+        kml_file = None
+        for arquivo in os.listdir(temp_dir):
+            if arquivo.endswith('.kml'):
+                kml_file = os.path.join(temp_dir, arquivo)
+                break
+
+        if not kml_file:
+            shutil.rmtree(temp_dir)
+            return False
+
+        removed = remover_cto_kml(kml_file, lat, lng, nome_cto=nome_cto, tolerance=tolerance)
+        if not removed:
+            shutil.rmtree(temp_dir)
+            return False
+
+        with zipfile.ZipFile(caminho_kmz, 'w', zipfile.ZIP_DEFLATED) as kmz:
+            for root_dir, dirs, files in os.walk(temp_dir):
+                for file in files:
+                    file_path = os.path.join(root_dir, file)
+                    arcname = os.path.relpath(file_path, temp_dir)
+                    kmz.write(file_path, arcname)
+
+        shutil.rmtree(temp_dir)
+        return True
+    except Exception as e:
+        print(f"Erro ao remover CTO em KMZ {caminho_kmz}: {e}")
+        return False
+
+
+def remover_cto_csv(caminho_csv, lat, lng, nome_cto=None, tolerance=1e-5):
+    """Remove um CTO de um arquivo CSV"""
+    try:
+        with open(caminho_csv, 'r', encoding='utf-8') as f:
+            sample = f.read(1024)
+            f.seek(0)
+            try:
+                delimiter = csv.Sniffer().sniff(sample).delimiter if sample else ','
+            except csv.Error:
+                delimiter = ','
+            reader = csv.DictReader(f, delimiter=delimiter)
+            fieldnames = reader.fieldnames or []
+            rows = list(reader)
+
+        if not rows:
+            return False
+
+        lat_cols = [col for col in fieldnames if any(keyword in col.lower() for keyword in ['lat', 'latitude', 'y'])]
+        lng_cols = [col for col in fieldnames if any(keyword in col.lower() for keyword in ['lng', 'lon', 'longitude', 'x'])]
+        nome_cols = [col for col in fieldnames if any(keyword in col.lower() for keyword in ['nome', 'name', 'id', 'cto'])]
+
+        if not lat_cols or not lng_cols:
+            return False
+
+        lat_col = lat_cols[0]
+        lng_col = lng_cols[0]
+        nome_col = nome_cols[0] if nome_cols else None
+        target_name = nome_cto.strip().lower() if nome_cto else None
+
+        filtered_rows = []
+        removed = False
+
+        for row in rows:
+            row_lat = _normalize_decimal(row.get(lat_col))
+            row_lng = _normalize_decimal(row.get(lng_col))
+            match = _coords_match(row_lat, row_lng, lat, lng, tolerance)
+
+            if target_name and nome_col:
+                nome_val = str(row.get(nome_col, '')).strip().lower()
+                match = match or (nome_val == target_name)
+
+            if match:
+                removed = True
+                continue
+
+            filtered_rows.append(row)
+
+        if not removed:
+            return False
+
+        with open(caminho_csv, 'w', encoding='utf-8', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter=delimiter)
+            writer.writeheader()
+            writer.writerows(filtered_rows)
+
+        return True
+    except Exception as e:
+        print(f"Erro ao remover CTO em CSV {caminho_csv}: {e}")
+        return False
+
+
+def remover_cto_excel(caminho_excel, lat, lng, nome_cto=None, tolerance=1e-5):
+    """Remove um CTO de um arquivo Excel"""
+    try:
+        df = pd.read_excel(caminho_excel)
+    except Exception as e:
+        print(f"Erro ao ler Excel {caminho_excel}: {e}")
+        return False
+
+    if df.empty:
+        return False
+
+    nome_cols = [col for col in df.columns if isinstance(col, str) and any(keyword in col.lower() for keyword in ['nome', 'name', 'id', 'cto'])]
+    lat_cols = [col for col in df.columns if isinstance(col, str) and any(keyword in col.lower() for keyword in ['lat', 'latitude', 'y'])]
+    lng_cols = [col for col in df.columns if isinstance(col, str) and any(keyword in col.lower() for keyword in ['lng', 'lon', 'longitude', 'x'])]
+
+    if not lat_cols or not lng_cols:
+        return False
+
+    lat_col = lat_cols[0]
+    lng_col = lng_cols[0]
+    nome_col = nome_cols[0] if nome_cols else None
+    target_name = nome_cto.strip().lower() if nome_cto else None
+
+    def _row_match(row):
+        row_lat = _normalize_decimal(row.get(lat_col))
+        row_lng = _normalize_decimal(row.get(lng_col))
+        match = _coords_match(row_lat, row_lng, lat, lng, tolerance)
+
+        if target_name and nome_col:
+            nome_val = row.get(nome_col)
+            if pd.notna(nome_val):
+                match = match or (str(nome_val).strip().lower() == target_name)
+        return match
+
+    mask = df.apply(_row_match, axis=1)
+    if not mask.any():
+        return False
+
+    df = df[~mask]
+    df.to_excel(caminho_excel, index=False)
+    return True
+
+
+def remover_cto_do_mapa(caminho_arquivo, lat, lng, nome_cto=None, file_type=None):
+    """Remove um CTO de um arquivo de mapa baseado no tipo"""
+    if not file_type:
+        ext = os.path.splitext(caminho_arquivo)[1].lower().lstrip('.')
+        file_type = ext
+
+    file_type = (file_type or '').lower()
+
+    if file_type == 'kml':
+        return remover_cto_kml(caminho_arquivo, lat, lng, nome_cto=nome_cto)
+    if file_type == 'kmz':
+        return remover_cto_kmz(caminho_arquivo, lat, lng, nome_cto=nome_cto)
+    if file_type == 'csv':
+        return remover_cto_csv(caminho_arquivo, lat, lng, nome_cto=nome_cto)
+    if file_type in ['xls', 'xlsx']:
+        return remover_cto_excel(caminho_arquivo, lat, lng, nome_cto=nome_cto)
+
+    print(f"Tipo de arquivo não suportado para remover CTO: {file_type}")
+    return False
 

@@ -19,5 +19,6 @@ urlpatterns = [
     path('api/cache/geocoding/stats', views.api_cache_geocoding_stats, name='api_cache_geocoding_stats'),
     path('api/cache/geocoding/clear', views.api_cache_geocoding_clear, name='api_cache_geocoding_clear'),
     path('api/adicionar-cto', views.api_adicionar_cto, name='api_adicionar_cto'),
+    path('api/remover-cto', views.api_remover_cto, name='api_remover_cto'),
 ]
 

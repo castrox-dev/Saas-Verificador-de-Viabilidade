@@ -17,7 +17,8 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from .utils import (
     ler_kml, ler_kmz, ler_csv, ler_excel, filtrar_coordenadas_brasil,
     calcular_distancia, calcular_rota_ruas_single, classificar_viabilidade,
-    get_all_ctos, get_arquivo_caminho, get_cached_geocoding, set_cached_geocoding
+    get_all_ctos, get_arquivo_caminho, get_cached_geocoding, set_cached_geocoding,
+    remover_cto_do_mapa
 )
 from .models import ViabilidadeCache
 from core.models import CTOMapFile, Company
@@ -26,7 +27,10 @@ from core.models import CTOMapFile, Company
 @login_required
 def index(request, company_slug=None):
     """Página principal do FTTH Viewer"""
-    return render(request, 'ftth_viewer/index.html')
+    context = {
+        'company_slug': company_slug,
+    }
+    return render(request, 'ftth_viewer/index.html', context)
 
 
 @login_required
@@ -492,7 +496,8 @@ def api_verificar_viabilidade(request, company_slug=None):
                 "nome": cto_mais_proximo.get("nome", "CTO"),
                 "lat": float(cto_mais_proximo["lat"]),
                 "lon": float(cto_mais_proximo["lng"]),
-                "arquivo": cto_mais_proximo.get("arquivo", "")
+                "arquivo": cto_mais_proximo.get("arquivo", ""),
+                "map_id": cto_mais_proximo.get("map_id")
             },
             "distancia": {
                 "metros": round(menor_distancia, 2),
@@ -653,6 +658,95 @@ def api_adicionar_cto(request, company_slug=None):
     except Exception as e:
         import traceback
         print(f"Erro ao adicionar CTO: {e}")
+        print(f"Traceback: {traceback.format_exc()}")
+        return JsonResponse({'erro': f'Erro interno: {str(e)}'}, status=500)
+
+
+@ensure_csrf_cookie
+@require_http_methods(["POST"])
+def api_remover_cto(request, company_slug=None):
+    """Remove um CTO existente de um arquivo de mapa - apenas para COMPANY_ADMIN e RM"""
+    from django.core.cache import cache
+
+    if not request.user.is_authenticated:
+        return JsonResponse({'erro': 'Usuário não autenticado'}, status=401)
+
+    user = request.user
+
+    if not (user.is_company_admin or user.is_rm_admin or user.is_superuser):
+        return JsonResponse({'erro': 'Apenas administradores podem remover CTOs'}, status=403)
+
+    try:
+        import json
+        data = json.loads(request.body) if request.body else {}
+    except json.JSONDecodeError:
+        return JsonResponse({'erro': 'Dados inválidos'}, status=400)
+
+    map_id = data.get('map_id')
+    lat = data.get('lat')
+    lon = data.get('lon')
+    nome_cto = (data.get('nome_cto') or data.get('nome') or '').strip()
+
+    if not map_id:
+        return JsonResponse({'erro': 'ID do mapa é obrigatório'}, status=400)
+
+    if lat is None or lon is None:
+        return JsonResponse({'erro': 'Coordenadas são obrigatórias'}, status=400)
+
+    try:
+        lat = float(lat)
+        lon = float(lon)
+    except (ValueError, TypeError):
+        return JsonResponse({'erro': 'Coordenadas inválidas'}, status=400)
+
+    try:
+        mapa = CTOMapFile.objects.get(id=map_id)
+    except CTOMapFile.DoesNotExist:
+        return JsonResponse({'erro': 'Mapa não encontrado'}, status=404)
+
+    if not user.is_rm_admin and not user.is_superuser:
+        if not user.company or user.company != mapa.company:
+            return JsonResponse({'erro': 'Acesso negado ao mapa'}, status=403)
+
+    if not mapa.file or not hasattr(mapa.file, 'path'):
+        return JsonResponse({'erro': 'Arquivo do mapa não encontrado'}, status=404)
+
+    caminho_arquivo = mapa.file.path
+    if not os.path.exists(caminho_arquivo):
+        return JsonResponse({'erro': 'Arquivo do mapa não existe no sistema de arquivos'}, status=404)
+
+    try:
+        removido = remover_cto_do_mapa(
+            caminho_arquivo,
+            lat,
+            lon,
+            nome_cto=nome_cto,
+            file_type=mapa.file_type
+        )
+
+        if not removido:
+            return JsonResponse({'erro': 'CTO não encontrado no arquivo'}, status=404)
+
+        cache_keys_to_delete = [
+            f'api_arquivos_{user.id}_{company_slug or (user.company.slug if user.company else "none")}',
+            f'api_coordenadas_{map_id}_{company_slug or "none"}',
+        ]
+        cache.delete_many(cache_keys_to_delete)
+
+        ViabilidadeCache.objects.filter(
+            lat=lat,
+            lon=lon,
+            company=mapa.company
+        ).delete()
+
+        return JsonResponse({
+            'sucesso': True,
+            'mensagem': f'CTO removido com sucesso do mapa "{mapa.file_name}"'
+        })
+
+    except Exception as e:
+        import traceback
+        print(f"Erro ao remover CTO: {e}")
         print(f"Traceback: {traceback.format_exc()}")
         return JsonResponse({'erro': f'Erro interno: {str(e)}'}, status=500)
 

@@ -80,15 +80,37 @@ const API_BASE = (() => {
     try {
         const parts = window.location.pathname.split('/').filter(Boolean);
         const first = parts[0] || '';
+
+        let basePath;
         if (first === 'verificador') {
-            return '/verificador/api';
+            basePath = '/verificador/api';
+        } else if (first && first !== 'rm' && first !== 'admin') {
+            basePath = `/${first}/verificador/api`;
+        } else {
+            basePath = '/verificador/api';
         }
-        const isCompany = first && first !== 'rm' && first !== 'admin';
-        return isCompany ? `/${first}/verificador/api` : '/verificador/api';
+
+        // Normaliza a URL garantindo barra inicial e removendo duplicações
+        const normalizedPath = new URL(basePath, window.location.origin).pathname;
+        return normalizedPath.endsWith('/') ? normalizedPath.slice(0, -1) : normalizedPath;
     } catch (_e) {
         return '/verificador/api';
     }
 })();
+
+const IS_ADMIN = Boolean(window.IS_ADMIN);
+let currentCTODetails = null;
+window.currentCTO = null;
+
+function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
 
 // ===== DARK MODE FUNCTIONALITY =====
 function initializeThemeToggle() {
@@ -1242,6 +1264,16 @@ async function verificarViabilidade(lat, lon, endereco = '') {
             return;
         }
 
+        const ctoInfo = data.cto || {};
+        currentCTODetails = {
+            mapId: ctoInfo?.map_id ?? null,
+            lat: ctoInfo?.lat ?? null,
+            lon: ctoInfo?.lon ?? null,
+            nome: ctoInfo?.nome ?? '',
+            arquivo: ctoInfo?.arquivo ?? ''
+        };
+        window.currentCTO = currentCTODetails;
+
         // Notificar sucesso na verificação
         showNotification(`Viabilidade verificada: ${data.viabilidade.status}`, 'success');
 
@@ -1280,6 +1312,33 @@ async function verificarViabilidade(lat, lon, endereco = '') {
         window.ctoMarker = L.marker([data.cto?.lat || 0, data.cto?.lon || 0], { 
             icon: ctoIcon 
         }).addTo(map);
+
+        const ctoPopupContent = `
+            <div class="viability-result-popup">
+                <h4>CTO Selecionado</h4>
+                <div class="viability-result-details">
+                    <p><strong>CTO:</strong> ${formatCtoNumber(data.cto?.nome || 'N/A')}</p>
+                    <p><strong>Mapa:</strong> ${data.cto?.arquivo || 'N/A'}</p>
+                    <p><strong>Coordenadas:</strong> ${Number(data.cto?.lat || 0).toFixed(6)}, ${Number(data.cto?.lon || 0).toFixed(6)}</p>
+                </div>
+                ${IS_ADMIN && currentCTODetails?.mapId ? '<button type="button" class="viability-close-btn remove-cto-btn">Remover CTO</button>' : ''}
+            </div>
+        `;
+        window.ctoMarker.bindPopup(ctoPopupContent);
+
+        if (IS_ADMIN && currentCTODetails?.mapId) {
+            window.ctoMarker.on('popupopen', () => {
+                const removeBtn = document.querySelector('.remove-cto-btn');
+                if (removeBtn && !removeBtn.dataset.bound) {
+                    removeBtn.dataset.bound = 'true';
+                    removeBtn.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        removerCtoAtual();
+                    });
+                }
+            });
+        }
 
         // Desenhar linha seguindo a rota das ruas - Estilo Google Maps
         let routeCoordinates = [];
@@ -1414,8 +1473,109 @@ async function verificarViabilidade(lat, lon, endereco = '') {
                 </div>
             `);
         }
+
+        currentCTODetails = null;
+        window.currentCTO = null;
     }
 
+}
+
+async function removerCtoAtual(details = null) {
+    if (!IS_ADMIN) {
+        showNotification('Apenas administradores podem remover CTOs.', 'error');
+        return;
+    }
+
+    const info = details || currentCTODetails;
+
+    if (!info || !info.mapId) {
+        showNotification('Nenhum CTO selecionado para remoção.', 'error');
+        return;
+    }
+
+    try {
+        const payload = {
+            map_id: info.mapId,
+            lat: info.lat,
+            lon: info.lon,
+            nome_cto: info.nome
+        };
+
+        const response = await fetch(`${API_BASE}/remover-cto`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': window.csrfToken || ''
+            },
+            body: JSON.stringify(payload)
+        });
+
+        let data = {};
+        try {
+            data = await response.json();
+        } catch (_e) {
+            // Ignora erro de parse, tratará abaixo
+        }
+
+        if (!response.ok || data?.erro) {
+            const message = data?.erro || `HTTP ${response.status}: ${response.statusText}`;
+            showNotification(`Erro ao remover CTO: ${message}`, 'error');
+            return;
+        }
+
+        showNotification(data?.mensagem || 'CTO removido com sucesso!', 'success');
+
+        if (!details) {
+            if (window.ctoMarker && map.hasLayer(window.ctoMarker)) {
+                map.removeLayer(window.ctoMarker);
+                window.ctoMarker = null;
+            }
+            if (window.routeBorder && map.hasLayer(window.routeBorder)) {
+                map.removeLayer(window.routeBorder);
+                window.routeBorder = null;
+            }
+            if (window.viabilityLine && map.hasLayer(window.viabilityLine)) {
+                map.removeLayer(window.viabilityLine);
+                window.viabilityLine = null;
+            }
+        } else if (details.marker) {
+            try {
+                if (currentLayer && currentLayer.hasLayer(details.marker)) {
+                    currentLayer.removeLayer(details.marker);
+                } else if (map.hasLayer(details.marker)) {
+                    map.removeLayer(details.marker);
+                }
+            } catch (e) {
+                console.warn('Não foi possível remover marcador do mapa:', e);
+            }
+        }
+
+        if (window.searchMarker && typeof window.searchMarker.setPopupContent === 'function') {
+            window.searchMarker.setPopupContent(`
+                <div class="viability-popup">
+                    <p>CTO removido com sucesso.</p>
+                </div>
+            `);
+        }
+
+        map.closePopup();
+
+        if (!details || (currentCTODetails && currentCTODetails.mapId === info.mapId && currentCTODetails.lat === info.lat && currentCTODetails.lon === info.lon)) {
+            currentCTODetails = null;
+            window.currentCTO = null;
+        }
+
+        if (typeof loadCTOFiles === 'function') {
+            try {
+                await loadCTOFiles(true);
+            } catch (error) {
+                console.error('Erro ao atualizar lista de mapas após remover CTO:', error);
+            }
+        }
+    } catch (error) {
+        console.error('Erro ao remover CTO:', error);
+        showNotification('Erro ao remover CTO', 'error');
+    }
 }
 
 // Event listener global para botões CTO (usa event delegation)
@@ -1485,7 +1645,7 @@ async function loadKML(filename, mapId = null) {
         console.log('📦 Usando dados do cache para:', filename || mapId);
         performanceMonitor.recordCacheHit();
         performanceMonitor.endTimer(timer, 'loadKML-cached');
-        return processKMLData(cachedData, filename);
+        return processKMLData(cachedData, filename, mapId);
     }
 
     performanceMonitor.recordCacheMiss();
@@ -1534,125 +1694,11 @@ async function loadKML(filename, mapId = null) {
         return;
     }
 
-    // Remover camada anterior se existir
-    if (window.viabilityLine) {
-        map.removeLayer(window.viabilityLine);
-        window.viabilityLine = null;
-    }
-    if (window.routeBorder) {
-        map.removeLayer(window.routeBorder);
-        window.routeBorder = null;
-    }
-    if (window.ctoMarker) {
-        map.removeLayer(window.ctoMarker);
-        window.ctoMarker = null;
-    }
-    if (window.searchMarker) {
-        map.removeLayer(window.searchMarker);
-        window.searchMarker = null;
-    }
-    if (typeof currentLayer !== 'undefined' && currentLayer) {
-        try { map.removeLayer(currentLayer); } catch (e) {}
-        currentLayer = null;
-    }
-
-    // Criar nova camada para os CTOs
-    currentLayer = L.layerGroup();
-
-    // Ícone azul pequeno para pontos de CTO
-    const blueIcon = L.divIcon({
-        className: 'custom-blue-marker',
-        html: '<div style="background-color: #007bff; width: 10px; height: 10px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.4);"></div>',
-        iconSize: [10, 10],
-        iconAnchor: [5, 5]
-    });
-
-    // Função para verificar se um ponto está em Maricá
-    function isInMarica(lat, lng) {
-        // Limites aproximados de Maricá, RJ
-        return lat >= -22.95 && lat <= -22.88 && lng >= -42.85 && lng <= -42.80;
-    }
-
-    const bounds = L.latLngBounds([]);
-    let filteredCount = 0;
-    
-    data.forEach(coord => {
-        if (coord.tipo === 'point' && (coord.lat !== undefined && coord.lng !== undefined)) {
-            // Converter coordenadas de string para número se necessário
-            let lat = typeof coord.lat === 'string' ? parseFloat(coord.lat.replace(',', '.')) : coord.lat;
-            let lng = typeof coord.lng === 'string' ? parseFloat(coord.lng.replace(',', '.')) : coord.lng;
-            
-            // Validar se as coordenadas são números válidos
-            if (isNaN(lat) || isNaN(lng) || !isFinite(lat) || !isFinite(lng)) {
-                console.warn('Coordenadas inválidas ignoradas:', coord);
-                return;
-            }
-            
-            // Validar se as coordenadas estão dentro de limites razoáveis
-            if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-                console.warn('Coordenadas fora dos limites válidos ignoradas:', coord);
-                return;
-            }
-            
-            // Filtrar apenas pontos em Maricá para o arquivo Centro Marica.kmz
-            if (filename === 'Centro Marica.kmz' && !isInMarica(lat, lng)) {
-                return; // Pular pontos fora de Maricá
-            }
-            
-            const marker = L.marker([lat, lng], { icon: blueIcon });
-            if (coord.nome) {
-                marker.bindPopup(coord.nome);
-            }
-            marker.addTo(currentLayer);
-            bounds.extend([lat, lng]);
-            filteredCount++;
-        } else if (coord.tipo === 'line' && Array.isArray(coord.coordenadas)) {
-            // Validar e filtrar coordenadas válidas para a linha
-            const validCoords = coord.coordenadas.filter(point => {
-                if (!Array.isArray(point) || point.length < 2) return false;
-                const lat = parseFloat(point[0]);
-                const lng = parseFloat(point[1]);
-                return !isNaN(lat) && !isNaN(lng) && isFinite(lat) && isFinite(lng) &&
-                       lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
-            });
-            
-            if (validCoords.length >= 2) {
-                const polyline = L.polyline(validCoords, { color: 'blue', weight: 3 });
-                if (coord.nome) {
-                    polyline.bindPopup(coord.nome);
-                }
-                polyline.addTo(currentLayer);
-                validCoords.forEach(point => bounds.extend(point));
-                filteredCount++;
-            } else {
-                // Silenciar warnings para linhas com coordenadas insuficientes
-                // Isso é normal em arquivos KML/KMZ - algumas linhas podem ter apenas 1 ponto
-                // Não é um erro, apenas dados que não podem ser renderizados como linhas
-            }
-        }
-    });
-
-    // Adicionar camada ao mapa
-    currentLayer.addTo(map);
-
-    // Ajustar a visão para englobar todos os pontos
-    if (bounds.isValid()) {
-        try {
-            map.fitBounds(bounds.pad(0.25), { maxZoom: 17 });
-        } catch (e) {
-            console.warn('Falha ao ajustar os bounds:', e);
-        }
-    }
-    
-    // Notificação única de sucesso
-    if (typeof showNotification === 'function') {
-        const base = filename.replace(/\.(kml|kmz|csv|xls|xlsx)$/i, '');
-        showNotification(`${base} carregado!`, 'success');
-    }
+    return processKMLData(data, filename, mapId);
 }
 
 // Função separada para processar dados KML (reutilizável e otimizada)
-function processKMLData(data, filename) {
+function processKMLData(data, filename, mapId = null) {
     if (!Array.isArray(data) || data.length === 0) {
         console.warn('Nenhuma coordenada encontrada no arquivo:', filename);
         if (typeof showNotification === 'function') {
@@ -1708,7 +1754,6 @@ function processKMLData(data, filename) {
                     let lat = typeof coord.lat === 'string' ? parseFloat(coord.lat.replace(',', '.')) : coord.lat;
                     let lng = typeof coord.lng === 'string' ? parseFloat(coord.lng.replace(',', '.')) : coord.lng;
                     
-                    // Validação mais rigorosa
                     if (isNaN(lat) || isNaN(lng) || !isFinite(lat) || !isFinite(lng)) {
                         continue;
                     }
@@ -1717,26 +1762,63 @@ function processKMLData(data, filename) {
                         continue;
                     }
 
+                    const markerMapId = coord.map_id || mapId || null;
+                    const nomeOriginal = coord.nome || 'CTO';
+                    const nomeEscapado = escapeHtml(nomeOriginal);
+                    const arquivoEscapado = escapeHtml(filename || '');
+                    const latFixed = Number(lat).toFixed(6);
+                    const lngFixed = Number(lng).toFixed(6);
+
                     const marker = L.marker([lat, lng], { icon: blueIcon }).addTo(currentLayer);
-                    
-                    // Popup otimizado com escape de caracteres especiais
-                    const nome = (coord.nome || 'CTO').replace(/'/g, "\\'");
-                    const popupContent = `
+
+                    let popupContent = `
                         <div class="cto-popup-optimized">
-                            <h4>${nome}</h4>
-                            <p><strong>Arquivo:</strong> ${filename}</p>
-                            <p><strong>Coordenadas:</strong> ${lat.toFixed(6)}, ${lng.toFixed(6)}</p>
-                            <button onclick="window.marcarEVerificar(${lat}, ${lng}, '${nome}')" class="btn-verificar-optimized">
-                                Verificar Viabilidade
-                            </button>
+                            <h4>${nomeEscapado}</h4>
+                            <p><strong>Arquivo:</strong> ${arquivoEscapado}</p>
+                            <p><strong>Coordenadas:</strong> ${latFixed}, ${lngFixed}</p>
+                    `;
+                    if (IS_ADMIN && markerMapId) {
+                        popupContent += `
+                            <div class="cto-popup-actions">
+                                <button type="button" class="btn-remove-cto-optimized">
+                                    <span class="remove-cto-icon">🗑️</span>
+                                    Remover CTO
+                                </button>
+                            </div>
                         </div>
                     `;
-                    
+                    } else {
+                        popupContent += `</div>`;
+                    }
+
                     marker.bindPopup(popupContent);
+
+                    marker.on('popupopen', (event) => {
+                        const popupNode = event.popup.getElement();
+                        if (!popupNode) return;
+
+                        if (IS_ADMIN && markerMapId) {
+                            const removeBtn = popupNode.querySelector('.btn-remove-cto-optimized');
+                            if (removeBtn && !removeBtn.dataset.bound) {
+                                removeBtn.dataset.bound = 'true';
+                                removeBtn.addEventListener('click', (ev) => {
+                                    ev.preventDefault();
+                                    ev.stopPropagation();
+                                    removerCtoAtual({
+                                        mapId: markerMapId,
+                                        lat,
+                                        lon: lng,
+                                        nome: nomeOriginal,
+                                        marker
+                                    });
+                                });
+                            }
+                        }
+                    });
+
                     processed++;
                 }
             } catch (error) {
-                // Log mais silencioso para erros comuns
                 if (error.message && !error.message.includes('Invalid LatLng')) {
                     console.warn(`Erro ao processar coordenada ${i}:`, error.message);
                 }
@@ -2459,6 +2541,60 @@ function showDropdown(dropdown) {
  // Adicionar estilos adicionais
 const additionalStyle = document.createElement('style');
 additionalStyle.textContent = `
+    .btn-remove-cto-optimized {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 18px;
+        background: linear-gradient(135deg, #f5365c, #d21f3c);
+        color: #fff;
+        border: none;
+        border-radius: 999px;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+        cursor: pointer;
+        box-shadow: 0 10px 20px rgba(213, 31, 60, 0.25);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+        font-size: 13px;
+    }
+
+    .btn-remove-cto-optimized:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 24px rgba(213, 31, 60, 0.35);
+        filter: brightness(1.05);
+    }
+
+    .btn-remove-cto-optimized:active {
+        transform: translateY(0);
+        box-shadow: 0 6px 14px rgba(213, 31, 60, 0.25);
+        filter: brightness(0.97);
+    }
+
+    .btn-remove-cto-optimized .remove-cto-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.25);
+        font-size: 13px;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.4);
+    }
+
+    .btn-remove-cto-optimized:focus-visible {
+        outline: 2px solid rgba(213, 31, 60, 0.6);
+        outline-offset: 3px;
+    }
+
+    .cto-popup-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 14px;
+    }
+
     .suggestion-item.selected,
     .history-item.selected {
         background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%) !important;
@@ -2809,6 +2945,8 @@ window.fecharVerificacao = function() {
         }
         // Resetar mapa para a visão inicial (Maricá)
         map.setView([-22.919, -42.818], 12);
+    currentCTODetails = null;
+    window.currentCTO = null;
         // Remover notificação desnecessária
     } catch (err) {
         console.error('Erro ao fechar verificação:', err);
