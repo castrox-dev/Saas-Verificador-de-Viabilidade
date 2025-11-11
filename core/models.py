@@ -296,3 +296,24 @@ class CTOMapFile(models.Model):
 
     def __str__(self):
         return f"{self.description or os.path.basename(self.file.name)} - {self.company.name}"
+
+# -----------------------------------------------------------------------------
+# Controle opcional de sessão única por usuário
+# -----------------------------------------------------------------------------
+# Quando quiser garantir que apenas uma sessão permaneça ativa por usuário
+# (último login derruba logins anteriores), descomente o bloco abaixo e execute
+# `python manage.py makemigrations` seguido de `python manage.py migrate`.
+#
+# from django.contrib.auth import get_user_model
+#
+# class UserSession(models.Model):
+#     user = models.OneToOneField(
+#         get_user_model(),
+#         on_delete=models.CASCADE,
+#         related_name='active_session'
+#     )
+#     session_key = models.CharField(max_length=40, blank=True, null=True)
+#     updated_at = models.DateTimeField(auto_now=True)
+#
+#     def __str__(self):
+#         return f"{self.user} - {self.session_key}"
