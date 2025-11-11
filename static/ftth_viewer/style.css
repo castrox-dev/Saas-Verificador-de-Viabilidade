@@ -1878,6 +1878,28 @@ Dark Mode Colors:
     box-shadow: var(--shadow-sm);
 }
 
+.cto-checkbox-input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    top: 0;
+    left: 0;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+}
+
+.cto-card.selected {
+    border-color: var(--rm-primary);
+    box-shadow: var(--rm-shadow-lg);
+    color: var(--rm-primary-dark);
+}
+
+.cto-card.loading {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
 .cto-card::before {
     content: '';
     position: absolute;

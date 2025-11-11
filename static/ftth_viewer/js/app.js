@@ -102,6 +102,111 @@ const IS_ADMIN = Boolean(window.IS_ADMIN);
 let currentCTODetails = null;
 window.currentCTO = null;
 
+const DEFAULT_CENTER = [-22.9068, -43.1729];
+const DEFAULT_ZOOM = 12;
+const activeMapLayers = new Map();
+let lastLoadedLayerKey = null;
+
+function getLayerKey(filename, mapId) {
+    if (mapId) return `id:${mapId}`;
+    if (filename) return `file:${filename}`;
+    return `temp:${Date.now()}`;
+}
+
+function cssEscape(value) {
+    if (window.CSS && typeof window.CSS.escape === 'function') {
+        return window.CSS.escape(value);
+    }
+    return String(value).replace(/"/g, '\\"').replace(/'/g, "\\'");
+}
+
+function findCheckboxElement(key) {
+    const selector = `.cto-checkbox-input[data-map-key="${cssEscape(key)}"]`;
+    return document.querySelector(selector);
+}
+
+function setCheckboxStateForKey(key, checked) {
+    const checkbox = findCheckboxElement(key);
+    if (!checkbox) return;
+    checkbox.checked = checked;
+    const card = checkbox.closest('.cto-card');
+    if (card) {
+        card.classList.toggle('selected', checked);
+    }
+}
+
+function resetMapView() {
+    if (typeof map !== 'undefined' && map && typeof map.setView === 'function') {
+        map.setView(DEFAULT_CENTER, DEFAULT_ZOOM);
+    }
+}
+
+function getCombinedBounds() {
+    let combined = null;
+    activeMapLayers.forEach(entry => {
+        const { bounds } = entry || {};
+        if (!bounds || typeof bounds.isValid !== 'function' || !bounds.isValid()) {
+            return;
+        }
+        if (!combined) {
+            combined = L.latLngBounds(bounds.getSouthWest(), bounds.getNorthEast());
+        } else {
+            combined.extend(bounds.getSouthWest());
+            combined.extend(bounds.getNorthEast());
+        }
+    });
+    return combined;
+}
+
+function focusMapOnCurrentLayers() {
+    if (typeof map === 'undefined' || !map || typeof map.fitBounds !== 'function') {
+        return;
+    }
+    const combinedBounds = getCombinedBounds();
+    if (combinedBounds && combinedBounds.isValid && combinedBounds.isValid()) {
+        map.fitBounds(combinedBounds.pad(0.1));
+    } else {
+        resetMapView();
+    }
+}
+
+function removeMapLayerByKey(key, { updateCheckbox = true, suppressFit = false } = {}) {
+    const entry = activeMapLayers.get(key);
+    if (!entry) return;
+    try {
+        if (entry.layer && map && typeof map.hasLayer === 'function' && map.hasLayer(entry.layer)) {
+            map.removeLayer(entry.layer);
+        } else if (entry.layer && typeof entry.layer.remove === 'function') {
+            entry.layer.remove();
+        }
+    } catch (error) {
+        console.warn('Erro ao remover camada do mapa:', error);
+    }
+    activeMapLayers.delete(key);
+    if (lastLoadedLayerKey === key) {
+        const remainingKeys = Array.from(activeMapLayers.keys());
+        lastLoadedLayerKey = remainingKeys.length ? remainingKeys[remainingKeys.length - 1] : null;
+    }
+    if (updateCheckbox) {
+        setCheckboxStateForKey(key, false);
+    }
+    if (!suppressFit) {
+        focusMapOnCurrentLayers();
+    }
+}
+
+function clearAllMapLayers({ resetCheckboxes = true, suppressFit = false } = {}) {
+    const keys = Array.from(activeMapLayers.keys());
+    keys.forEach(key => {
+        removeMapLayerByKey(key, { updateCheckbox: resetCheckboxes, suppressFit: true });
+    });
+    activeMapLayers.clear();
+    lastLoadedLayerKey = null;
+    if (!suppressFit) {
+        focusMapOnCurrentLayers();
+    }
+}
+
 function escapeHtml(value) {
     if (value === null || value === undefined) return '';
     return String(value)
@@ -360,8 +465,6 @@ let searchInput, searchBtn, clearSearchBtn, searchResults;
 
 // Variável para controlar debounce da busca
 let searchTimeout;
-// Camada com todos os CTOs atualmente desenhados
-let currentLayer = null;
 // Variável para controlar o modo de clique/navegação
 let isClickMode = false;
 
@@ -600,8 +703,8 @@ const northControl = L.Control.extend({
 
 new northControl({ position: 'bottomright' }).addTo(map);
 
-// Vista inicial em Maricá, RJ
-map.setView([-22.919, -42.818], 12);
+// Vista inicial no Rio de Janeiro, RJ
+resetMapView();
 
 // Tornar acessível globalmente
 window.map = map;
@@ -1293,10 +1396,8 @@ async function verificarViabilidade(lat, lon, endereco = '') {
             map.removeLayer(window.ctoMarker);
         }
 
-        // Remover camada anterior de todos os CTOs se existir
-        if (currentLayer) {
-            map.removeLayer(currentLayer);
-        }
+        // Remover camadas de CTOs existentes para destacar apenas o resultado atual
+        clearAllMapLayers({ resetCheckboxes: true, suppressFit: true });
 
         // Não carregar todos os CTOs do arquivo durante a verificação.
         // Exibiremos apenas o CTO que atende (marcador destacado) e a rota.
@@ -1546,10 +1647,13 @@ async function removerCtoAtual(details = null) {
             }
         } else if (details.marker) {
             try {
-                if (currentLayer && currentLayer.hasLayer(details.marker)) {
-                    currentLayer.removeLayer(details.marker);
-                } else if (map.hasLayer(details.marker)) {
+                const parentLayer = details.marker.__parentLayer;
+                if (parentLayer && typeof parentLayer.removeLayer === 'function' && parentLayer.hasLayer && parentLayer.hasLayer(details.marker)) {
+                    parentLayer.removeLayer(details.marker);
+                } else if (map && typeof map.hasLayer === 'function' && map.hasLayer(details.marker)) {
                     map.removeLayer(details.marker);
+                } else if (typeof details.marker.remove === 'function') {
+                    details.marker.remove();
                 }
             } catch (e) {
                 console.warn('Não foi possível remover marcador do mapa:', e);
@@ -1588,46 +1692,50 @@ async function removerCtoAtual(details = null) {
 function setupCTOButtonListeners() {
     const ctoGrid = document.querySelector('.cto-grid');
     if (!ctoGrid) return;
-    
-    // Usar event delegation para evitar duplicação de listeners
-    ctoGrid.addEventListener('click', async (event) => {
-        const button = event.target.closest('.cto-btn');
-        if (!button) return;
-        
-        const filename = button.getAttribute('data-file');
-        const fileType = button.getAttribute('data-type');
-        const mapId = button.getAttribute('data-map-id'); // ID do mapa no banco de dados
-        
-        if (!filename) {
-            console.error('Nome do arquivo não encontrado no botão');
+
+    ctoGrid.addEventListener('change', async (event) => {
+        const checkbox = event.target.closest('.cto-checkbox-input');
+        if (!checkbox) return;
+
+        const card = checkbox.closest('.cto-card');
+        const filename = checkbox.getAttribute('data-file') || '';
+        const mapId = checkbox.getAttribute('data-map-id') || '';
+        const mapKey = checkbox.getAttribute('data-map-key');
+
+        if (!mapKey) {
+            console.error('Chave do mapa não encontrada para o item selecionado.');
             return;
         }
-        
-        // Adicionar feedback visual
-        button.classList.add('loading');
-        button.disabled = true;
-        
-        try {
-            // Carregar o arquivo KML/KMZ/CSV/XLS/XLSX (passar ID se disponível)
-            await loadKML(filename, mapId);
-            
-            // Fechar sidebar em dispositivos móveis
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('overlay');
-            if (sidebar && window.innerWidth <= 768) {
-                sidebar.classList.remove('active');
-                if (overlay) overlay.classList.remove('active');
-                document.body.classList.remove('no-scroll');
+
+        if (checkbox.checked) {
+            card?.classList.add('loading');
+            checkbox.disabled = true;
+            try {
+                await loadKML(filename, mapId, { append: true });
+                setCheckboxStateForKey(mapKey, true);
+                lastLoadedLayerKey = mapKey;
+
+                // Fechar sidebar em dispositivos móveis
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('overlay');
+                if (sidebar && window.innerWidth <= 768) {
+                    sidebar.classList.remove('active');
+                    if (overlay) overlay.classList.remove('active');
+                    document.body.classList.remove('no-scroll');
+                }
+            } catch (error) {
+                console.error('Erro ao carregar mapa selecionado:', error);
+                showNotification(`Erro ao carregar mapa: ${filename}`, 'error');
+                checkbox.checked = false;
+                setCheckboxStateForKey(mapKey, false);
+            } finally {
+                checkbox.disabled = false;
+                card?.classList.remove('loading');
             }
-            
-        } catch (error) {
-            console.error('Erro ao carregar CTO:', error);
-            const detail = (error && error.message) ? ` - ${error.message}` : '';
-            showNotification(`Erro ao carregar CTO: ${filename}${detail}`, 'error');
-        } finally {
-            // Remover feedback visual
-            button.classList.remove('loading');
-            button.disabled = false;
+        } else {
+            removeMapLayerByKey(mapKey, { updateCheckbox: false });
+            card?.classList.remove('selected');
+            lastLoadedLayerKey = activeMapLayers.size > 0 ? Array.from(activeMapLayers.keys()).pop() : null;
         }
     });
 }
@@ -1639,7 +1747,7 @@ function initializeCtoButtons() {
 }
 
 // Nova função: carregar KML/KMZ e exibir CTOs com lazy loading
-async function loadKML(filename, mapId = null) {
+async function loadKML(filename, mapId = null, options = {}) {
     const timer = performanceMonitor.startTimer('loadKML');
     console.log('📥 Carregando arquivo:', filename, mapId ? `(ID: ${mapId})` : '');
     if (!filename && !mapId) throw new Error('Nome de arquivo ou ID inválido');
@@ -1651,7 +1759,7 @@ async function loadKML(filename, mapId = null) {
         console.log('📦 Usando dados do cache para:', filename || mapId);
         performanceMonitor.recordCacheHit();
         performanceMonitor.endTimer(timer, 'loadKML-cached');
-        return processKMLData(cachedData, filename, mapId);
+        return processKMLData(cachedData, filename, mapId, options);
     }
 
     performanceMonitor.recordCacheMiss();
@@ -1700,11 +1808,13 @@ async function loadKML(filename, mapId = null) {
         return;
     }
 
-    return processKMLData(data, filename, mapId);
+    return processKMLData(data, filename, mapId, options);
 }
 
 // Função separada para processar dados KML (reutilizável e otimizada)
-function processKMLData(data, filename, mapId = null) {
+function processKMLData(data, filename, mapId = null, options = {}) {
+    const { append = false, skipFit = false } = options;
+
     if (!Array.isArray(data) || data.length === 0) {
         console.warn('Nenhuma coordenada encontrada no arquivo:', filename);
         if (typeof showNotification === 'function') {
@@ -1713,7 +1823,6 @@ function processKMLData(data, filename, mapId = null) {
         return;
     }
 
-    // Remover camada anterior se existir
     if (window.viabilityLine) {
         map.removeLayer(window.viabilityLine);
         window.viabilityLine = null;
@@ -1730,15 +1839,18 @@ function processKMLData(data, filename, mapId = null) {
         map.removeLayer(window.searchMarker);
         window.searchMarker = null;
     }
-    if (typeof currentLayer !== 'undefined' && currentLayer) {
-        try { map.removeLayer(currentLayer); } catch (e) {}
-        currentLayer = null;
+
+    const layerKey = getLayerKey(filename, mapId);
+
+    if (!append) {
+        clearAllMapLayers({ resetCheckboxes: false, suppressFit: true });
+    } else {
+        removeMapLayerByKey(layerKey, { updateCheckbox: false, suppressFit: true });
     }
 
-    // Criar nova camada para os CTOs
-    currentLayer = L.layerGroup();
+    const mapLayer = L.layerGroup();
+    const mapBounds = L.latLngBounds();
 
-    // Ícone otimizado para pontos de CTO
     const blueIcon = L.divIcon({
         className: 'cto-marker-optimized',
         html: '<div style="background-color: #007bff; width: 8px; height: 8px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px rgba(0,123,255,0.8);"></div>',
@@ -1746,24 +1858,23 @@ function processKMLData(data, filename, mapId = null) {
         iconAnchor: [6, 6]
     });
 
-    // Processar em lotes para melhor performance
     const batchSize = 50;
     let processed = 0;
-    
+
     function processBatch(startIndex) {
         const endIndex = Math.min(startIndex + batchSize, data.length);
-        
+
         for (let i = startIndex; i < endIndex; i++) {
             const coord = data[i];
             try {
                 if (coord.tipo === 'point' && (coord.lat !== undefined && coord.lng !== undefined)) {
                     let lat = typeof coord.lat === 'string' ? parseFloat(coord.lat.replace(',', '.')) : coord.lat;
                     let lng = typeof coord.lng === 'string' ? parseFloat(coord.lng.replace(',', '.')) : coord.lng;
-                    
+
                     if (isNaN(lat) || isNaN(lng) || !isFinite(lat) || !isFinite(lng)) {
                         continue;
                     }
-                    
+
                     if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
                         continue;
                     }
@@ -1775,7 +1886,11 @@ function processKMLData(data, filename, mapId = null) {
                     const latFixed = Number(lat).toFixed(6);
                     const lngFixed = Number(lng).toFixed(6);
 
-                    const marker = L.marker([lat, lng], { icon: blueIcon }).addTo(currentLayer);
+                    mapBounds.extend([lat, lng]);
+
+                    const marker = L.marker([lat, lng], { icon: blueIcon }).addTo(mapLayer);
+                    marker.__layerKey = layerKey;
+                    marker.__parentLayer = mapLayer;
 
                     let popupContent = `
                         <div class="cto-popup-optimized">
@@ -1830,31 +1945,44 @@ function processKMLData(data, filename, mapId = null) {
                 }
             }
         }
-        
-        // Continuar processamento se houver mais dados
+
         if (endIndex < data.length) {
-            setTimeout(() => processBatch(endIndex), 5); // Delay mínimo para não bloquear UI
+            setTimeout(() => processBatch(endIndex), 5);
         } else {
-            // Processamento concluído
-            currentLayer.addTo(map);
-            
-            // Ajustar vista do mapa para mostrar todos os pontos
             if (processed > 0) {
-                const group = new L.featureGroup(currentLayer.getLayers());
-                map.fitBounds(group.getBounds().pad(0.1));
-            }
-            
-            console.log(`✅ ${processed} CTOs carregados do arquivo ${filename}`);
-            
-            // Notificação de sucesso
-            if (typeof showNotification === 'function') {
-                const base = filename.replace(/\.(kml|kmz|csv|xls|xlsx)$/i, '');
-                showNotification(`${base} carregado! (${processed} pontos)`, 'success');
+                mapLayer.addTo(map);
+                activeMapLayers.set(layerKey, {
+                    layer: mapLayer,
+                    bounds: mapBounds.isValid() ? mapBounds : null,
+                    meta: {
+                        filename,
+                        mapId,
+                        count: processed
+                    }
+                });
+                setCheckboxStateForKey(layerKey, true);
+                lastLoadedLayerKey = layerKey;
+
+                if (!skipFit) {
+                    focusMapOnCurrentLayers();
+                }
+
+                console.log(`✅ ${processed} CTOs carregados do arquivo ${filename}`);
+
+                if (typeof showNotification === 'function') {
+                    const base = filename.replace(/\.(kml|kmz|csv|xls|xlsx)$/i, '');
+                    showNotification(`${base} carregado! (${processed} pontos)`, 'success');
+                }
+            } else {
+                console.warn(`Arquivo ${filename} não possui pontos válidos.`);
+                removeMapLayerByKey(layerKey, { updateCheckbox: true, suppressFit: true });
+                if (typeof showNotification === 'function') {
+                    showNotification(`Mapa sem pontos válidos: ${filename}`, 'error');
+                }
             }
         }
     }
-    
-    // Iniciar processamento em lotes
+
     processBatch(0);
 }
 
@@ -2931,11 +3059,8 @@ window.fecharVerificacao = function() {
             map.removeLayer(window.ctoMarker);
             window.ctoMarker = null;
         }
-        // Remover camada com todos os CTOs
-        if (currentLayer && map.hasLayer(currentLayer)) {
-            map.removeLayer(currentLayer);
-            currentLayer = null;
-        }
+        // Remover camadas de CTO carregadas via checkboxes
+        clearAllMapLayers({ resetCheckboxes: true, suppressFit: true });
         // Remover marcador de busca
         if (window.searchMarker && map.hasLayer(window.searchMarker)) {
             map.removeLayer(window.searchMarker);
@@ -2949,8 +3074,8 @@ window.fecharVerificacao = function() {
         if (typeof addressSearch !== 'undefined' && addressSearch) {
             addressSearch.value = '';
         }
-        // Resetar mapa para a visão inicial (Maricá)
-        map.setView([-22.919, -42.818], 12);
+        // Resetar mapa para a visão inicial (Rio de Janeiro)
+        resetMapView();
     currentCTODetails = null;
     window.currentCTO = null;
         // Remover notificação desnecessária
@@ -3026,16 +3151,21 @@ async function loadCTOFiles(forceRefresh = false) {
         // Função helper para criar botão de CTO
         function createCTOButton(arquivo) {
             const nomeDisplay = arquivo.nome.replace(/\.[^.]+$/, ''); // Remove extensão
+            const mapKey = getLayerKey(arquivo.nome, arquivo.id);
             
-            const button = document.createElement('button');
-            button.className = 'cto-card cto-btn';
-            button.setAttribute('data-file', arquivo.nome);
-            button.setAttribute('data-type', arquivo.tipo);
-            if (arquivo.id) {
-                button.setAttribute('data-map-id', arquivo.id);
-            }
-            
-            button.innerHTML = `
+            const card = document.createElement('label');
+            card.className = 'cto-card';
+            card.setAttribute('data-map-key', mapKey);
+
+            card.innerHTML = `
+                <input 
+                    type="checkbox" 
+                    class="cto-checkbox-input" 
+                    data-file="${arquivo.nome}" 
+                    data-type="${arquivo.tipo || ''}"
+                    data-map-key="${mapKey}"
+                    ${arquivo.id ? `data-map-id="${arquivo.id}"` : ''}
+                />
                 <div class="cto-icon">
                     <i class="fas fa-map"></i>
                 </div>
@@ -3043,8 +3173,14 @@ async function loadCTOFiles(forceRefresh = false) {
                     <span class="cto-name">${nomeDisplay}</span>
                 </div>
             `;
+
+            const checkbox = card.querySelector('.cto-checkbox-input');
+            if (activeMapLayers.has(mapKey)) {
+                checkbox.checked = true;
+                card.classList.add('selected');
+            }
             
-            return button;
+            return card;
         }
         
         // Verificar se está agrupado por empresa
