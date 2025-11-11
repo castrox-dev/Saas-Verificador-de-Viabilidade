@@ -1069,6 +1069,66 @@ async function markLocationWithConfirmation(lat, lng, addressText) {
     // Adicionar marcador
     window.searchMarker = L.marker([lat, lng], { icon: searchIcon }).addTo(map);
     
+    const attachPopupListeners = (popupNode) => {
+        if (!popupNode) {
+            return;
+        }
+
+        const confirmBtn = popupNode.querySelector('.confirm-verify-btn');
+        const cancelBtn = popupNode.querySelector('.cancel-verify-btn');
+
+        if (confirmBtn && !confirmBtn.hasAttribute('data-connected')) {
+            confirmBtn.setAttribute('data-connected', 'true');
+            confirmBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Botão Sim clicado');
+
+                if (window.searchMarker && typeof window.searchMarker.setPopupContent === 'function') {
+                    window.searchMarker.setPopupContent('<div class="loading-popup">Verificando viabilidade...</div>');
+                }
+                verificarViabilidade(lat, lng, addressText).catch(error => {
+                    console.error('Erro na verificação de viabilidade:', error);
+                    showNotification('Erro ao verificar viabilidade', 'error');
+                });
+            });
+        }
+
+        if (cancelBtn && !cancelBtn.hasAttribute('data-connected')) {
+            cancelBtn.setAttribute('data-connected', 'true');
+            cancelBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                console.log('Botão Não clicado');
+
+                const closeAndRemove = () => {
+                    if (window.searchMarker) {
+                        try {
+                            window.searchMarker.closePopup();
+                        } catch (err) {
+                        }
+                    }
+
+                    try {
+                        map.closePopup();
+                    } catch (err) {
+                    }
+
+                    if (window.searchMarker && map.hasLayer(window.searchMarker)) {
+                        map.removeLayer(window.searchMarker);
+                    }
+                    window.searchMarker = null;
+                };
+
+                closeAndRemove();
+                setTimeout(closeAndRemove, 50);
+
+                return false;
+            });
+        }
+    };
+
     // Popup de confirmação
     const confirmPopup = `
         <div class="viability-popup">
@@ -1085,75 +1145,21 @@ async function markLocationWithConfirmation(lat, lng, addressText) {
     const connectPopupButtons = () => {
         const popupNode = document.querySelector('.leaflet-popup-content');
         if (!popupNode) {
-            // Tentar novamente após um pequeno delay
             setTimeout(connectPopupButtons, 50);
             return;
         }
-        
-        const confirmBtn = popupNode.querySelector('.confirm-verify-btn');
-        const cancelBtn = popupNode.querySelector('.cancel-verify-btn');
-        
-        if (confirmBtn && !confirmBtn.hasAttribute('data-connected')) {
-            confirmBtn.setAttribute('data-connected', 'true');
-            confirmBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('Botão Sim clicado');
-                
-                if (window.searchMarker && typeof window.searchMarker.setPopupContent === 'function') {
-                    window.searchMarker.setPopupContent('<div class="loading-popup">Verificando viabilidade...</div>');
-                }
-                verificarViabilidade(lat, lng, addressText).catch(error => {
-                    console.error('Erro na verificação de viabilidade:', error);
-                    showNotification('Erro ao verificar viabilidade', 'error');
-                });
-            });
-        }
-        
-        if (cancelBtn && !cancelBtn.hasAttribute('data-connected')) {
-            cancelBtn.setAttribute('data-connected', 'true');
-            cancelBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                e.stopImmediatePropagation();
-                console.log('Botão Não clicado');
-                
-                // Fechar o popup e remover o marcador
-                const closeAndRemove = () => {
-                    // Fechar popup do marcador se existir
-                    if (window.searchMarker) {
-                        try {
-                            window.searchMarker.closePopup();
-                        } catch (err) {
-                            // Ignorar erro se o método não existir
-                        }
-                    }
-                    
-                    // Fechar qualquer popup aberto no mapa
-                    try {
-                        map.closePopup();
-                    } catch (err) {
-                        // Ignorar erro
-                    }
-                    
-                    // Remover o marcador
-                    if (window.searchMarker && map.hasLayer(window.searchMarker)) {
-                        map.removeLayer(window.searchMarker);
-                    }
-                    window.searchMarker = null;
-                };
-                
-                // Executar imediatamente e também com um pequeno delay para garantir
-                closeAndRemove();
-                setTimeout(closeAndRemove, 50);
-                
-                return false;
-            });
-        }
+        attachPopupListeners(popupNode);
     };
     
     // Aguardar o popup ser renderizado
     setTimeout(connectPopupButtons, 100);
+
+    if (window.searchMarker && typeof window.searchMarker.on === 'function') {
+        window.searchMarker.on('popupopen', (event) => {
+            const popupNode = event?.popup?.getElement()?.querySelector('.leaflet-popup-content');
+            attachPopupListeners(popupNode);
+        });
+    }
 }
 
 
