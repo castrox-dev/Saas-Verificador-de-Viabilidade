@@ -34,10 +34,10 @@ pip install -r requirements.txt
 ### 3. Configure as variáveis de ambiente
 ```bash
 cp env.example .env
-# Edite o arquivo .env com suas configurações
+# Edite o arquivo .env com as credenciais reais do Neon
 ```
 
-Para usar PostgreSQL (ex.: Neon):
+O projeto exige PostgreSQL (Neon). Use uma string similar a:
 
 ```env
 DATABASE_URL=postgresql://neondb_owner:senha@host-do-neon/neondb?sslmode=require&channel_binding=require
@@ -64,8 +64,10 @@ python manage.py runserver
 ### Variáveis de Ambiente (.env)
 ```env
 SECRET_KEY=sua-chave-secreta-aqui
-DEBUG=True
-DATABASE_URL=sqlite:///db.sqlite3
+DEBUG=False
+DATABASE_URL=postgresql://neondb_owner:senha@host-do-neon/neondb?sslmode=require&channel_binding=require
+ALLOWED_HOSTS=rmsys.app,www.rmsys.app,127.0.0.1,localhost
+CSRF_TRUSTED_ORIGINS=https://rmsys.app,https://www.rmsys.app
 ```
 
 ### Empresas e Usuários

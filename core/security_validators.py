@@ -292,17 +292,21 @@ class SecureFileValidator:
         try:
             file.seek(0)
             content = file.read(1024)
+            file.seek(0)
+            
+            file_ext = os.path.splitext(file.name)[1].lower()
+            allowed_zip_like = ('.xlsx', '.xls', '.kmz')
             
             # Padrões suspeitos comuns
             suspicious_patterns = [
-                b'MZ',  # Executável Windows
-                b'\x4d\x5a',  # PE header
-                b'PK\x03\x04',  # ZIP/Office com macros
-                b'%PDF',  # PDF (não permitido)
+                (b'MZ', True),        # Executável Windows
+                (b'\x4d\x5a', True), # PE header (igual ao MZ, redundante mas mantém)
+                (b'PK\x03\x04', file_ext not in allowed_zip_like),  # ZIP somente se não for extensão permitida
+                (b'%PDF', True),      # PDF (não permitido)
             ]
             
-            for pattern in suspicious_patterns:
-                if content.startswith(pattern):
+            for pattern, should_block in suspicious_patterns:
+                if should_block and content.startswith(pattern):
                     logger.warning(f"Padrão suspeito detectado em {file.name}: {pattern}")
                     raise ValidationError("Arquivo contém padrões suspeitos")
                     

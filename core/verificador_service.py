@@ -11,6 +11,7 @@ from django.core.files.uploadedfile import UploadedFile
 from django.utils import timezone
 from core.models import CTOMapFile, Company, CustomUser
 from core.audit_logger import AuditLogger
+from core.security_validators import SecureFileValidator
 # Substitui integrações antigas do app 'verificador' pelo novo 'ftth_viewer'
 from ftth_viewer import utils as ftth_utils
 
@@ -37,7 +38,11 @@ class VerificadorService:
             Dict com resultados da análise
         """
         temp_path = None
+        validator = SecureFileValidator()
+
         try:
+            validator.validate_file(uploaded_file)
+            uploaded_file.seek(0)
             # Salvar arquivo temporariamente
             temp_path = cls._save_temp_file(uploaded_file)
             file_type = cls._get_file_extension(uploaded_file.name)
@@ -296,7 +301,8 @@ class VerificadorService:
         os.makedirs(temp_dir, exist_ok=True)
         
         # Gerar nome único para o arquivo
-        temp_filename = f"{uuid.uuid4()}_{uploaded_file.name}"
+        safe_name = os.path.basename(uploaded_file.name)
+        temp_filename = f"{uuid.uuid4()}_{safe_name}"
         temp_path = os.path.join(temp_dir, temp_filename)
         
         # Salvar arquivo
@@ -397,7 +403,11 @@ class VerificadorIntegrationManager:
         Returns:
             Resultado completo do processamento
         """
+        validator = SecureFileValidator()
+
         try:
+            validator.validate_file(uploaded_file)
+            uploaded_file.seek(0)
             # 1. Criar registro no banco Django
             cto_file = CTOMapFile.objects.create(
                 file=uploaded_file,

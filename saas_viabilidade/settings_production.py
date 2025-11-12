@@ -21,8 +21,8 @@ DEBUG = False
 
 # Domínio de produção
 ALLOWED_HOSTS = [
-    'rmsys.com.br',
-    'www.rmsys.com.br',
+    'rmsys.app',
+    'www.rmsys.app',
     '127.0.0.1',
     'localhost'
 ]
@@ -71,9 +71,17 @@ CSRF_COOKIE_SAMESITE = 'Strict'
 CSRF_USE_SESSIONS = True
 CSRF_COOKIE_NAME = 'rmsys_csrftoken'
 CSRF_TRUSTED_ORIGINS = [
-    'https://rmsys.com.br',
-    'https://www.rmsys.com.br',
+    'https://rmsys.app',
+    'https://www.rmsys.app',
 ]
+
+# Redirecionamento e cabeçalhos quando atrás de proxy/HTTPS
+SECURE_SSL_REDIRECT = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
+# URLs tolerantes à ausência de barra final
+APPEND_SLASH = True
 
 # Configurações de arquivos estáticos e media
 STATIC_URL = '/static/'

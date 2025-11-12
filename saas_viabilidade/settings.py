@@ -130,14 +130,17 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = "same-origin"
 X_FRAME_OPTIONS = "DENY"
 
+# URLs tolerantes à ausência de barra final
+APPEND_SLASH = True
+
 # Configurações de tratamento de erros
 handler404 = 'core.error_views.custom_404'
 handler500 = 'core.error_views.custom_500'
 handler403 = 'core.error_views.custom_403'
 handler400 = 'core.error_views.custom_400'
 
-# Forçar uso das páginas de erro personalizadas mesmo em DEBUG
-DEBUG_PROPAGATE_EXCEPTIONS = True
+# Propagar exceções apenas em modo debug
+DEBUG_PROPAGATE_EXCEPTIONS = DEBUG
 
 # Desabilitar debug toolbar e outras ferramentas de debug que podem interferir
 INTERNAL_IPS = []
