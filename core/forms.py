@@ -102,16 +102,42 @@ class CompanyForm(forms.ModelForm):
             # Valida se tem 14 dígitos
             if len(cnpj_numbers) != 14:
                 raise ValidationError('CNPJ deve ter 14 dígitos')
+            # Formatar no padrão 00.000.000/0000-00
+            formatted = f"{cnpj_numbers[:2]}.{cnpj_numbers[2:5]}.{cnpj_numbers[5:8]}/{cnpj_numbers[8:12]}-{cnpj_numbers[12:]}"
+            self.cleaned_data['cnpj'] = formatted
             
             # Verifica se já existe outro CNPJ igual (exceto o próprio)
-            existing = Company.objects.filter(cnpj=cnpj)
+            existing = Company.objects.filter(cnpj=formatted)
             if self.instance.pk:
                 existing = existing.exclude(pk=self.instance.pk)
             
             if existing.exists():
                 raise ValidationError('Já existe uma empresa com este CNPJ')
         
-        return cnpj
+        return self.cleaned_data.get('cnpj')
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email', '').strip()
+        if not email:
+            raise ValidationError('Informe um e-mail válido.')
+        if '@' not in email or email.startswith('@') or email.endswith('@'):
+            raise ValidationError('E-mail inválido. Verifique o endereço informado.')
+        return email
+
+    def clean_phone(self):
+        phone = self.cleaned_data.get('phone', '')
+        if phone:
+            digits = ''.join(filter(str.isdigit, phone))
+            if len(digits) not in (10, 11):
+                raise ValidationError('Telefone deve conter DDD + número (10 ou 11 dígitos).')
+            ddd = digits[:2]
+            if len(digits) == 10:
+                number = f"{digits[2:6]}-{digits[6:]}"
+            else:
+                number = f"{digits[2:7]}-{digits[7:]}"
+            formatted = f"({ddd}) {number}"
+            self.cleaned_data['phone'] = formatted
+        return self.cleaned_data.get('phone', '')
 
 class CustomUserForm(UserCreationForm):
     email = forms.EmailField(required=True)

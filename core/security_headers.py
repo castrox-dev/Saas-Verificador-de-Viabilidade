@@ -15,7 +15,7 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com; "
             "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com https://unpkg.com; "
-            "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com https://unpkg.com; "
+            "font-src 'self' data: https://fonts.gstatic.com https://fonts.googleapis.com https://cdnjs.cloudflare.com https://unpkg.com; "
             "img-src 'self' data: https:; "
             "connect-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://viacep.com.br https://brasilapi.com.br; "
             "frame-ancestors 'none'; "

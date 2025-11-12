@@ -4,7 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login da Empresa - {{ company_slug|title }}</title>
+    <title>RM Systems</title>
+    <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
     <link rel="stylesheet" href="{% static 'css/login.css' %}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -43,7 +44,8 @@
         <div class="login-side">
             <div class="login-card">
                 <div class="logo-container">
-                    <!-- Logo removido -->
+                    <img src="{% static 'img/Logo_rmsys.png' %}" alt="RM Systems" class="login-logo">
+                    <span class="login-brand">RM Systems</span>
                 </div>
                 <h2 class="card-title">Acesse sua conta</h2>
                 {% if company_slug %}
@@ -92,5 +94,9 @@
     
     <script src="{% static 'js/login.js' %}"></script>
     <script src="{% static 'js/dark-mode.js' %}"></script>
+    <footer class="login-footer">
+        <p>&copy; {% now "Y" %} RM Systems. Todos os direitos reservados.</p>
+        <p class="login-footer__meta">Rm Systems Tecnologia &bull; Plataforma multi-tenant segura.</p>
+    </footer>
 </body>
 </html>

@@ -9,6 +9,7 @@ from django.views.decorators.cache import cache_page
 from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Count, Q
+from django.db.models.functions import TruncMonth
 from django.core.paginator import Paginator
 from django.urls import reverse
 from django.utils import timezone
@@ -16,6 +17,7 @@ import logging
 import os
 import csv
 from django.views.decorators.csrf import ensure_csrf_cookie
+from datetime import timedelta
 
 from .forms import CTOMapFileForm, CompanyForm, CustomUserForm, CustomUserChangeForm
 from .models import CTOMapFile, Company, CustomUser
@@ -27,6 +29,7 @@ from .reports import ReportGenerator, ExportManager
 from .audit_logger import log_user_action, log_data_access
 from .rate_limiting import login_rate_limit, upload_rate_limit, general_rate_limit
 from .verificador_service import VerificadorService, VerificadorIntegrationManager
+from ftth_viewer.models import ViabilidadeCache
 
 logger = logging.getLogger(__name__)
 
@@ -739,6 +742,123 @@ def company_map_admin(request, company_slug):
     return render(request, 'company/maps/admin.html', context)
 
 
+@login_required
+@company_access_required(require_admin=True, allow_user_role=False)
+def company_reports(request, company_slug):
+    """Relatórios completos para administradores da empresa"""
+    company = get_object_or_404(Company, slug=company_slug)
+
+    maps_qs = CTOMapFile.objects.filter(company=company)
+
+    total_maps = maps_qs.count()
+    processed_maps = maps_qs.filter(is_processed=True).count()
+    pending_maps = total_maps - processed_maps
+    maps_last_30_days = maps_qs.filter(uploaded_at__gte=timezone.now() - timedelta(days=30)).count()
+
+    viability_agg = maps_qs.aggregate(
+        viavel=Count('id', filter=Q(viability_score__gte=80)),
+        limitada=Count('id', filter=Q(viability_score__gte=60, viability_score__lt=80)),
+        inviavel=Count('id', filter=Q(viability_score__lt=60, viability_score__isnull=False)),
+        nao_analisado=Count('id', filter=Q(viability_score__isnull=True))
+    )
+
+    viability_counts = {
+        'viavel': viability_agg.get('viavel', 0) or 0,
+        'limitada': viability_agg.get('limitada', 0) or 0,
+        'inviavel': viability_agg.get('inviavel', 0) or 0,
+        'nao_analisado': viability_agg.get('nao_analisado', 0) or 0,
+    }
+
+    verifications_qs = ViabilidadeCache.objects.filter(company=company)
+    total_verifications = verifications_qs.count()
+    verifications_viavel = verifications_qs.filter(resultado__viabilidade__status__iexact='Viável').count()
+    verifications_limitada = verifications_qs.filter(resultado__viabilidade__status__iexact='Viabilidade Limitada').count()
+    verifications_inviavel = verifications_qs.filter(resultado__viabilidade__status__iexact='Sem viabilidade').count()
+    verifications_outros = max(total_verifications - (verifications_viavel + verifications_limitada + verifications_inviavel), 0)
+
+    monthly_uploads = maps_qs.filter(uploaded_at__isnull=False).annotate(
+        month=TruncMonth('uploaded_at')
+    ).values('month').order_by('month').annotate(total=Count('id'))
+
+    def format_month(value):
+        if not value:
+            return 'N/A'
+        if timezone.is_naive(value):
+            return value.strftime('%b/%Y')
+        return timezone.localtime(value).strftime('%b/%Y')
+
+    monthly_upload_labels = [format_month(entry['month']) for entry in monthly_uploads]
+    monthly_upload_values = [entry['total'] for entry in monthly_uploads]
+
+    monthly_verifications = verifications_qs.annotate(
+        month=TruncMonth('created_at')
+    ).values('month').order_by('month').annotate(total=Count('id')) if hasattr(ViabilidadeCache, 'created_at') else []
+
+    monthly_verification_labels = [format_month(entry['month']) for entry in monthly_verifications]
+    monthly_verification_values = [entry['total'] for entry in monthly_verifications]
+
+    top_uploaders_qs = maps_qs.values(
+        'uploaded_by__first_name',
+        'uploaded_by__last_name',
+        'uploaded_by__username'
+    ).annotate(total=Count('id')).order_by('-total')[:5]
+
+    top_uploaders = []
+    for item in top_uploaders_qs:
+        first = item.get('uploaded_by__first_name') or ''
+        last = item.get('uploaded_by__last_name') or ''
+        username = item.get('uploaded_by__username') or ''
+        full_name = f"{first} {last}".strip()
+        display_name = full_name if full_name else username
+        top_uploaders.append({
+            'name': display_name,
+            'username': username,
+            'total': item['total']
+        })
+
+    recent_maps = maps_qs.select_related('uploaded_by').order_by('-uploaded_at')[:5]
+
+    context = {
+        'company': company,
+        'map_stats': {
+            'total': total_maps,
+            'processed': processed_maps,
+            'pending': pending_maps,
+            'last_30_days': maps_last_30_days,
+        },
+        'viability_counts': viability_counts,
+        'viability_labels': ['Viável', 'Viabilidade Limitada', 'Sem Viabilidade', 'Não analisado'],
+        'viability_values': [
+            viability_counts['viavel'],
+            viability_counts['limitada'],
+            viability_counts['inviavel'],
+            viability_counts['nao_analisado'],
+        ],
+        'verification_stats': {
+            'total': total_verifications,
+            'viavel': verifications_viavel,
+            'limitada': verifications_limitada,
+            'inviavel': verifications_inviavel,
+            'outros': verifications_outros,
+        },
+        'verification_labels': ['Viável', 'Viabilidade Limitada', 'Sem Viabilidade', 'Outros'],
+        'verification_values': [
+            verifications_viavel,
+            verifications_limitada,
+            verifications_inviavel,
+            verifications_outros,
+        ],
+        'monthly_upload_labels': monthly_upload_labels,
+        'monthly_upload_values': monthly_upload_values,
+        'monthly_verification_labels': monthly_verification_labels,
+        'monthly_verification_values': monthly_verification_values,
+        'top_uploaders': top_uploaders,
+        'recent_maps': recent_maps,
+    }
+
+    return render(request, 'company/reports.html', context)
+
+
 # --- Novas views RM para relatórios e lista/ações de mapas ---
 @login_required
 @rm_admin_required
@@ -856,6 +976,7 @@ def rm_reports(request):
     # Totais gerais para o gráfico de status e cards
     overall_processed = CTOMapFile.objects.filter(is_processed=True).count()
     overall_pending = CTOMapFile.objects.filter(is_processed=False).count()
+    companies_with_maps = sum(1 for stat in company_stats if stat['total_maps'] > 0)
 
     context = {
         'total_companies': companies.count(),
@@ -863,6 +984,7 @@ def rm_reports(request):
         'total_users': users.count(),
         'active_users': users.filter(is_active=True).count(),
         'total_maps': CTOMapFile.objects.count(),
+        'companies_with_maps': companies_with_maps,
         'overall_processed': overall_processed,
         'overall_pending': overall_pending,
         'chart_labels': labels,

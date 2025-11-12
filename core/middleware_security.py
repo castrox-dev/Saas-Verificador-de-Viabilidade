@@ -30,6 +30,10 @@ class SecureCompanyMiddleware(MiddlewareMixin):
             
         first_segment = segments[0].lower()
         
+        # Verificar se é acesso de arquivos estáticos ou mídia
+        if first_segment in ('static', 'staticfiles', 'media'):
+            return None
+        
         # Verificar se é acesso RM
         if first_segment == 'rm':
             request.is_rm_access = True

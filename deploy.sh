@@ -5,7 +5,7 @@
 
 set -e  # Parar em caso de erro
 
-echo "🚀 Iniciando deploy do SaaS Verificador de Viabilidade..."
+echo "🚀 Iniciando deploy do Verificador de Viabilidade..."
 
 # Cores para output
 RED='\033[0;31m'

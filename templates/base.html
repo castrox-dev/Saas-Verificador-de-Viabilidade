@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
     <meta name="description" content="Sistema de verificação de viabilidade para mapas CTO - RM Systems">
     <meta name="theme-color" content="#1D4ED8">
-    <title>{% block title %}Verificador de Viabilidade{% endblock %}</title>
+    <title>{% block title %}RMSystems{% endblock %}</title>
     {% load static %}
-    <!-- Favicon removido -->
+    <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
     <link rel="stylesheet" href="{% static 'css/theme_colors.css' %}" />
     <link rel="stylesheet" href="{% static 'css/theme_rm.css' %}" />
     <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
@@ -132,7 +132,7 @@
           <span class="navbar-toggler-icon">≡</span>
         </button>
         {% endif %}
-        <h1 class="app-title">Verificador de Viabilidade (SaaS)</h1>
+        <h1 class="app-title">Verificador de Viabilidade </h1>
       </div>
       <nav role="navigation" aria-label="Navegação principal">
         {% if user.is_authenticated %}
@@ -192,7 +192,7 @@
           <a class="nav-link {% if 'map_history' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'company:map_history' company_slug=user.company.slug %}">
             <i class="fas fa-history me-2"></i>Histórico
           </a>
-          <a class="nav-link" href="#">
+          <a class="nav-link {% if request.resolver_match.url_name == 'reports' %}active{% endif %}" href="{% url 'company:reports' company_slug=user.company.slug %}">
             <i class="fas fa-chart-bar me-2"></i>Relatórios
           </a>
           {% endif %}
@@ -212,7 +212,7 @@
       {% block content %}{% endblock %}
     </main>
     <footer class="footer" role="contentinfo">
-      <p>&copy; {% now "Y" %} Viabilidade SaaS - RM Systems. Todos os direitos reservados.</p>
+      <p>&copy; {% now "Y" %} Viabilidade - RM Systems. Todos os direitos reservados.</p>
     </footer>
     
     <!-- Sistema de Toast -->

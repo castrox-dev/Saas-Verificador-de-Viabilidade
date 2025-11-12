@@ -1,0 +1,373 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Relatórios - {{ company.name }}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SzlrxWriC3kjvC3VPS+XbkNv9Ij8HkfjK6QrN6ZVDy87cj6p+G9TL3vn0Z9YhslJ0Fl1fdCZI47P2JqZe1A5dQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<style>
+  .reports-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    color: var(--rm-text-primary);
+  }
+  .reports-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 18px;
+  }
+  .reports-card {
+    background: var(--rm-card-bg);
+    border-radius: 16px;
+    padding: 20px;
+    border: 1px solid var(--rm-card-border);
+    box-shadow: var(--rm-card-shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .reports-card h3 {
+    margin: 0;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--rm-primary);
+  }
+  .reports-card span {
+    font-size: 14px;
+    color: var(--rm-text-secondary);
+  }
+  .reports-section {
+    background: var(--rm-card-bg);
+    border-radius: 18px;
+    border: 1px solid var(--rm-card-border);
+    box-shadow: var(--rm-card-shadow);
+    padding: 24px;
+  }
+  .reports-section h4 {
+    margin-top: 0;
+    margin-bottom: 16px;
+    font-size: 18px;
+    font-weight: 600;
+  }
+  .reports-flex {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+  }
+  .chart-container {
+    flex: 1 1 320px;
+    min-height: 260px;
+  }
+  .chart-container canvas {
+    width: 100% !important;
+    height: 260px !important;
+  }
+  .table-responsive {
+    overflow-x: auto;
+  }
+  table.report-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  table.report-table th,
+  table.report-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--rm-border-primary);
+    text-align: left;
+  }
+  table.report-table th {
+    font-size: 14px;
+    color: var(--rm-text-secondary);
+    font-weight: 600;
+  }
+  table.report-table td {
+    font-size: 14px;
+  }
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(99, 102, 241, 0.12);
+    color: var(--rm-primary);
+  }
+  .status-pill.success {
+    background: rgba(34, 197, 94, 0.12);
+    color: #16a34a;
+  }
+  .status-pill.warning {
+    background: rgba(250, 204, 21, 0.2);
+    color: #b45309;
+  }
+  .status-pill.danger {
+    background: rgba(248, 113, 113, 0.2);
+    color: #dc2626;
+  }
+  .status-pill.neutral {
+    background: rgba(148, 163, 184, 0.2);
+    color: #475569;
+  }
+  .top-uploaders {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .top-uploaders li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--rm-bg-secondary);
+    border-radius: 12px;
+    padding: 12px 16px;
+  }
+  .top-uploaders strong {
+    font-size: 14px;
+  }
+  .top-uploaders span {
+    font-size: 12px;
+    color: var(--rm-text-secondary);
+  }
+  .empty-state {
+    text-align: center;
+    padding: 32px 16px;
+    color: var(--rm-text-secondary);
+  }
+  .empty-state i {
+    font-size: 32px;
+    margin-bottom: 12px;
+    color: var(--rm-border-primary);
+  }
+  @media (max-width: 768px) {
+    .reports-section {
+      padding: 18px;
+    }
+    .reports-card h3 {
+      font-size: 26px;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="reports-wrapper">
+  <div class="d-flex justify-content-between align-items-center flex-wrap" style="gap:16px;">
+    <div>
+      <h2 style="margin:0;">Relatórios de Desempenho</h2>
+      <p class="text-muted" style="margin:6px 0 0;">Visão consolidada das operações da empresa {{ company.name }}</p>
+    </div>
+    <div class="text-muted" style="font-size:14px;">
+      <i class="fas fa-calendar-week me-2"></i>
+      Atualizado em {% now "d/m/Y H:i" %}
+    </div>
+  </div>
+
+  <div class="reports-grid">
+    <div class="reports-card">
+      <span>Total de mapas enviados</span>
+      <h3>{{ map_stats.total }}</h3>
+      <span><i class="fas fa-map me-1 text-primary"></i>Mapas associados à empresa</span>
+    </div>
+    <div class="reports-card">
+      <span>Mapas processados</span>
+      <h3>{{ map_stats.processed }}</h3>
+      <span class="status-pill success"><i class="fas fa-check-circle"></i>Prontos para análise</span>
+    </div>
+    <div class="reports-card">
+      <span>Mapas em processamento</span>
+      <h3>{{ map_stats.pending }}</h3>
+      <span class="status-pill warning"><i class="fas fa-clock"></i>Dependem de ação</span>
+    </div>
+    <div class="reports-card">
+      <span>Uploads nos últimos 30 dias</span>
+      <h3>{{ map_stats.last_30_days }}</h3>
+      <span class="status-pill neutral"><i class="fas fa-calendar-day"></i>Atividade recente</span>
+    </div>
+  </div>
+
+  <div class="reports-section">
+    <h4><i class="fas fa-chart-pie me-2"></i>Distribuição de Viabilidade</h4>
+    <div class="reports-flex">
+      <div class="chart-container">
+        <canvas id="viabilityChart" role="img" aria-label="Distribuição de viabilidade dos mapas"></canvas>
+      </div>
+      <div class="chart-container">
+        <canvas id="verificationChart" role="img" aria-label="Resultados das verificações de campo"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="reports-section">
+    <h4><i class="fas fa-chart-line me-2"></i>Volume de Mapas e Verificações</h4>
+    <div class="reports-flex">
+      <div class="chart-container">
+        {% if monthly_upload_values %}
+        <canvas id="uploadTrendChart" role="img" aria-label="Evolução mensal de uploads"></canvas>
+        {% else %}
+        <div class="empty-state">
+          <i class="fas fa-folder-open"></i>
+          <p>Não há histórico de uploads suficientes para construir um gráfico.</p>
+        </div>
+        {% endif %}
+      </div>
+      <div class="chart-container">
+        {% if monthly_verification_values %}
+        <canvas id="verificationTrendChart" role="img" aria-label="Evolução mensal de verificações"></canvas>
+        {% else %}
+        <div class="empty-state">
+          <i class="fas fa-search"></i>
+          <p>As verificações ainda não geraram histórico suficiente.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="reports-flex">
+    <div class="reports-section" style="flex:1 1 360px;">
+      <h4><i class="fas fa-user-tie me-2"></i>Top colaboradores</h4>
+      {% if top_uploaders %}
+      <ul class="top-uploaders">
+        {% for uploader in top_uploaders %}
+        <li>
+          <div>
+            <strong>{{ uploader.name }}</strong>
+            {% if uploader.username %}<span>@{{ uploader.username }}</span>{% endif %}
+          </div>
+          <span>{{ uploader.total }} mapas</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="empty-state">
+        <i class="fas fa-user"></i>
+        <p>Nenhum upload registrado ainda.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{{ monthly_upload_labels|json_script:"monthly-upload-labels" }}
+{{ monthly_upload_values|json_script:"monthly-upload-values" }}
+{{ monthly_verification_labels|json_script:"monthly-verification-labels" }}
+{{ monthly_verification_values|json_script:"monthly-verification-values" }}
+{{ viability_labels|json_script:"viability-labels" }}
+{{ viability_values|json_script:"viability-values" }}
+{{ verification_labels|json_script:"verification-labels" }}
+{{ verification_values|json_script:"verification-values" }}
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" integrity="sha256-6O+jU5Ti5Nj9BkAuCEi0aKBslZx2drXr/7EQo1gChXQ=" crossorigin="anonymous"></script>
+<script>
+  const viabilityLabels = JSON.parse(document.getElementById('viability-labels').textContent);
+  const viabilityValues = JSON.parse(document.getElementById('viability-values').textContent);
+  const verificationLabels = JSON.parse(document.getElementById('verification-labels').textContent);
+  const verificationValues = JSON.parse(document.getElementById('verification-values').textContent);
+  const uploadLabels = JSON.parse(document.getElementById('monthly-upload-labels').textContent);
+  const uploadValues = JSON.parse(document.getElementById('monthly-upload-values').textContent);
+  const verificationTrendLabels = JSON.parse(document.getElementById('monthly-verification-labels').textContent);
+  const verificationTrendValues = JSON.parse(document.getElementById('monthly-verification-values').textContent);
+
+  const palette = ['#22c55e','#facc15','#ef4444','#94a3b8'];
+
+  const viabilityCtx = document.getElementById('viabilityChart');
+  if (viabilityCtx && viabilityValues.some(v => v > 0)) {
+    new Chart(viabilityCtx, {
+      type: 'doughnut',
+      data: {
+        labels: viabilityLabels,
+        datasets: [{
+          data: viabilityValues,
+          backgroundColor: palette,
+          borderWidth: 1,
+          borderColor: '#1f2937'
+        }]
+      },
+      options: {
+        plugins: {
+          legend: { position: 'bottom' }
+        }
+      }
+    });
+  }
+
+  const verificationCtx = document.getElementById('verificationChart');
+  if (verificationCtx && verificationValues.some(v => v > 0)) {
+    new Chart(verificationCtx, {
+      type: 'doughnut',
+      data: {
+        labels: verificationLabels,
+        datasets: [{
+          data: verificationValues,
+          backgroundColor: ['#0ea5e9','#f97316','#ef4444','#a855f7'],
+          borderWidth: 1,
+          borderColor: '#1f2937'
+        }]
+      },
+      options: {
+        plugins: {
+          legend: { position: 'bottom' }
+        }
+      }
+    });
+  }
+
+  const uploadTrendCtx = document.getElementById('uploadTrendChart');
+  if (uploadTrendCtx && uploadValues.length) {
+    new Chart(uploadTrendCtx, {
+      type: 'line',
+      data: {
+        labels: uploadLabels,
+        datasets: [{
+          label: 'Uploads',
+          data: uploadValues,
+          fill: false,
+          tension: 0.35,
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59,130,246,0.25)',
+          pointRadius: 4,
+          pointBackgroundColor: '#3b82f6'
+        }]
+      },
+      options: {
+        scales: {
+          y: { beginAtZero: true, ticks: { stepSize: 1 } }
+        }
+      }
+    });
+  }
+
+  const verificationTrendCtx = document.getElementById('verificationTrendChart');
+  if (verificationTrendCtx && verificationTrendValues.length) {
+    new Chart(verificationTrendCtx, {
+      type: 'line',
+      data: {
+        labels: verificationTrendLabels,
+        datasets: [{
+          label: 'Verificações',
+          data: verificationTrendValues,
+          fill: false,
+          tension: 0.35,
+          borderColor: '#f97316',
+          backgroundColor: 'rgba(249,115,22,0.25)',
+          pointRadius: 4,
+          pointBackgroundColor: '#f97316'
+        }]
+      },
+      options: {
+        scales: {
+          y: { beginAtZero: true, ticks: { stepSize: 1 } }
+        }
+      }
+    });
+  }
+</script>
+{% endblock %}
