@@ -244,6 +244,30 @@
         color: var(--rm-primary-light);
     }
 </style>
+<script>
+    // Garantir que todos os links abram na mesma aba (não em nova aba)
+    document.addEventListener('DOMContentLoaded', function() {
+        // Prevenir comportamento padrão de abertura em nova aba
+        const allLinks = document.querySelectorAll('a[href]');
+        allLinks.forEach(function(link) {
+            // Garantir que não tenha target="_blank"
+            if (link.getAttribute('target') === '_blank') {
+                link.removeAttribute('target');
+                link.setAttribute('target', '_self');
+            }
+            
+            // Garantir navegação na mesma aba
+            link.addEventListener('click', function(e) {
+                // Se for link externo ou com target="_blank", não fazer nada
+                // Caso contrário, garantir navegação normal na mesma aba
+                if (!this.hasAttribute('target') || this.getAttribute('target') === '_self') {
+                    // Navegação normal - não interceptar
+                    return true;
+                }
+            });
+        });
+    });
+</script>
 {% endblock %}
 
 {% block content %}
@@ -285,7 +309,7 @@
                             </h1>
                             <p class="text-muted mb-0">Gestão e visualização de dados da empresa</p>
                         </div>
-                        <a class="btn btn-outline-secondary" href="{% url 'rm:company_list' %}">
+                        <a class="btn btn-outline-secondary" href="{% url 'rm:company_list' %}" target="_self" rel="noopener noreferrer">
                             <i class="fas fa-arrow-left me-2"></i>
                             Voltar para Empresas
                         </a>
@@ -319,7 +343,7 @@
                                         <h5 class="card-title mb-0">Gerir Membros</h5>
                                     </div>
                                     <p class="card-text mb-3">Adicionar, editar e ativar/desativar usuários desta empresa.</p>
-                                    <a class="btn btn-primary w-100" href="{% url 'company:user_list' company_slug=company.slug %}">
+                                    <a class="btn btn-primary w-100" href="{% url 'company:user_list' company_slug=company.slug %}" target="_self" rel="noopener noreferrer">
                                         <i class="fas fa-user-cog me-2"></i>
                                         Abrir gestão de membros
                                     </a>
@@ -336,7 +360,7 @@
                                         <h5 class="card-title mb-0">Mapas</h5>
                                     </div>
                                     <p class="card-text mb-3">Visualizar e baixar mapas CTO desta empresa.</p>
-                                    <a class="btn btn-primary w-100" href="{% url 'rm:map_list' %}?company={{ company.slug }}">
+                                    <a class="btn btn-primary w-100" href="{% url 'rm:map_list' %}?company={{ company.slug }}" target="_self" rel="noopener noreferrer">
                                         <i class="fas fa-map-marked-alt me-2"></i>
                                         Abrir lista de mapas
                                     </a>
@@ -353,7 +377,7 @@
                                         <h5 class="card-title mb-0">Verificador</h5>
                                     </div>
                                     <p class="card-text mb-3">Fazer upload de novos mapas para verificação.</p>
-                                    <a class="btn btn-success w-100" href="{% url 'company:ftth_viewer:index' company_slug=company.slug %}">
+                                    <a class="btn btn-success w-100" href="{% url 'company:ftth_viewer:index' company_slug=company.slug %}" target="_self" rel="noopener noreferrer">
                                         <i class="fas fa-upload me-2"></i>
                                         Abrir verificador
                                     </a>
@@ -405,7 +429,7 @@
                                                 <br>
                                                 <small class="text-muted">{{ m.uploaded_at|date:"d/m/Y H:i" }}</small>
                                             </div>
-                                            <a class="btn btn-sm btn-outline-primary" href="{% url 'rm:map_download' m.pk %}" title="Baixar arquivo">
+                                            <a class="btn btn-sm btn-outline-primary" href="{% url 'rm:map_download' m.pk %}" title="Baixar arquivo" target="_self" rel="noopener noreferrer">
                                                 <i class="fas fa-download"></i>
                                             </a>
                                         </li>
