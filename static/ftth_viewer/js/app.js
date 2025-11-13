@@ -795,22 +795,56 @@ function showNotification(message, type = 'info') {
             container.style.display = 'flex';
             container.style.flexDirection = 'column';
             container.style.gap = '8px';
+            container.style.maxWidth = '400px';
             document.body.appendChild(container);
         }
         const el = document.createElement('div');
-        el.textContent = message;
-        el.style.padding = '10px 14px';
-        el.style.borderRadius = '6px';
-        el.style.boxShadow = '0 3px 10px rgba(0,0,0,0.15)';
+        
+        // Suportar mensagens multilinha
+        const messageLines = message.split('\n');
+        if (messageLines.length > 1) {
+            // Criar estrutura com título e corpo
+            const title = messageLines[0];
+            const body = messageLines.slice(1).join('\n');
+            
+            el.innerHTML = `
+                <div style="font-weight: 600; margin-bottom: 6px; font-size: 14px;">${title}</div>
+                <div style="font-size: 13px; opacity: 0.95; line-height: 1.4; white-space: pre-wrap;">${body}</div>
+            `;
+        } else {
+            el.textContent = message;
+        }
+        
+        el.style.padding = '12px 16px';
+        el.style.borderRadius = '8px';
+        el.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
         el.style.fontSize = '14px';
         el.style.color = '#fff';
-        el.style.background = type === 'success' ? '#2ecc71' : (type === 'error' ? '#e74c3c' : '#1976d2');
+        el.style.lineHeight = '1.4';
+        el.style.wordWrap = 'break-word';
+        el.style.maxWidth = '100%';
+        
+        // Cores baseadas no tipo
+        if (type === 'success') {
+            el.style.background = '#10B981'; // --rm-success
+        } else if (type === 'error') {
+            el.style.background = '#EF4444'; // --rm-error
+        } else if (type === 'warning') {
+            el.style.background = '#F59E0B'; // --rm-warning
+        } else {
+            el.style.background = '#3B82F6'; // --rm-info
+        }
+        
         container.appendChild(el);
+        
+        // Duração baseada no tipo (warnings e errors ficam mais tempo)
+        const duration = type === 'warning' || type === 'error' ? 8000 : 3000;
+        
         setTimeout(() => {
             el.style.opacity = '0';
             el.style.transition = 'opacity 300ms ease';
             setTimeout(() => el.remove(), 300);
-        }, 3000);
+        }, duration);
     } catch (e) {
         console.log('Notification:', message);
     }
@@ -1726,14 +1760,38 @@ function setupCTOButtonListeners() {
             } catch (error) {
                 // Tratar erros de forma mais específica
                 const errorMessage = error.message || error.toString();
-                if (errorMessage.includes('não encontrado') || errorMessage.includes('not found')) {
-                    // Arquivo não encontrado - não é um erro crítico, apenas avisar o usuário
+                const isNotFound = errorMessage.includes('não encontrado') || 
+                                  errorMessage.includes('not found') || 
+                                  error.status === 404;
+                
+                if (isNotFound) {
+                    // Arquivo não encontrado - mostrar mensagem mais informativa
                     console.warn('Mapa não encontrado:', filename);
-                    showNotification(`Mapa não encontrado: ${filename}`, 'warning');
+                    
+                    // Construir mensagem com solução se disponível
+                    let notificationMessage = `Mapa não encontrado: ${filename}`;
+                    if (error.solucao) {
+                        notificationMessage += `\n\n💡 ${error.solucao}`;
+                    } else if (errorMessage.includes('Railway') || errorMessage.includes('efêmero')) {
+                        notificationMessage += '\n\n💡 No Railway, arquivos são efêmeros. Faça upload do arquivo novamente através da interface web.';
+                    } else {
+                        notificationMessage += '\n\n💡 Faça upload do arquivo novamente através da interface web.';
+                    }
+                    
+                    showNotification(notificationMessage, 'warning');
                 } else {
                     // Outros erros - logar e mostrar mensagem de erro
                     console.error('Erro ao carregar mapa selecionado:', error);
-                    showNotification(`Erro ao carregar mapa: ${filename}`, 'error');
+                    
+                    // Mostrar mensagem de erro mais detalhada se disponível
+                    let notificationMessage = `Erro ao carregar mapa: ${filename}`;
+                    if (errorMessage.length < 200) {
+                        notificationMessage += `\n\n${errorMessage}`;
+                    } else {
+                        notificationMessage += `\n\n${errorMessage.substring(0, 200)}...`;
+                    }
+                    
+                    showNotification(notificationMessage, 'error');
                 }
                 checkbox.checked = false;
                 setCheckboxStateForKey(mapKey, false);
@@ -1791,32 +1849,62 @@ async function loadKML(filename, mapId = null, options = {}) {
         const resp = await fetch(url, { signal: controller.signal });
         clearTimeout(timeoutId);
         
+        // Verificar Content-Type primeiro
+        const contentType = resp.headers.get('content-type') || '';
+        const isJson = contentType.includes('application/json');
+        
         // Verificar se a resposta foi bem-sucedida
         if (!resp.ok) {
             // Tentar obter mensagem de erro do JSON se possível
             let errorMessage = `Erro ${resp.status}: ${resp.statusText}`;
-            try {
-                const contentType = resp.headers.get('content-type');
-                if (contentType && contentType.includes('application/json')) {
+            let errorDetails = null;
+            let errorSolucao = null;
+            
+            if (isJson) {
+                try {
                     const errorData = await resp.json();
                     errorMessage = errorData.erro || errorData.message || errorMessage;
-                } else {
-                    // Se não for JSON, pode ser HTML (página de erro)
+                    errorDetails = errorData.detalhes || null;
+                    errorSolucao = errorData.solucao || null;
+                    
+                    // Se for "Arquivo não encontrado", criar mensagem mais informativa
+                    if (errorMessage.includes('não encontrado') || errorMessage.includes('not found')) {
+                        let fullMessage = errorMessage;
+                        if (errorSolucao) {
+                            fullMessage += `\n\n💡 Solução: ${errorSolucao}`;
+                        }
+                        if (errorDetails) {
+                            fullMessage += `\n\nℹ️ Detalhes: ${errorDetails}`;
+                        }
+                        errorMessage = fullMessage;
+                    }
+                } catch (parseErr) {
+                    // Se não conseguir fazer parse, usar mensagem padrão
+                    console.warn('Não foi possível fazer parse da resposta de erro:', parseErr);
+                }
+            } else {
+                // Se não for JSON, pode ser HTML (página de erro)
+                try {
                     const text = await resp.text();
                     if (text.includes('<!doctype') || text.includes('<html')) {
                         errorMessage = `Erro do servidor (${resp.status}): O servidor retornou uma página de erro ao invés de dados JSON`;
                     }
+                } catch (textErr) {
+                    // Se não conseguir ler o texto, usar mensagem padrão
+                    console.warn('Não foi possível ler a resposta de erro:', textErr);
                 }
-            } catch (parseErr) {
-                // Se não conseguir fazer parse, usar mensagem padrão
-                console.warn('Não foi possível fazer parse da resposta de erro:', parseErr);
             }
-            throw new Error(errorMessage);
+            
+            // Criar erro com informações adicionais
+            const error = new Error(errorMessage);
+            error.status = resp.status;
+            error.details = errorDetails;
+            error.solucao = errorSolucao;
+            throw error;
         }
         
         // Verificar se a resposta é JSON
-        const contentType = resp.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
+        if (!isJson) {
             const text = await resp.text();
             throw new Error(`Resposta não é JSON. Content-Type: ${contentType || 'não especificado'}`);
         }
@@ -1845,13 +1933,26 @@ async function loadKML(filename, mapId = null, options = {}) {
     }
 
     if (data && data.erro) {
+        // Construir mensagem de erro mais informativa
+        let errorMessage = data.erro;
+        if (data.solucao) {
+            errorMessage += `\n\n💡 Solução: ${data.solucao}`;
+        }
+        if (data.detalhes) {
+            errorMessage += `\n\nℹ️ Detalhes: ${data.detalhes}`;
+        }
+        
         // Não logar erro se for "Arquivo não encontrado" - é esperado em alguns casos
         if (data.erro.includes('não encontrado') || data.erro.includes('not found')) {
             console.warn('Arquivo não encontrado:', filename, '-', data.erro);
         } else {
             console.error('Erro da API:', data.erro);
         }
-        throw new Error(data.erro);
+        
+        const error = new Error(errorMessage);
+        error.details = data.detalhes;
+        error.solucao = data.solucao;
+        throw error;
     }
     if (!Array.isArray(data) || data.length === 0) {
         console.warn('Nenhuma coordenada encontrada no arquivo:', filename);
