@@ -132,7 +132,23 @@ WHITENOISE_MAX_AGE = 31536000 if not DEBUG else 0  # Cache de 1 ano em produçã
 WHITENOISE_USE_FINDERS = DEBUG  # Em dev, usar finders para arquivos não coletados
 WHITENOISE_AUTOREFRESH = DEBUG  # Em dev, recarregar automaticamente
 MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+
+# Configurar MEDIA_ROOT para usar Railway Volume se disponível
+# No Railway, volumes são montados em /data ou caminho configurado
+RAILWAY_VOLUME_PATH = os.getenv("RAILWAY_VOLUME_PATH", "/data")
+if IS_RAILWAY and os.path.exists(RAILWAY_VOLUME_PATH):
+    # Usar volume persistente do Railway
+    MEDIA_ROOT = Path(RAILWAY_VOLUME_PATH) / "media"
+    # Criar diretório se não existir
+    MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
+    print(f"✅ Usando Railway Volume para arquivos de mídia: {MEDIA_ROOT}")
+else:
+    # Usar diretório local (desenvolvimento ou sem volume configurado)
+    MEDIA_ROOT = BASE_DIR / "media"
+    if IS_RAILWAY:
+        print(f"⚠️ ATENÇÃO: Railway Volume não encontrado em {RAILWAY_VOLUME_PATH}")
+        print(f"⚠️ Arquivos de mídia serão salvos em {MEDIA_ROOT} (EFÊMERO)")
+        print(f"⚠️ Configure um Railway Volume em {RAILWAY_VOLUME_PATH} para persistência")
 
 LOGIN_REDIRECT_URL = "/dashboard/"  # Usa dashboard_redirect que redireciona corretamente conforme papel do usuário
 LOGOUT_REDIRECT_URL = "/rm/login/"
