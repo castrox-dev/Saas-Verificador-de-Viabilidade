@@ -104,21 +104,21 @@
     <!-- PWA Service Worker -->
     <script src="{% static 'js/pwa.js' %}"></script>
     <footer class="login-footer">
-        <div>
+        <div class="login-footer__container">
+            <p class="login-footer__copyright">&copy; {% now "Y" %} RM Systems. Todos os direitos reservados.</p>
             <div class="login-footer__links">
                 <a href="{% url 'termos_uso' %}">Termos de Uso</a>
-                <span>&bull;</span>
+                <span>|</span>
                 <a href="{% url 'politica_privacidade' %}">Política de Privacidade</a>
-                <span>&bull;</span>
+                <span>|</span>
                 <a href="{% url 'politica_cookies' %}">Política de Cookies</a>
-                <span>&bull;</span>
+                <span>|</span>
                 <a href="{% url 'faq' %}">FAQ</a>
-                <span>&bull;</span>
+                <span>|</span>
                 <a href="{% url 'ajuda' %}">Ajuda</a>
             </div>
-            <p>&copy; {% now "Y" %} RM Systems. Todos os direitos reservados.</p>
-            <p class="login-footer__meta">Rm Systems Tecnologia &bull; Plataforma multi-tenant segura.</p>
         </div>
+        <p class="login-footer__meta">Rm Systems Tecnologia &bull; Plataforma multi-tenant segura.</p>
     </footer>
 </body>
 </html>
