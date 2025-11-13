@@ -73,18 +73,13 @@ class CustomUser(AbstractUser):
         # Superusuários não precisam seguir as regras de empresa
         if self.is_superuser:
             return
-            
-        # RM admins não precisam de empresa
-        if self.role == 'RM' and self.company:
-            raise ValidationError("Administradores RM não devem ter empresa associada.")
         
-        # Outros roles precisam de empresa
-        if self.role in ['COMPANY_ADMIN', 'COMPANY_USER'] and not self.company:
-            raise ValidationError("Usuários de empresa devem ter uma empresa associada.")
-
+        # NOTA: Validações de empresa/role são feitas no formulário
+        # O modelo apenas ajusta os dados no save() para garantir consistência
+        # Não lançar ValidationError aqui para evitar conflitos com o formulário
+        
     def save(self, *args, **kwargs):
-        self.clean()
-        # Garantir separação de privilégios entre RM e empresas
+        # Ajustar dados antes de validar
         # IMPORTANTE: Superusuários sempre mantêm seus privilégios, independente do role
         if self.is_superuser:
             # Superusuários podem ter qualquer role e manter is_superuser=True
@@ -105,14 +100,14 @@ class CustomUser(AbstractUser):
         else:
             # Usuários de empresas nunca devem ser superuser, nem staff global
             # Mas apenas se não forem superusuários (já verificado acima)
-            if self.is_superuser:
-                # Isso não deveria acontecer porque já foi verificado acima
-                # Mas manter para segurança
-                pass
-            else:
+            if not self.is_superuser:
                 # Apenas remover is_staff se não for superuser
                 if self.is_staff:
                     self.is_staff = False
+        
+        # Não chamar clean() aqui para evitar validações que já foram feitas no formulário
+        # O formulário já validou role/company, então apenas salvar
+        # Se houver erro de validação básica do Django (email único, etc.), deixar passar
         super().save(*args, **kwargs)
 
     @property

@@ -217,17 +217,17 @@ class CustomUserForm(UserCreationForm):
         
         # Validações baseadas no role
         if role == 'RM' and company:
-            raise ValidationError('Administradores RM não devem ter empresa associada.')
+            self.add_error('company', 'Administradores RM não devem ter empresa associada.')
         elif role in ['COMPANY_ADMIN', 'COMPANY_USER'] and not company:
-            raise ValidationError('Usuários de empresa devem ter uma empresa associada.')
+            self.add_error('company', 'Usuários de empresa devem ter uma empresa associada.')
         
         # Validações baseadas no usuário atual
         if self.current_user and self.current_user.is_company_admin:
             if company != self.current_user.company:
-                raise ValidationError('Você só pode criar usuários para sua empresa.')
+                self.add_error('company', 'Você só pode criar usuários para sua empresa.')
             # Garantir que role seja válido para empresa
             if role not in ['COMPANY_ADMIN', 'COMPANY_USER']:
-                raise ValidationError('Role inválido para usuários de empresa.')
+                self.add_error('role', 'Role inválido para usuários de empresa.')
         
         return cleaned_data
 
@@ -238,8 +238,56 @@ class CustomUserForm(UserCreationForm):
         user.last_name = self.cleaned_data['last_name']
         user.phone = self.cleaned_data.get('phone', '')
         
+        # Definir role e company antes de salvar
+        user.role = self.cleaned_data.get('role', 'COMPANY_USER')
+        user.company = self.cleaned_data.get('company', None)
+        
+        # Garantir que role e company estejam corretos antes de salvar
+        # As validações do clean() do formulário já foram feitas
+        # Garantir consistência: RM não deve ter empresa, COMPANY_ADMIN/USER devem ter
+        if user.role == 'RM':
+            user.company = None
+            user.company_id = None
+        
+        # Salvar o usuário
+        # O save() do modelo ajusta os dados automaticamente e não chama clean()
         if commit:
-            user.save()
+            try:
+                user.save()
+            except Exception as e:
+                # Capturar qualquer erro e adicionar ao formulário
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Erro ao salvar usuário: {str(e)}", exc_info=True)
+                
+                error_message = str(e)
+                
+                # Tentar identificar o tipo de erro
+                if 'unique constraint' in error_message.lower() or 'already exists' in error_message.lower() or 'duplicate key' in error_message.lower():
+                    if 'username' in error_message.lower() or 'user' in error_message.lower():
+                        self.add_error('username', 'Este nome de usuário já está em uso.')
+                    elif 'email' in error_message.lower():
+                        self.add_error('email', 'Este e-mail já está em uso.')
+                    else:
+                        self.add_error(None, 'Este registro já existe no sistema.')
+                elif isinstance(e, ValidationError):
+                    # Se for ValidationError, tratar adequadamente
+                    if hasattr(e, 'error_dict') and e.error_dict:
+                        for field, errors in e.error_dict.items():
+                            for error in errors:
+                                self.add_error(field, error)
+                    elif hasattr(e, 'error_list') and e.error_list:
+                        for error in e.error_list:
+                            self.add_error(None, str(error))
+                    else:
+                        self.add_error(None, error_message)
+                else:
+                    # Outro erro - adicionar como erro geral
+                    self.add_error(None, f'Erro ao salvar usuário: {error_message}')
+                
+                # Re-lançar como ValidationError para que a view saiba
+                raise ValidationError(f'Erro ao salvar usuário: {error_message}') from e
+        
         return user
 
 class CustomUserChangeForm(forms.ModelForm):

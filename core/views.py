@@ -235,22 +235,48 @@ def rm_user_create(request):
     logger.debug(f"rm_user_create: method={request.method}, user={request.user.username}")
     
     if request.method == 'POST':
+        logger.debug(f"rm_user_create POST: dados recebidos - {request.POST.dict()}")
         form = CustomUserForm(request.POST, current_user=request.user)
+        
+        logger.debug(f"rm_user_create: formulário criado, is_valid={form.is_valid()}")
+        if not form.is_valid():
+            logger.warning(f"Formulário inválido:")
+            logger.warning(f"  Erros de campos: {form.errors.as_json()}")
+            if form.non_field_errors():
+                logger.warning(f"  Erros gerais: {list(form.non_field_errors())}")
+        
         if form.is_valid():
             try:
                 with transaction.atomic():
+                    logger.debug(f"Salvando usuário...")
                     user = form.save()
                     logger.info(f"Usuário criado com sucesso: {user.username} (role: {user.role}, company: {user.company.name if user.company else 'N/A'})")
                     messages.success(request, f'Usuário {user.username} criado com sucesso!')
                     return redirect('rm:user_list')
+            except ValidationError as e:
+                # Erros de validação são tratados no formulário
+                # Quando ValidationError é lançado no save(), o formulário adiciona os erros aos campos
+                # Mas o formulário ainda está marcado como válido, então precisamos marcar como inválido
+                logger.warning(f"Erro de validação ao criar usuário: {str(e)}")
+                logger.warning(f"Erros no formulário após ValidationError: {form.errors}")
+                # Não recriar o formulário - manter os erros já adicionados
+                # A view continuará e exibirá o formulário com erros
             except Exception as e:
                 logger.error(f"Erro ao criar usuário: {str(e)}", exc_info=True)
+                import traceback
+                logger.error(f"Traceback completo: {traceback.format_exc()}")
+                # Adicionar erro ao formulário se possível
+                if hasattr(form, 'add_error'):
+                    form.add_error(None, f'Erro ao criar usuário: {str(e)}')
                 messages.error(request, f'Erro ao criar usuário: {str(e)}')
-        else:
-            # Form inválido - logar erros
-            logger.warning(f"Formulário inválido ao criar usuário: {form.errors}")
-            # Django já exibe os erros no template através de form.errors
-            messages.error(request, 'Por favor, corrija os erros no formulário.')
+        
+        # Logar erros do formulário se houver
+        if not form.is_valid() or form.errors:
+            logger.warning(f"Formulário tem erros:")
+            for field, errors in form.errors.items():
+                logger.warning(f"  Campo '{field}': {list(errors)}")
+            if form.non_field_errors():
+                logger.warning(f"  Erros gerais: {list(form.non_field_errors())}")
     else:
         form = CustomUserForm(current_user=request.user)
     
