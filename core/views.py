@@ -231,16 +231,35 @@ def rm_user_list(request):
 @login_required
 @rm_admin_required
 def rm_user_create(request):
+    """Cria um novo usuário no painel RM"""
+    logger.debug(f"rm_user_create: method={request.method}, user={request.user.username}")
+    
     if request.method == 'POST':
-        form = CustomUserForm(request.POST)
+        form = CustomUserForm(request.POST, current_user=request.user)
         if form.is_valid():
-            with transaction.atomic():
-                user = form.save()
-                messages.success(request, 'Usuário criado com sucesso!')
-                return redirect('rm:user_list')
+            try:
+                with transaction.atomic():
+                    user = form.save()
+                    logger.info(f"Usuário criado com sucesso: {user.username} (role: {user.role}, company: {user.company.name if user.company else 'N/A'})")
+                    messages.success(request, f'Usuário {user.username} criado com sucesso!')
+                    return redirect('rm:user_list')
+            except Exception as e:
+                logger.error(f"Erro ao criar usuário: {str(e)}", exc_info=True)
+                messages.error(request, f'Erro ao criar usuário: {str(e)}')
+        else:
+            # Form inválido - logar erros
+            logger.warning(f"Formulário inválido ao criar usuário: {form.errors}")
+            # Django já exibe os erros no template através de form.errors
+            messages.error(request, 'Por favor, corrija os erros no formulário.')
     else:
-        form = CustomUserForm()
-    return render(request, 'rm/users/form.html', {'form': form})
+        form = CustomUserForm(current_user=request.user)
+    
+    # Adicionar action para o template
+    context = {
+        'form': form,
+        'action': 'Criar'
+    }
+    return render(request, 'rm/users/form.html', context)
 
 
 @login_required
