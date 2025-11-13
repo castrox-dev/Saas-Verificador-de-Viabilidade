@@ -67,14 +67,18 @@ body {
   font-size: 0.875rem;
 }
 
-.footer a {
-  color: var(--rm-footer-text);
+.footer a,
+.footer a:link,
+.footer a:visited {
+  color: var(--rm-footer-text) !important;
   text-decoration: none;
   transition: text-decoration 0.2s ease;
 }
 
-.footer a:hover {
-  color: var(--rm-footer-text);
+.footer a:hover,
+.footer a:focus,
+.footer a:active {
+  color: var(--rm-footer-text) !important;
   text-decoration: underline;
 }
 

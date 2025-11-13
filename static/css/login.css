@@ -426,15 +426,19 @@ body {
   width: 100%;
 }
 
-.login-footer a {
-  color: var(--rm-footer-text, #9ca3af);
+.login-footer a,
+.login-footer a:link,
+.login-footer a:visited {
+  color: var(--rm-footer-text, #9ca3af) !important;
   text-decoration: none;
   transition: text-decoration 0.2s ease;
   font-size: clamp(9px, 1vw, 11px);
 }
 
-.login-footer a:hover {
-  color: var(--rm-footer-text, #9ca3af);
+.login-footer a:hover,
+.login-footer a:focus,
+.login-footer a:active {
+  color: var(--rm-footer-text, #9ca3af) !important;
   text-decoration: underline;
 }
 
@@ -477,15 +481,19 @@ body {
   font-size: clamp(9px, 1vw, 0.875rem);
 }
 
-.login-footer__links a {
-  color: var(--rm-footer-text, #9ca3af);
+.login-footer__links a,
+.login-footer__links a:link,
+.login-footer__links a:visited {
+  color: var(--rm-footer-text, #9ca3af) !important;
   text-decoration: none;
   transition: text-decoration 0.2s ease;
   padding: 2px 0;
 }
 
-.login-footer__links a:hover {
-  color: var(--rm-footer-text, #9ca3af);
+.login-footer__links a:hover,
+.login-footer__links a:focus,
+.login-footer__links a:active {
+  color: var(--rm-footer-text, #9ca3af) !important;
   text-decoration: underline;
 }
 
