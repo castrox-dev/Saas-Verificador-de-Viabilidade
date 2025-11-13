@@ -38,8 +38,30 @@ class SecureCompanyMiddleware(MiddlewareMixin):
         if first_segment == 'rm':
             request.is_rm_access = True
             return None
+        
+        # Verificar se é rota de login da empresa (permitir acesso sem autenticação)
+        # O login valida se o usuário pertence à empresa na view company_login_view
+        if len(segments) > 1 and segments[1].lower() == 'login':
+            # Permitir acesso à página de login (GET e POST) sem autenticação
+            # A view company_login_view valida se o usuário pertence à empresa antes de fazer login
+            try:
+                company = Company.objects.filter(
+                    slug__iexact=first_segment,
+                    is_active=True
+                ).first()
+                if company:
+                    request.company = company
+                    request.company_slug = company.slug
+                    # Permitir acesso - a view fará a validação de autenticação e pertencimento à empresa
+                    return None
+                else:
+                    # Empresa não encontrada - deixar passar para retornar 404
+                    return None
+            except Exception:
+                # Em caso de erro, deixar passar
+                return None
             
-        # Para acesso de empresa, SEMPRE exigir autenticação
+        # Para acesso de empresa (exceto login), exigir autenticação
         if not request.user.is_authenticated:
             # Log tentativa de acesso não autenticado
             logger.warning(
