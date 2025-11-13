@@ -1,4 +1,4 @@
-# Guia de Deploy - Railway
+image.png# Guia de Deploy - Railway
 
 ## Problemas comuns e soluções
 
@@ -42,6 +42,10 @@ ALLOWED_HOSTS=verificador.up.railway.app
 CSRF_TRUSTED_ORIGINS=https://verificador.up.railway.app
 DATABASE_URL=postgresql://...
 ```
+
+**⚠️ IMPORTANTE:** O `CSRF_TRUSTED_ORIGINS` é **OBRIGATÓRIO** em produção. Sem ele, todos os POST requests retornarão 403 Forbidden.
+
+Se não configurar, o sistema tentará detectar automaticamente baseado em `ALLOWED_HOSTS`, mas é **recomendado configurar explicitamente**.
 
 ### 2. Configuração Automática
 

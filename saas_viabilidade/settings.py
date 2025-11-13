@@ -124,14 +124,36 @@ CSRF_TRUSTED_ORIGINS_ENV = os.getenv("CSRF_TRUSTED_ORIGINS", "")
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in CSRF_TRUSTED_ORIGINS_ENV.split(",") if o.strip()]
 
 # Se não houver CSRF_TRUSTED_ORIGINS configurado, adicionar hosts permitidos automaticamente
-if not CSRF_TRUSTED_ORIGINS and ALLOWED_HOSTS:
-    # Adicionar https:// para cada host permitido
+if not CSRF_TRUSTED_ORIGINS:
+    # Adicionar https:// para cada host permitido (exceto wildcard)
     for host in ALLOWED_HOSTS:
         if host and host != '*':
             # Adicionar com e sem www
-            CSRF_TRUSTED_ORIGINS.append(f"https://{host}")
+            origin = f"https://{host}"
+            if origin not in CSRF_TRUSTED_ORIGINS:
+                CSRF_TRUSTED_ORIGINS.append(origin)
             if not host.startswith('www.'):
-                CSRF_TRUSTED_ORIGINS.append(f"https://www.{host}")
+                origin_www = f"https://www.{host}"
+                if origin_www not in CSRF_TRUSTED_ORIGINS:
+                    CSRF_TRUSTED_ORIGINS.append(origin_www)
+    
+    # Se ainda estiver vazio e estiver em produção, adicionar domínios comuns do Railway
+    if not CSRF_TRUSTED_ORIGINS and not DEBUG:
+        # Tentar detectar domínio do Railway através de variáveis de ambiente
+        railway_public_domain = os.getenv("RAILWAY_PUBLIC_DOMAIN", "")
+        if railway_public_domain:
+            origin = f"https://{railway_public_domain}"
+            if origin not in CSRF_TRUSTED_ORIGINS:
+                CSRF_TRUSTED_ORIGINS.append(origin)
+        
+        # Adicionar domínio específico do Railway se detectado
+        # O Railway geralmente usa *.up.railway.app, mas precisamos do domínio exato
+        # Por isso é importante configurar CSRF_TRUSTED_ORIGINS manualmente
+
+# Log para debug (apenas em desenvolvimento)
+if DEBUG:
+    print(f"CSRF_TRUSTED_ORIGINS: {CSRF_TRUSTED_ORIGINS}")
+    print(f"ALLOWED_HOSTS: {ALLOWED_HOSTS}")
 
 # Configurações de sessão - Segurança aprimorada
 SESSION_COOKIE_AGE = 3600  # 1 hora
