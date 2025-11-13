@@ -84,15 +84,28 @@ def custom_403(request, *args, **kwargs):
     if 'exception' in kwargs:
         exception = kwargs['exception']
     
+    # Log detalhado para debug
+    logger.error(
+        f"Erro 403: path={request.path}, method={request.method}, "
+        f"is_csrf_error={bool(reason)}, reason={reason}, "
+        f"origin={request.META.get('HTTP_ORIGIN', 'N/A')}, "
+        f"referer={request.META.get('HTTP_REFERER', 'N/A')}, "
+        f"host={request.get_host()}, "
+        f"is_secure={request.is_secure()}"
+    )
+    
     # Determinar a mensagem baseada no tipo de erro
     if reason:
         # Erro CSRF
         error_message = "Verificação CSRF falhou. Pedido cancelado."
+        logger.error(f"ERRO CSRF: {reason} - Origin: {request.META.get('HTTP_ORIGIN', 'N/A')}, Host: {request.get_host()}")
     elif exception:
         # Outro tipo de erro 403
         error_message = "Você não tem permissão para acessar esta página."
+        logger.error(f"ERRO 403: {exception} - Path: {request.path}")
     else:
         error_message = "Acesso negado."
+        logger.error(f"ERRO 403: Acesso negado - Path: {request.path}, Method: {request.method}")
     
     try:
         context = {

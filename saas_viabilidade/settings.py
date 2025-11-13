@@ -147,32 +147,46 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 CSRF_TRUSTED_ORIGINS_ENV = os.getenv("CSRF_TRUSTED_ORIGINS", "")
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in CSRF_TRUSTED_ORIGINS_ENV.split(",") if o.strip()]
 
-# Se não houver CSRF_TRUSTED_ORIGINS configurado, adicionar hosts permitidos automaticamente
-if not CSRF_TRUSTED_ORIGINS:
-    # Se estiver no Railway, adicionar domínio automaticamente
-    if IS_RAILWAY:
-        railway_domain = os.getenv("RAILWAY_PUBLIC_DOMAIN", "")
-        if railway_domain:
-            origin = f"https://{railway_domain}"
-            if origin not in CSRF_TRUSTED_ORIGINS:
-                CSRF_TRUSTED_ORIGINS.append(origin)
-    
-    # Adicionar https:// para cada host permitido (exceto wildcard)
-    for host in ALLOWED_HOSTS:
-        if host and host != '*' and not host.startswith('*.'):
-            # Adicionar com e sem www
-            origin = f"https://{host}"
-            if origin not in CSRF_TRUSTED_ORIGINS:
-                CSRF_TRUSTED_ORIGINS.append(origin)
-            if not host.startswith('www.'):
-                origin_www = f"https://www.{host}"
-                if origin_www not in CSRF_TRUSTED_ORIGINS:
-                    CSRF_TRUSTED_ORIGINS.append(origin_www)
+# Adicionar hosts permitidos automaticamente (mesmo se já houver CSRF_TRUSTED_ORIGINS configurados)
+# Se estiver no Railway, adicionar domínio automaticamente
+if IS_RAILWAY:
+    railway_domain = os.getenv("RAILWAY_PUBLIC_DOMAIN", "")
+    if railway_domain:
+        origin = f"https://{railway_domain}"
+        if origin not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(origin)
+        # Também adicionar http:// para desenvolvimento/testes
+        origin_http = f"http://{railway_domain}"
+        if origin_http not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(origin_http)
 
-# Log para debug (apenas em desenvolvimento)
-if DEBUG:
-    print(f"CSRF_TRUSTED_ORIGINS: {CSRF_TRUSTED_ORIGINS}")
-    print(f"ALLOWED_HOSTS: {ALLOWED_HOSTS}")
+# Adicionar https:// para cada host permitido (exceto wildcard)
+for host in ALLOWED_HOSTS:
+    if host and host != '*' and not host.startswith('*.'):
+        # Adicionar com e sem www
+        origin = f"https://{host}"
+        if origin not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(origin)
+        origin_http = f"http://{host}"
+        if origin_http not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(origin_http)
+        if not host.startswith('www.'):
+            origin_www = f"https://www.{host}"
+            if origin_www not in CSRF_TRUSTED_ORIGINS:
+                CSRF_TRUSTED_ORIGINS.append(origin_www)
+
+# Se ainda estiver vazio, adicionar padrões de desenvolvimento
+if not CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS = [
+        "https://127.0.0.1:8000",
+        "https://localhost:8000",
+        "http://127.0.0.1:8000",
+        "http://localhost:8000",
+    ]
+
+# Log para debug (apenas print, logger será configurado depois)
+print(f"CSRF_TRUSTED_ORIGINS configurados: {CSRF_TRUSTED_ORIGINS}")
+print(f"ALLOWED_HOSTS configurados: {ALLOWED_HOSTS}")
 
 # Configurações de sessão - Segurança aprimorada
 SESSION_COOKIE_AGE = 3600  # 1 hora

@@ -58,7 +58,16 @@ def home_redirect(request):
 @ensure_csrf_cookie
 @login_rate_limit
 def rm_login_view(request):
+    # Log para debug de CSRF
+    logger.debug(f"rm_login_view: method={request.method}, path={request.path}, host={request.get_host()}")
+    logger.debug(f"rm_login_view: is_secure={request.is_secure()}, META.get('HTTP_ORIGIN')={request.META.get('HTTP_ORIGIN', 'N/A')}")
+    logger.debug(f"rm_login_view: CSRF cookie presente={request.META.get('CSRF_COOKIE', 'N/A')}")
+    
     if request.method == 'POST':
+        # Log detalhado do POST
+        logger.info(f"rm_login_view POST: origin={request.META.get('HTTP_ORIGIN', 'N/A')}, referer={request.META.get('HTTP_REFERER', 'N/A')}")
+        logger.info(f"rm_login_view POST: CSRF token presente={bool(request.POST.get('csrfmiddlewaretoken'))}")
+        
         input_id = (request.POST.get('username', '') or '').strip()
         password = (request.POST.get('password', '') or '').strip()
         # aceitar e-mail ou username
