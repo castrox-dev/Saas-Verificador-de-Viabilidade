@@ -61,25 +61,33 @@
 html,
 body {
   height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* Prevenir scroll na raiz */
 }
 
 body {
   background: linear-gradient(110deg, #0b1324 0%, #101d36 40%, #172842 70%, #1f2f4f 100%);
-  min-height: 100vh;
+  height: 100vh;
+  width: 100vw;
   margin: 0;
   padding: 0;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .side-by-side-layout {
   display: flex;
   width: 100%;
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
+  height: calc(100vh - 70px); /* Altura total menos espaço do footer */
+  overflow: hidden;
   position: relative;
+  max-height: calc(100vh - 70px);
 }
 
 .side-by-side-layout::before {
@@ -102,6 +110,8 @@ body {
   padding: 2.5rem 2rem;
   position: relative;
   z-index: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 .info-content {
   max-width: 500px;
@@ -109,7 +119,9 @@ body {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 2rem;
+  gap: 1.5rem;
+  height: 100%;
+  justify-content: center;
 }
 .two-column,
 .logo-column {
@@ -129,7 +141,7 @@ body {
 }
 
 .main-title {
-  font-size: 2.1rem;
+  font-size: clamp(1.75rem, 4vw, 2.1rem);
   font-weight: 700;
   line-height: 1.2;
   margin-bottom: 1rem;
@@ -143,9 +155,9 @@ body {
 }
 
 .main-subtitle {
-  font-size: 1rem;
+  font-size: clamp(0.9rem, 1.5vw, 1rem);
   color: var(--img-text-secondary);
-  margin-bottom: 2.5rem;
+  margin-bottom: clamp(1.5rem, 3vw, 2.5rem);
   text-align: left;
   line-height: 1.5;
 }
@@ -153,8 +165,8 @@ body {
 .compact-features {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  gap: clamp(0.75rem, 1.5vw, 1rem);
+  margin-bottom: 1rem;
 }
 
 .compact-feature {
@@ -187,15 +199,17 @@ body {
 
 /* === LADO DIREITO - FORMULÁRIO === */
 .login-side {
-  flex: 0.9; /* reduzido para caber sem scroll */
+  flex: 0.9;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 2rem;
   background: transparent;
   overflow-y: auto;
+  overflow-x: hidden;
   position: relative;
   z-index: 1;
+  height: 100%;
 }
 
 .login-card {
@@ -364,97 +378,202 @@ body {
 /* === FOOTER === */
 .login-footer {
   text-align: center;
-  padding: 20px 10px;
-  font-size: 14px;
+  padding: 12px 10px;
+  font-size: 13px;
   color: #9ca3af;
+  background: transparent;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  margin: 0;
+  flex-shrink: 0;
 }
 
 .login-footer__meta {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: 11px;
   color: #6b7280;
 }
 
 /* === RESPONSIVIDADE === */
 @media (max-width: 1024px) {
+  .side-by-side-layout {
+    height: calc(100vh - 70px);
+  }
+  
   .info-side {
-    flex: 1.5;
+    flex: 1.2;
+    padding: 2rem 1.5rem;
   }
   
   .login-side {
     flex: 1;
+    padding: 1.5rem;
+  }
+  
+  .main-title {
+    font-size: 1.9rem;
+  }
+  
+  .compact-feature {
+    padding: 0.9rem 1rem;
   }
 }
 
 @media (max-width: 768px) {
+  body {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  
+  .side-by-side-layout {
+    flex-direction: column;
+    height: auto;
+    min-height: calc(100vh - 60px);
+    overflow-y: auto;
+  }
+  
   .info-side {
     flex: none;
-    padding: 2rem 1.5rem;
-    min-height: 50vh;
+    padding: 1.5rem 1rem;
+    min-height: auto;
+    max-height: 45vh;
   }
+  
   .info-content {
     text-align: center;
     align-items: center;
+    gap: 1rem;
+    max-width: 100%;
   }
+  
   .info-container {
     width: 100%;
   }
+  
+  .main-title {
+    font-size: 1.75rem;
+    text-align: center;
+  }
+  
+  .main-subtitle {
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+  
+  .compact-features {
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  
+  .compact-feature {
+    padding: 0.85rem 1rem;
+  }
+  
+  .login-side {
+    flex: none;
+    padding: 1.5rem 1rem;
+    min-height: auto;
+  }
+  
   .logo-container {
-    flex-direction: column;
+    flex-direction: row;
     gap: 0.75rem;
   }
+  
   .logo-container .login-logo {
-    width: 100px;
+    width: 70px;
   }
+  
   .login-brand {
     letter-spacing: 0.18em;
+  }
+  
+  .login-footer {
+    position: relative;
+    padding: 10px 10px;
   }
 }
 
 @media (max-width: 480px) {
-  .info-side {
-    padding: 1.5rem 1rem;
-    min-height: 40vh;
+  .side-by-side-layout {
+    min-height: calc(100vh - 50px);
   }
-
-  .brand-column img {
-    width: 90px;
+  
+  .info-side {
+    padding: 1.25rem 1rem;
+    max-height: 40vh;
   }
 
   .main-title {
-    font-size: 1.75rem;
+    font-size: 1.5rem;
+    line-height: 1.3;
   }
 
   .main-subtitle {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .compact-features {
+    gap: 0.65rem;
   }
 
   .compact-feature {
-    padding: 1rem;
+    padding: 0.75rem 0.9rem;
   }
 
   .compact-feature h4 {
-    font-size: 1rem;
+    font-size: 0.95rem;
+    margin-bottom: 0.4rem;
   }
 
   .compact-feature p {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
+    line-height: 1.4;
   }
 
   .login-side {
-    padding: 1rem;
+    padding: 1.25rem 1rem;
   }
 
   .login-card {
     padding: 1.25rem;
+    max-width: 100%;
+  }
+  
+  .logo-container .login-logo {
+    width: 60px;
   }
 
   .card-title {
-    font-size: 1.25rem;
+    font-size: 1.2rem;
+    margin-bottom: 1.25rem;
   }
 
   .form {
     gap: 1rem;
+  }
+  
+  .form-row input {
+    padding: 0.75rem 0.875rem;
+    font-size: 0.95rem;
+  }
+  
+  .btn {
+    padding: 0.75rem 1.25rem;
+    font-size: 0.95rem;
+  }
+  
+  .login-footer {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  
+  .login-footer__meta {
+    font-size: 10px;
   }
 }
 

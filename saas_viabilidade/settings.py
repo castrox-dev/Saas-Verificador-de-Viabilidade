@@ -8,10 +8,34 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Load environment variables from .env file
 load_dotenv(BASE_DIR / ".env")
 
+# Detectar se está rodando no Railway
+IS_RAILWAY = os.getenv("RAILWAY_ENVIRONMENT") is not None or os.getenv("RAILWAY_PUBLIC_DOMAIN") is not None
+
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-me")
-DEBUG = os.getenv("DEBUG", "True").lower() in ("1", "true", "on", "yes")
+DEBUG = os.getenv("DEBUG", "True").lower() in ("1", "true", "on", "yes") and not IS_RAILWAY
 ALLOWED_HOSTS_ENV = os.getenv("ALLOWED_HOSTS", "")
-ALLOWED_HOSTS = [h.strip() for h in ALLOWED_HOSTS_ENV.split(",") if h.strip()] or ["127.0.0.1", "localhost", "testserver", "*"]
+
+# Configurar ALLOWED_HOSTS automaticamente para Railway
+if IS_RAILWAY:
+    railway_domain = os.getenv("RAILWAY_PUBLIC_DOMAIN", "")
+    if railway_domain:
+        # Django não suporta wildcards, então usamos apenas o domínio exato
+        ALLOWED_HOSTS = [railway_domain]
+    else:
+        # Se não houver domínio específico, usar variável de ambiente ou fallback
+        # O Railway geralmente fornece o domínio via RAILWAY_PUBLIC_DOMAIN
+        # Se não estiver disponível, o usuário deve configurar ALLOWED_HOSTS manualmente
+        ALLOWED_HOSTS = []
+    
+    # Adicionar hosts customizados se configurados
+    if ALLOWED_HOSTS_ENV:
+        ALLOWED_HOSTS.extend([h.strip() for h in ALLOWED_HOSTS_ENV.split(",") if h.strip()])
+    
+    # Se ainda estiver vazio, usar fallback seguro
+    if not ALLOWED_HOSTS:
+        ALLOWED_HOSTS = ["*"]  # Apenas como último recurso - configure ALLOWED_HOSTS adequadamente
+else:
+    ALLOWED_HOSTS = [h.strip() for h in ALLOWED_HOSTS_ENV.split(",") if h.strip()] or ["127.0.0.1", "localhost", "testserver", "*"]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -125,9 +149,17 @@ CSRF_TRUSTED_ORIGINS = [o.strip() for o in CSRF_TRUSTED_ORIGINS_ENV.split(",") i
 
 # Se não houver CSRF_TRUSTED_ORIGINS configurado, adicionar hosts permitidos automaticamente
 if not CSRF_TRUSTED_ORIGINS:
+    # Se estiver no Railway, adicionar domínio automaticamente
+    if IS_RAILWAY:
+        railway_domain = os.getenv("RAILWAY_PUBLIC_DOMAIN", "")
+        if railway_domain:
+            origin = f"https://{railway_domain}"
+            if origin not in CSRF_TRUSTED_ORIGINS:
+                CSRF_TRUSTED_ORIGINS.append(origin)
+    
     # Adicionar https:// para cada host permitido (exceto wildcard)
     for host in ALLOWED_HOSTS:
-        if host and host != '*':
+        if host and host != '*' and not host.startswith('*.'):
             # Adicionar com e sem www
             origin = f"https://{host}"
             if origin not in CSRF_TRUSTED_ORIGINS:
@@ -136,19 +168,6 @@ if not CSRF_TRUSTED_ORIGINS:
                 origin_www = f"https://www.{host}"
                 if origin_www not in CSRF_TRUSTED_ORIGINS:
                     CSRF_TRUSTED_ORIGINS.append(origin_www)
-    
-    # Se ainda estiver vazio e estiver em produção, adicionar domínios comuns do Railway
-    if not CSRF_TRUSTED_ORIGINS and not DEBUG:
-        # Tentar detectar domínio do Railway através de variáveis de ambiente
-        railway_public_domain = os.getenv("RAILWAY_PUBLIC_DOMAIN", "")
-        if railway_public_domain:
-            origin = f"https://{railway_public_domain}"
-            if origin not in CSRF_TRUSTED_ORIGINS:
-                CSRF_TRUSTED_ORIGINS.append(origin)
-        
-        # Adicionar domínio específico do Railway se detectado
-        # O Railway geralmente usa *.up.railway.app, mas precisamos do domínio exato
-        # Por isso é importante configurar CSRF_TRUSTED_ORIGINS manualmente
 
 # Log para debug (apenas em desenvolvimento)
 if DEBUG:
