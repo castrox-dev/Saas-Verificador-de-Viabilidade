@@ -205,12 +205,23 @@ def api_coordenadas(request, company_slug=None):
         # Não buscar mais de pastas antigas - apenas do banco de dados
         if not caminho:
             logger.warning(f"Arquivo não encontrado no banco: map_id={map_id}, arquivo={arquivo_nome}, company={target_company.slug if target_company else None}")
-            return JsonResponse({'erro': 'Arquivo não encontrado no banco de dados'}, status=404)
+            return JsonResponse({
+                'erro': 'Arquivo não encontrado no banco de dados',
+                'detalhes': 'O arquivo não foi encontrado no banco de dados. Verifique se o mapa foi enviado corretamente.',
+                'solucao': 'Faça upload do arquivo novamente através da interface web.'
+            }, status=404)
         
         # Verificar se o arquivo existe fisicamente
         if not os.path.exists(caminho):
             logger.warning(f"Arquivo não existe fisicamente: {caminho} (map_id: {map_id}, arquivo: {arquivo_nome})")
-            return JsonResponse({'erro': 'Arquivo não encontrado no sistema de arquivos'}, status=404)
+            # Informar ao usuário que o arquivo precisa ser reenviado
+            return JsonResponse({
+                'erro': 'Arquivo não encontrado no sistema de arquivos',
+                'detalhes': f'O arquivo existe no banco de dados, mas não foi encontrado fisicamente no servidor: {caminho}',
+                'solucao': 'No Railway, arquivos são efêmeros. Você precisa fazer upload do arquivo novamente através da interface web após o deploy.',
+                'arquivo': arquivo_nome or f'map_id_{map_id}',
+                'caminho_esperado': caminho
+            }, status=404)
         
         # Determinar extensão se não foi definida
         if not ext:

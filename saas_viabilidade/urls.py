@@ -4,9 +4,12 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import RedirectView
 from django.contrib.auth import views as auth_views
+from django.views.static import serve
+from django.http import Http404
 from core.views import home_redirect, dashboard_redirect
 from core.admin import rm_admin_site
 from core.error_views import custom_404, force_404
+import os
 
 urlpatterns = [
     path("admin/", rm_admin_site.urls),
@@ -32,5 +35,17 @@ urlpatterns = [
     re_path(r'^.*$', force_404, name='catch_all_404'),
 ]
 
+# Servir arquivos de mídia (tanto em DEBUG quanto em produção no Railway)
+# No Railway, os arquivos precisam ser enviados novamente após o deploy
 if settings.DEBUG:
+    # Em desenvolvimento, usar o método padrão
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+else:
+    # Em produção (Railway), servir arquivos de mídia se existirem
+    # NOTA: No Railway, arquivos são efêmeros - arquivos enviados localmente não estarão disponíveis
+    # Arquivos precisam ser enviados novamente através da interface web após o deploy
+    media_root = settings.MEDIA_ROOT
+    if os.path.exists(media_root):
+        urlpatterns += [
+            re_path(r'^media/(?P<path>.*)$', serve, {'document_root': media_root}),
+        ]
