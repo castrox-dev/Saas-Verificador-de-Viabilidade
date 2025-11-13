@@ -282,6 +282,7 @@ def rm_user_edit(request, user_id):
     return render(request, 'rm/users/form.html', {'form': form, 'user_obj': user_obj})
 
 
+@ensure_csrf_cookie
 @login_rate_limit
 def company_login_view(request, company_slug):
     context = {'company_slug': company_slug}
