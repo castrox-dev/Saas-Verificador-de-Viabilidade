@@ -3451,7 +3451,56 @@ async function loadCTOFiles(forceRefresh = false) {
 window.loadCTOFiles = loadCTOFiles;
 
 // ===== INICIALIZAÇÃO DO SISTEMA =====
+// ===== MOBILE SIDEBAR BUTTONS CONNECTION =====
+function initializeMobileSidebarButtons() {
+    // Conectar botão mobile do cursor toggle
+    const cursorToggleBtnMobile = document.getElementById('cursor-toggle-btn-mobile');
+    if (cursorToggleBtnMobile) {
+        cursorToggleBtnMobile.addEventListener('click', function() {
+            const originalBtn = document.getElementById('cursor-toggle-btn');
+            if (originalBtn) {
+                originalBtn.click();
+            } else {
+                toggleCursorMode();
+            }
+        });
+    }
+    
+    // Conectar botão mobile do theme toggle
+    const themeToggleBtnMobile = document.getElementById('theme-toggle-btn-mobile');
+    if (themeToggleBtnMobile) {
+        themeToggleBtnMobile.addEventListener('click', function() {
+            const originalBtn = document.getElementById('theme-toggle-btn');
+            if (originalBtn) {
+                originalBtn.click();
+            } else {
+                // Alternar tema manualmente se o botão original não existir
+                const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+                const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+                document.documentElement.setAttribute('data-theme', newTheme);
+                document.body.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+            }
+        });
+    }
+    
+    // Conectar botão mobile do add CTO toggle
+    const addCTOToggleBtnMobile = document.getElementById('add-cto-toggle-btn-mobile');
+    if (addCTOToggleBtnMobile) {
+        addCTOToggleBtnMobile.addEventListener('click', function() {
+            const originalBtn = document.getElementById('add-cto-toggle-btn');
+            if (originalBtn) {
+                originalBtn.click();
+            } else {
+                toggleAddCTOMode();
+            }
+        });
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar botões mobile do side menu
+    initializeMobileSidebarButtons();
     console.log('🚀 Iniciando sistema...');
     
     // Inicializar modo escuro PRIMEIRO

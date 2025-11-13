@@ -283,6 +283,62 @@ body.no-scroll {
     border-radius: var(--border-radius-md);
 }
 
+/* Menu de ações mobile no side menu */
+.mobile-actions-grid {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.5rem, 2vw, 0.75rem);
+}
+
+.mobile-action-btn {
+    display: flex;
+    align-items: center;
+    gap: clamp(0.75rem, 2vw, 1rem);
+    padding: clamp(0.75rem, 2vw, 1rem);
+    border-radius: var(--border-radius-md);
+    background: var(--bg-primary);
+    border: 2px solid var(--border-color);
+    color: var(--text-primary);
+    text-decoration: none;
+    font-size: clamp(0.8rem, 2.2vw, 0.9rem);
+    font-weight: 500;
+    transition: all 0.2s ease;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    cursor: pointer;
+    min-height: 44px;
+    width: 100%;
+    justify-content: flex-start;
+}
+
+.mobile-action-btn i {
+    font-size: clamp(1rem, 2.5vw, 1.25rem);
+    min-width: 24px;
+    color: var(--primary-color);
+}
+
+.mobile-action-btn:hover,
+.mobile-action-btn:focus {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    transform: translateX(4px);
+}
+
+.mobile-action-btn:hover i,
+.mobile-action-btn:focus i {
+    color: white;
+}
+
+.mobile-action-btn:active {
+    transform: translateX(2px) scale(0.98);
+}
+
+.mobile-action-btn span {
+    flex: 1;
+    text-align: left;
+}
+
 /* CTO grid mobile */
 .cto-grid {
     gap: clamp(0.375rem, 1.5vw, 0.5rem);
@@ -531,6 +587,19 @@ body.no-scroll {
         gap: var(--spacing-sm);
     }
     
+    /* Esconder botões da navbar no mobile, manter apenas pesquisa e menu hambúrguer */
+    .menu-admin-link,
+    .cursor-toggle-container,
+    .add-cto-toggle-container,
+    .theme-toggle-container {
+        display: none !important;
+    }
+    
+    /* Mostrar menu de ações no side menu para mobile */
+    .sidebar-mobile-actions {
+        display: block !important;
+    }
+    
     .cursor-toggle-btn {
         padding: 10px 16px;
         font-size: var(--font-size-xs);
@@ -631,6 +700,19 @@ body.no-scroll {
     .top-bar {
         padding: 0 var(--spacing-sm);
         gap: var(--spacing-xs);
+    }
+    
+    /* Esconder botões da navbar no mobile pequeno também */
+    .menu-admin-link,
+    .cursor-toggle-container,
+    .add-cto-toggle-container,
+    .theme-toggle-container {
+        display: none !important;
+    }
+    
+    /* Mostrar menu de ações no side menu para mobile */
+    .sidebar-mobile-actions {
+        display: block !important;
     }
     
     .brand {
