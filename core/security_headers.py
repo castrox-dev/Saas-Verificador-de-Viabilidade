@@ -10,6 +10,19 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
     """
     
     def process_response(self, request, response):
+        # Headers específicos para Service Worker
+        if request.path.endswith('/sw.js') or request.path.endswith('/service-worker.js'):
+            response['Content-Type'] = 'application/javascript; charset=utf-8'
+            response['Service-Worker-Allowed'] = '/'
+            # Service Workers não devem ser cacheados
+            response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response['Pragma'] = 'no-cache'
+            response['Expires'] = '0'
+        
+        # Headers específicos para manifest.json
+        if request.path.endswith('/manifest.json'):
+            response['Content-Type'] = 'application/manifest+json; charset=utf-8'
+        
         # Content Security Policy - Restritivo mas permitindo estilos inline para desenvolvimento
         # Permite arquivos estáticos do próprio domínio
         request_host = request.get_host()
@@ -24,6 +37,8 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
             f"font-src 'self' data: blob: {protocol}://{host_without_port} https://fonts.gstatic.com https://fonts.googleapis.com https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net; "
             f"img-src 'self' data: blob: {protocol}://{host_without_port} https:; "
             f"connect-src 'self' {protocol}://{host_without_port} https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://viacep.com.br https://brasilapi.com.br https://www.gstatic.com; "
+            f"worker-src 'self' {protocol}://{host_without_port} blob:; "
+            f"manifest-src 'self' {protocol}://{host_without_port}; "
             "frame-ancestors 'none'; "
             "base-uri 'self'; "
             "form-action 'self'; "

@@ -5,10 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
     <meta name="description" content="Sistema de verificação de viabilidade para mapas CTO - RM Systems">
     <meta name="theme-color" content="#1D4ED8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="RM Systems">
     <meta name="google" content="notranslate">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="msapplication-TileColor" content="#1D4ED8">
+    <meta name="msapplication-config" content="/static/browserconfig.xml">
     <title>{% block title %}RMSystems{% endblock %}</title>
     {% load static %}
     <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
+    <link rel="apple-touch-icon" href="{% static 'img/Logo_rmsys.png' %}">
     <link rel="stylesheet" href="{% static 'css/theme_colors.css' %}" />
     <link rel="stylesheet" href="{% static 'css/theme_rm.css' %}" />
     <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
@@ -262,6 +269,8 @@
     <script src="{% static 'js/toast.js' %}"></script>
     <!-- Sistema de Dark Mode -->
     <script src="{% static 'js/dark-mode.js' %}"></script>
+    <!-- PWA Service Worker -->
+    <script src="{% static 'js/pwa.js' %}"></script>
     
     <!-- CSS Responsivo -->
     <style>

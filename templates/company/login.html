@@ -4,8 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#1D4ED8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="RM Systems">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>RM Systems</title>
     <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
+    <link rel="apple-touch-icon" href="{% static 'img/Logo_rmsys.png' %}">
+    <link rel="manifest" href="{% static 'manifest.json' %}">
     <link rel="stylesheet" href="{% static 'css/login.css' %}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -94,9 +101,24 @@
     
     <script src="{% static 'js/login.js' %}"></script>
     <script src="{% static 'js/dark-mode.js' %}"></script>
+    <!-- PWA Service Worker -->
+    <script src="{% static 'js/pwa.js' %}"></script>
     <footer class="login-footer">
-        <p>&copy; {% now "Y" %} RM Systems. Todos os direitos reservados.</p>
-        <p class="login-footer__meta">Rm Systems Tecnologia &bull; Plataforma multi-tenant segura.</p>
+        <div>
+            <div class="login-footer__links">
+                <a href="{% url 'termos_uso' %}">Termos de Uso</a>
+                <span>&bull;</span>
+                <a href="{% url 'politica_privacidade' %}">Política de Privacidade</a>
+                <span>&bull;</span>
+                <a href="{% url 'politica_cookies' %}">Política de Cookies</a>
+                <span>&bull;</span>
+                <a href="{% url 'faq' %}">FAQ</a>
+                <span>&bull;</span>
+                <a href="{% url 'ajuda' %}">Ajuda</a>
+            </div>
+            <p>&copy; {% now "Y" %} RM Systems. Todos os direitos reservados.</p>
+            <p class="login-footer__meta">Rm Systems Tecnologia &bull; Plataforma multi-tenant segura.</p>
+        </div>
     </footer>
 </body>
 </html>
