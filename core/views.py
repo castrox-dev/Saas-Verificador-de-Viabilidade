@@ -72,8 +72,14 @@ def rm_login_view(request):
         user = authenticate(request, username=username, password=password)
         if user is not None and (user.is_rm_admin or user.is_superuser):
             login(request, user)
-            return redirect('rm:admin_dashboard')
-        messages.error(request, 'Credenciais inválidas.')
+            # Usar LOGIN_REDIRECT_URL ou redirecionar diretamente para dashboard
+            next_url = request.GET.get('next') or request.POST.get('next') or '/dashboard/'
+            return redirect(next_url)
+        elif user is not None:
+            # Usuário autenticado mas não é admin RM
+            messages.error(request, 'Você não tem permissão para acessar esta área.')
+        else:
+            messages.error(request, 'Credenciais inválidas.')
     return render(request, 'login.html')
 
 

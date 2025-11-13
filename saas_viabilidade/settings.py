@@ -134,7 +134,7 @@ WHITENOISE_AUTOREFRESH = DEBUG  # Em dev, recarregar automaticamente
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-LOGIN_REDIRECT_URL = "/dashboard/"
+LOGIN_REDIRECT_URL = "/dashboard/"  # Usa dashboard_redirect que redireciona corretamente conforme papel do usuário
 LOGOUT_REDIRECT_URL = "/rm/login/"
 LOGIN_URL = "/rm/login/"
 
