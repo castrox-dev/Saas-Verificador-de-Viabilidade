@@ -64,6 +64,47 @@ body.no-scroll {
     overflow: hidden;
     position: fixed;
     width: 100%;
+    /* No mobile, manter scroll habilitado na sidebar mesmo com no-scroll no body */
+}
+
+@media (max-width: 768px) {
+    /* No mobile, quando sidebar está aberta, permitir scroll apenas na sidebar */
+    body.no-scroll {
+        /* Manter body fixo para evitar scroll da página */
+        overflow: hidden;
+        position: fixed;
+        width: 100%;
+        height: 100%;
+    }
+    
+    /* Sidebar sempre permite scroll no mobile, mesmo quando body tem no-scroll */
+    body.no-scroll .sidebar,
+    .sidebar {
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        touch-action: pan-y !important;
+        overscroll-behavior-y: contain !important;
+        overscroll-behavior-x: none !important;
+        /* Garantir que a sidebar seja scrollável */
+        will-change: scroll-position;
+        /* Permitir scroll independente do body */
+        position: fixed;
+        z-index: 1050;
+    }
+    
+    /* Conteúdo da sidebar sempre scrollável no mobile */
+    body.no-scroll .sidebar-content,
+    .sidebar-content {
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        touch-action: pan-y !important;
+        overscroll-behavior-y: contain !important;
+        min-height: 0;
+        /* Garantir que o conteúdo possa ser scrollado */
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
 }
 
 /* ===== SIDEBAR RESPONSIVA ===== */
@@ -79,9 +120,14 @@ body.no-scroll {
     height: 100dvh;
     overflow-y: auto;
     overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch; /* Scroll suave no iOS/Safari */
+    overscroll-behavior-y: contain; /* Prevenir scroll da página quando sidebar chega ao topo/fim */
+    overscroll-behavior-x: none;
+    touch-action: pan-y; /* Permitir apenas scroll vertical */
+    /* Melhorar performance de scroll */
+    will-change: scroll-position;
+    /* Permitir scroll mesmo quando body tem no-scroll */
+    position: fixed;
 }
 
 .sidebar.active {
@@ -129,6 +175,11 @@ body.no-scroll {
     padding: clamp(0.75rem, 3vw, 1rem);
     flex: 1;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch; /* Scroll suave no iOS */
+    overscroll-behavior-y: contain; /* Prevenir scroll da página quando conteúdo chega ao topo/fim */
+    touch-action: pan-y; /* Permitir scroll vertical */
+    /* Garantir que o conteúdo seja scrollável */
+    min-height: 0; /* Importante para flexbox permitir scroll */
 }
 
 .sidebar-section {
@@ -759,8 +810,30 @@ body.no-scroll {
     }
     
     .sidebar {
-        -webkit-overflow-scrolling: touch;
-        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch !important;
+        overscroll-behavior-y: contain !important;
+        overscroll-behavior-x: none !important;
+        touch-action: pan-y !important;
+        /* Garantir scroll suave e responsivo */
+        will-change: scroll-position;
+        /* Permitir scroll mesmo quando body tem no-scroll */
+        overflow-y: auto !important;
+    }
+    
+    /* Garantir que o conteúdo da sidebar seja scrollável */
+    .sidebar-content {
+        -webkit-overflow-scrolling: touch !important;
+        overscroll-behavior-y: contain !important;
+        touch-action: pan-y !important;
+        overflow-y: auto !important;
+        min-height: 0;
+        flex: 1;
+    }
+    
+    /* CTO grid deve ser scrollável dentro da sidebar */
+    .cto-grid {
+        overflow-y: visible;
+        max-height: none;
     }
     
     .search-input {

@@ -812,6 +812,24 @@ body {
     min-height: 100dvh; /* Dynamic viewport height para mobile */
 }
 
+/* Permitir scroll no mobile quando necessário */
+@media (max-width: 768px) {
+    body {
+        /* No mobile, permitir scroll vertical se necessário */
+        touch-action: pan-x pan-y pinch-zoom;
+        /* Não bloquear scroll completamente no mobile */
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Permitir scroll na sidebar no mobile */
+    .sidebar {
+        touch-action: pan-y;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-y: contain;
+        overscroll-behavior-x: none;
+    }
+}
+
 /* ===== LAYOUT PRINCIPAL ===== */
 .app-container {
     display: flex;
@@ -1386,8 +1404,12 @@ body {
     scrollbar-color: rgba(29, 78, 216, 0.3) transparent;
     display: flex;
     flex-direction: column;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch; /* Scroll suave no iOS */
+    overscroll-behavior-y: contain; /* Prevenir scroll da página quando sidebar chega ao topo/fim */
+    overscroll-behavior-x: none;
+    touch-action: pan-y; /* Permitir scroll vertical com gestos */
+    /* Melhorar performance de scroll no mobile */
+    will-change: scroll-position;
 }
 
 .sidebar::-webkit-scrollbar {
@@ -1420,8 +1442,37 @@ body {
     border-bottom: 2px solid var(--rm-primary);
     background: var(--rm-sidebar-bg);
     position: relative;
-    flex-shrink: 0;
+    flex-shrink: 0; /* Header não encolhe */
     min-height: 80px;
+    /* Garantir que o header não bloqueie o scroll */
+    z-index: 1;
+}
+
+/* No mobile, garantir que o header não interfira com o scroll */
+@media (max-width: 768px) {
+    .sidebar-header {
+        flex-shrink: 0 !important;
+        position: relative !important;
+        /* Não fixar o header no mobile para permitir scroll */
+    }
+    
+    /* Garantir que a sidebar permita scroll mesmo com header fixo */
+    .sidebar {
+        display: flex !important;
+        flex-direction: column !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        touch-action: pan-y !important;
+    }
+    
+    /* Conteúdo da sidebar deve poder scrollar independente do header */
+    .sidebar-content {
+        flex: 1 !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        touch-action: pan-y !important;
+    }
 }
 
 .sidebar-header::before {
@@ -1539,6 +1590,33 @@ body {
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
+    -webkit-overflow-scrolling: touch; /* Scroll suave no iOS */
+    overscroll-behavior-y: contain; /* Prevenir scroll da página quando conteúdo chega ao topo/fim */
+    touch-action: pan-y; /* Permitir scroll vertical */
+    /* Importante para flexbox permitir scroll */
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* No mobile, garantir scroll sempre habilitado na sidebar */
+@media (max-width: 768px) {
+    .sidebar-content {
+        -webkit-overflow-scrolling: touch !important;
+        overscroll-behavior-y: contain !important;
+        touch-action: pan-y !important;
+        overflow-y: auto !important;
+        /* Garantir que o conteúdo seja scrollável mesmo quando body tem no-scroll */
+        min-height: 0 !important;
+    }
+    
+    /* Garantir que a sidebar toda seja scrollável no mobile */
+    .sidebar {
+        -webkit-overflow-scrolling: touch !important;
+        overscroll-behavior-y: contain !important;
+        touch-action: pan-y !important;
+        overflow-y: auto !important;
+    }
 }
 
 /* Seções da Sidebar */
