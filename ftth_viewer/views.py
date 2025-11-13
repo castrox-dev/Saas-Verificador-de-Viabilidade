@@ -214,13 +214,44 @@ def api_coordenadas(request, company_slug=None):
         # Verificar se o arquivo existe fisicamente
         if not os.path.exists(caminho):
             logger.warning(f"Arquivo não existe fisicamente: {caminho} (map_id: {map_id}, arquivo: {arquivo_nome})")
+            
+            # Verificar se está no Railway e se o volume está configurado
+            is_railway = os.getenv("RAILWAY_ENVIRONMENT") is not None or os.getenv("RAILWAY_PUBLIC_DOMAIN") is not None
+            railway_volume_path = os.getenv("RAILWAY_VOLUME_PATH", "/data")
+            has_volume = is_railway and os.path.exists(railway_volume_path)
+            
             # Informar ao usuário que o arquivo precisa ser reenviado
+            detalhes = f'O arquivo existe no banco de dados, mas não foi encontrado fisicamente no servidor.'
+            solucao = []
+            
+            if is_railway:
+                if not has_volume:
+                    detalhes += f' **RAILWAY VOLUME NÃO CONFIGURADO!**'
+                    solucao.append('🔴 SOLUÇÃO CRÍTICA: Configure um Railway Volume para persistência dos arquivos.')
+                    solucao.append('1. Acesse seu projeto no Railway')
+                    solucao.append('2. Vá em "Volumes" → "New Volume"')
+                    solucao.append(f'3. Configure Mount Path: {railway_volume_path}')
+                    solucao.append('4. Conecte o volume ao serviço Django')
+                    solucao.append('5. Faça o deploy novamente')
+                    solucao.append('6. Re-envie os arquivos de mapas após o deploy')
+                    solucao.append('📖 Veja: docs/railway-volume-setup.md')
+                else:
+                    solucao.append('O Railway Volume está configurado, mas o arquivo foi perdido.')
+                    solucao.append('Possíveis causas:')
+                    solucao.append('- O arquivo foi enviado antes da configuração do volume')
+                    solucao.append('- O container foi reiniciado antes do deploy com volume')
+                    solucao.append('✅ Faça upload do arquivo novamente através da interface web.')
+            else:
+                solucao.append('Faça upload do arquivo novamente através da interface web.')
+            
             return JsonResponse({
                 'erro': 'Arquivo não encontrado no sistema de arquivos',
-                'detalhes': f'O arquivo existe no banco de dados, mas não foi encontrado fisicamente no servidor: {caminho}',
-                'solucao': 'No Railway, arquivos são efêmeros. Você precisa fazer upload do arquivo novamente através da interface web após o deploy.',
+                'detalhes': detalhes,
+                'solucao': '\n'.join(solucao),
                 'arquivo': arquivo_nome or f'map_id_{map_id}',
-                'caminho_esperado': caminho
+                'caminho_esperado': caminho,
+                'is_railway': is_railway,
+                'volume_configurado': has_volume if is_railway else None
             }, status=404)
         
         # Determinar extensão se não foi definida

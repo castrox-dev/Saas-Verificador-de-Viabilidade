@@ -141,14 +141,34 @@ if IS_RAILWAY and os.path.exists(RAILWAY_VOLUME_PATH):
     MEDIA_ROOT = Path(RAILWAY_VOLUME_PATH) / "media"
     # Criar diretório se não existir
     MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
-    print(f"✅ Usando Railway Volume para arquivos de mídia: {MEDIA_ROOT}")
+    print("=" * 80)
+    print("✅ RAILWAY VOLUME CONFIGURADO CORRETAMENTE")
+    print(f"✅ Arquivos de mídia sendo salvos em: {MEDIA_ROOT}")
+    print("✅ Os arquivos persistem após reinicializações do container")
+    print("=" * 80)
 else:
     # Usar diretório local (desenvolvimento ou sem volume configurado)
     MEDIA_ROOT = BASE_DIR / "media"
     if IS_RAILWAY:
-        print(f"⚠️ ATENÇÃO: Railway Volume não encontrado em {RAILWAY_VOLUME_PATH}")
-        print(f"⚠️ Arquivos de mídia serão salvos em {MEDIA_ROOT} (EFÊMERO)")
-        print(f"⚠️ Configure um Railway Volume em {RAILWAY_VOLUME_PATH} para persistência")
+        print("=" * 80)
+        print("🚨 ATENÇÃO CRÍTICA: RAILWAY VOLUME NÃO CONFIGURADO!")
+        print("=" * 80)
+        print(f"❌ Railway Volume não encontrado em: {RAILWAY_VOLUME_PATH}")
+        print(f"⚠️ Arquivos de mídia serão salvos em: {MEDIA_ROOT} (EFÊMERO)")
+        print("")
+        print("🔴 CONSEQUÊNCIA: Todos os arquivos de mapas serão PERDIDOS quando o")
+        print("   container reiniciar. Você precisará re-enviar os arquivos a cada restart!")
+        print("")
+        print("✅ SOLUÇÃO: Configure um Railway Volume:")
+        print("   1. Acesse seu projeto no Railway")
+        print("   2. Vá em 'Volumes' → 'New Volume'")
+        print(f"   3. Configure Mount Path: {RAILWAY_VOLUME_PATH}")
+        print("   4. Escolha um tamanho adequado (ex: 10GB)")
+        print("   5. Conecte o volume ao serviço Django")
+        print("   6. Faça o deploy novamente")
+        print("")
+        print("📖 Documentação completa: docs/railway-volume-setup.md")
+        print("=" * 80)
 
 LOGIN_REDIRECT_URL = "/dashboard/"  # Usa dashboard_redirect que redireciona corretamente conforme papel do usuário
 LOGOUT_REDIRECT_URL = "/rm/login/"

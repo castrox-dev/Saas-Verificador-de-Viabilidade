@@ -781,7 +781,7 @@ async function searchByCEP(query) {
     }];
 }
 
-function showNotification(message, type = 'info') {
+function showNotification(message, type = 'info', duration = null) {
     try {
         console.log(`[${type}] ${message}`);
         let container = document.getElementById('app-notifications');
@@ -795,7 +795,7 @@ function showNotification(message, type = 'info') {
             container.style.display = 'flex';
             container.style.flexDirection = 'column';
             container.style.gap = '8px';
-            container.style.maxWidth = '400px';
+            container.style.maxWidth = '500px';
             document.body.appendChild(container);
         }
         const el = document.createElement('div');
@@ -809,7 +809,7 @@ function showNotification(message, type = 'info') {
             
             el.innerHTML = `
                 <div style="font-weight: 600; margin-bottom: 6px; font-size: 14px;">${title}</div>
-                <div style="font-size: 13px; opacity: 0.95; line-height: 1.4; white-space: pre-wrap;">${body}</div>
+                <div style="font-size: 13px; opacity: 0.95; line-height: 1.5; white-space: pre-wrap; max-height: 400px; overflow-y: auto;">${body}</div>
             `;
         } else {
             el.textContent = message;
@@ -837,14 +837,37 @@ function showNotification(message, type = 'info') {
         
         container.appendChild(el);
         
-        // Duração baseada no tipo (warnings e errors ficam mais tempo)
-        const duration = type === 'warning' || type === 'error' ? 8000 : 3000;
+        // Duração baseada no tipo (warnings e errors ficam mais tempo) ou usar duração customizada
+        const autoCloseDuration = duration !== null ? duration : (type === 'warning' || type === 'error' ? 10000 : 3000);
+        
+        // Para mensagens críticas, adicionar botão de fechar manual
+        if (autoCloseDuration >= 15000) {
+            const closeBtn = document.createElement('button');
+            closeBtn.innerHTML = '×';
+            closeBtn.style.position = 'absolute';
+            closeBtn.style.top = '4px';
+            closeBtn.style.right = '4px';
+            closeBtn.style.background = 'transparent';
+            closeBtn.style.border = 'none';
+            closeBtn.style.color = '#fff';
+            closeBtn.style.fontSize = '20px';
+            closeBtn.style.cursor = 'pointer';
+            closeBtn.style.padding = '0 8px';
+            closeBtn.style.lineHeight = '1';
+            closeBtn.onclick = () => {
+                el.style.opacity = '0';
+                el.style.transition = 'opacity 300ms ease';
+                setTimeout(() => el.remove(), 300);
+            };
+            el.style.position = 'relative';
+            el.appendChild(closeBtn);
+        }
         
         setTimeout(() => {
             el.style.opacity = '0';
             el.style.transition = 'opacity 300ms ease';
             setTimeout(() => el.remove(), 300);
-        }, duration);
+        }, autoCloseDuration);
     } catch (e) {
         console.log('Notification:', message);
     }
@@ -1769,24 +1792,42 @@ function setupCTOButtonListeners() {
                     console.warn('⚠️ Mapa não encontrado:', filename || mapId);
                     console.info('💡 Este erro é esperado quando arquivos não foram enviados após o deploy no Railway.');
                     
-                    // Construir mensagem com solução se disponível
-                    let notificationMessage = `Mapa não encontrado: ${filename || mapId || 'arquivo'}`;
+                    // Verificar se há informações sobre Railway Volume não configurado
+                    const hasVolumeInfo = error.solucao && (
+                        error.solucao.includes('RAILWAY VOLUME NÃO CONFIGURADO') || 
+                        error.solucao.includes('SOLUÇÃO CRÍTICA') ||
+                        error.solucao.includes('Configure um Railway Volume')
+                    );
+                    
+                    let notificationTitle = hasVolumeInfo ? '🔴 RAILWAY VOLUME NÃO CONFIGURADO!' : '⚠️ Mapa não encontrado';
+                    let notificationMessage = hasVolumeInfo 
+                        ? `Arquivos serão PERDIDOS a cada reinicialização!`
+                        : `Mapa não encontrado: ${filename || mapId || 'arquivo'}`;
+                    
                     if (error.solucao) {
-                        notificationMessage += `\n\n💡 ${error.solucao}`;
+                        // Limitar tamanho da solução para não sobrecarregar a notificação
+                        let solucaoTexto = error.solucao;
+                        if (solucaoTexto.length > 500) {
+                            solucaoTexto = solucaoTexto.substring(0, 500) + '\n...\n📖 Veja: docs/railway-volume-setup.md';
+                        }
+                        notificationMessage += `\n\n${solucaoTexto}`;
                     } else if (errorMessage.includes('Railway') || errorMessage.includes('efêmero')) {
-                        notificationMessage += '\n\n💡 No Railway, arquivos são efêmeros. Faça upload do arquivo novamente através da interface web.';
+                        notificationMessage += '\n\n💡 No Railway, arquivos são efêmeros. Configure um Railway Volume para persistência.';
+                        notificationMessage += '\n📖 Veja: docs/railway-volume-setup.md';
                     } else {
                         notificationMessage += '\n\n💡 Faça upload do arquivo novamente através da interface web após o deploy.';
                     }
                     
-                    showNotification(notificationMessage, 'warning');
+                    showNotification(notificationMessage, hasVolumeInfo ? 'error' : 'warning', hasVolumeInfo ? 15000 : 10000);
                 } else {
                     // Outros erros - logar e mostrar mensagem de erro
                     console.error('Erro ao carregar mapa selecionado:', error);
                     
                     // Mostrar mensagem de erro mais detalhada se disponível
                     let notificationMessage = `Erro ao carregar mapa: ${filename}`;
-                    if (errorMessage.length < 200) {
+                    if (error.solucao) {
+                        notificationMessage += `\n\n${error.solucao}`;
+                    } else if (errorMessage.length < 200) {
                         notificationMessage += `\n\n${errorMessage}`;
                     } else {
                         notificationMessage += `\n\n${errorMessage.substring(0, 200)}...`;
@@ -1861,12 +1902,19 @@ async function loadKML(filename, mapId = null, options = {}) {
             let errorDetails = null;
             let errorSolucao = null;
             
+            let errorData = null;
             if (isJson) {
                 try {
-                    const errorData = await resp.json();
+                    errorData = await resp.json();
                     errorMessage = errorData.erro || errorData.message || errorMessage;
                     errorDetails = errorData.detalhes || null;
                     errorSolucao = errorData.solucao || null;
+                    
+                    // Verificar se Railway Volume não está configurado
+                    if (errorData.volume_configurado === false && errorData.is_railway) {
+                        console.error('🔴 RAILWAY VOLUME NÃO CONFIGURADO!');
+                        console.error('🔴 Arquivos serão PERDIDOS a cada reinicialização!');
+                    }
                     
                     // Se for "Arquivo não encontrado", criar mensagem mais informativa
                     if (errorMessage.includes('não encontrado') || errorMessage.includes('not found')) {
@@ -1901,6 +1949,11 @@ async function loadKML(filename, mapId = null, options = {}) {
             error.status = resp.status;
             error.details = errorDetails;
             error.solucao = errorSolucao;
+            // Preservar informações do Railway Volume se disponíveis
+            if (errorData) {
+                error.volume_configurado = errorData.volume_configurado;
+                error.is_railway = errorData.is_railway;
+            }
             throw error;
         }
         
@@ -1947,33 +2000,49 @@ async function loadKML(filename, mapId = null, options = {}) {
         throw err;
     }
 
-    if (data && data.erro) {
+        if (data && data.erro) {
         // Construir mensagem de erro mais informativa
         let errorMessage = data.erro;
-        if (data.solucao) {
-            errorMessage += `\n\n💡 Solução: ${data.solucao}`;
-        }
-        if (data.detalhes) {
-            errorMessage += `\n\nℹ️ Detalhes: ${data.detalhes}`;
-        }
         
         // Tratar erros 404 como warnings (arquivos não encontrados são esperados no Railway)
         const isNotFound = data.erro.includes('não encontrado') || 
                           data.erro.includes('not found') || 
                           data.erro.includes('404');
         
+        // Verificar se Railway Volume não está configurado
+        const volumeNotConfigured = data.solucao && (
+            data.solucao.includes('RAILWAY VOLUME NÃO CONFIGURADO') || 
+            data.solucao.includes('SOLUÇÃO CRÍTICA') ||
+            data.volume_configurado === false
+        );
+        
         if (isNotFound) {
-            // Arquivo não encontrado - logar como warning (não erro crítico)
-            console.warn('⚠️ Arquivo não encontrado:', filename || mapId, '-', data.erro);
-            console.info('💡 Este erro é esperado quando arquivos não foram enviados após o deploy no Railway (filesystem efêmero).');
+            if (volumeNotConfigured) {
+                // Railway Volume não configurado - mensagem crítica
+                console.error('🔴 RAILWAY VOLUME NÃO CONFIGURADO!');
+                console.error('🔴 Arquivos serão PERDIDOS a cada reinicialização!');
+                console.error('🔴 Configure um Railway Volume para persistência.');
+                console.info('📖 Documentação: docs/railway-volume-setup.md');
+            } else {
+                // Arquivo não encontrado - logar como warning
+                console.warn('⚠️ Arquivo não encontrado:', filename || mapId, '-', data.erro);
+                if (data.volume_configurado === true) {
+                    console.info('💡 Railway Volume configurado. O arquivo precisa ser re-enviado.');
+                } else {
+                    console.info('💡 Este erro é esperado quando arquivos não foram enviados após o deploy no Railway (filesystem efêmero).');
+                }
+            }
         } else {
             // Outros erros - logar como erro crítico
             console.error('❌ Erro da API:', data.erro);
         }
         
+        // Criar erro com todas as informações
         const error = new Error(errorMessage);
+        error.status = 404; // Definir status para erro 404
         error.details = data.detalhes;
         error.solucao = data.solucao;
+        error.volume_configurado = data.volume_configurado;
         throw error;
     }
     if (!Array.isArray(data) || data.length === 0) {
