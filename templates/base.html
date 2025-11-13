@@ -120,20 +120,13 @@
     </style>
     {% block extra_head %}{% endblock %}
     <style>
-      /* Esconder TODOS os elementos do layout em páginas de erro */
-      body.error-page header,
-      body.error-page .topbar,
+      /* Esconder apenas sidebar e footer em páginas de erro, mantendo navbar */
       body.error-page .sidebar,
       body.error-page .sidebar-overlay,
       body.error-page .settings-button,
       body.error-page .skip-link,
-      body.error-page .footer,
-      body.error-page nav[role="navigation"],
-      body.error-page .navbar-toggler,
-      body.error-page .app-title,
-      body.error-page .main-container > .messages {
+      body.error-page .footer {
         display: none !important;
-        visibility: hidden !important;
       }
       /* Ajustar main-container para páginas de erro */
       body.error-page .main-container {
@@ -146,17 +139,13 @@
       /* Garantir que o conteúdo de erro apareça e ocupe a tela toda */
       body.error-page .error-container {
         position: fixed !important;
-        top: 0 !important;
+        top: 76px !important;
         left: 0 !important;
         right: 0 !important;
         bottom: 0 !important;
         z-index: 99999 !important;
         background: transparent !important;
-      }
-      /* Esconder qualquer elemento fixo que possa aparecer */
-      body.error-page [class*="fixed"],
-      body.error-page [class*="absolute"]:not(.error-container):not(.error-content) {
-        display: none !important;
+        height: calc(100vh - 76px) !important;
       }
     </style>
   </head>
