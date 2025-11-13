@@ -70,13 +70,28 @@ def rm_login_view(request):
             except CustomUser.DoesNotExist:
                 username = input_id
         user = authenticate(request, username=username, password=password)
-        if user is not None and (user.is_rm_admin or user.is_superuser):
-            login(request, user)
-            # Redirecionar para o dashboard administrativo RM
-            return redirect('rm:admin_dashboard')
-        elif user is not None:
-            # Usuário autenticado mas não é admin RM - pode tentar login da empresa
-            messages.error(request, 'Credenciais inválidas ou você não tem permissão para acessar esta área.')
+        if user is not None:
+            # Verificar se o usuário está ativo
+            if not user.is_active:
+                messages.error(request, 'Sua conta está desativada. Contate o administrador.')
+            # Verificar se é admin RM ou superuser
+            elif user.is_rm_admin or user.is_superuser:
+                login(request, user)
+                # Log para debug (remover em produção se necessário)
+                logger.info(f"Login bem-sucedido: {user.username} (role: {user.role}, is_superuser: {user.is_superuser}, is_rm_admin: {user.is_rm_admin})")
+                # Redirecionar para o dashboard administrativo RM
+                next_url = request.GET.get('next') or request.POST.get('next')
+                if next_url:
+                    try:
+                        return redirect(next_url)
+                    except:
+                        return redirect('rm:admin_dashboard')
+                else:
+                    return redirect('rm:admin_dashboard')
+            else:
+                # Usuário autenticado mas não é admin RM - pode tentar login da empresa
+                logger.warning(f"Tentativa de login RM sem permissão: {user.username} (role: {user.role})")
+                messages.error(request, 'Você não tem permissão para acessar esta área. Tente fazer login através da página da sua empresa.')
         else:
             messages.error(request, 'Credenciais inválidas.')
     return render(request, 'login.html')
