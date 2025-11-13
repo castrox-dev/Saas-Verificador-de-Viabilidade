@@ -43,12 +43,13 @@ CSRF_TRUSTED_ORIGINS=https://verificador.up.railway.app
 DATABASE_URL=postgresql://...
 ```
 
-### 2. Comando de Start
+### 2. Configuração Automática
 
-O projeto agora usa um script `start.sh` que garante que as migrações sejam executadas. O Railway deve usar automaticamente o `Procfile` ou você pode configurar manualmente:
+O Railway detecta automaticamente projetos Python através do arquivo `requirements.txt` e usa o `Procfile` para iniciar a aplicação.
 
-```bash
-bash start.sh
+O `Procfile` contém:
+```
+web: bash start.sh
 ```
 
 O script `start.sh`:
@@ -57,7 +58,7 @@ O script `start.sh`:
 - Coleta arquivos estáticos
 - Inicia o servidor Gunicorn
 
-**Importante:** Certifique-se de que o arquivo `start.sh` tem permissão de execução no Railway.
+**Importante:** O Railway executa automaticamente o `Procfile`. Não é necessário configurar comandos manualmente.
 
 ### 3. Build Command (opcional)
 
