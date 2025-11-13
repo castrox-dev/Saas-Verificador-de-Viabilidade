@@ -1,0 +1,235 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}FAQ - Perguntas Frequentes - RM Systems{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 900px; margin: 2rem auto; padding: 2rem;">
+  <div class="card" style="background: var(--rm-card-bg); border: 1px solid var(--rm-card-border); border-radius: 0.5rem; padding: 2rem; box-shadow: var(--rm-shadow-md);">
+    <h1 style="color: var(--rm-primary); margin-bottom: 1.5rem; font-size: 2rem;">
+      <i class="fas fa-question-circle me-2"></i>Perguntas Frequentes (FAQ)
+    </h1>
+    
+    <div style="line-height: 1.8; color: var(--rm-text-primary);">
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">
+          <i class="fas fa-user me-2"></i>Conta e Acesso
+        </h2>
+        
+        <div style="margin-bottom: 1.5rem;">
+          <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-bottom: 0.5rem; font-weight: 600;">
+            Como criar uma conta?
+          </h3>
+          <p style="margin-left: 1rem;">Para criar uma conta, entre em contato com o administrador do sistema RM Systems. O administrador criará sua conta e fornecerá suas credenciais de acesso.</p>
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+          <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-bottom: 0.5rem; font-weight: 600;">
+            Esqueci minha senha. Como recuperar?
+          </h3>
+          <p style="margin-left: 1rem;">A funcionalidade de recuperação de senha está em desenvolvimento. Por favor, entre em contato com o administrador do sistema ou com o suporte para redefinir sua senha.</p>
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+          <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-bottom: 0.5rem; font-weight: 600;">
+            Posso usar meu e-mail ou nome de usuário para fazer login?
+          </h3>
+          <p style="margin-left: 1rem;">Sim, você pode fazer login usando tanto seu e-mail quanto seu nome de usuário.</p>
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+          <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-bottom: 0.5rem; font-weight: 600;">
+            Como alterar minha senha?
+          </h3>
+          <p style="margin-left: 1rem;">Para alterar sua senha, acesse suas configurações de perfil (quando disponível) ou entre em contato com o administrador do sistema.</p>
+        </div>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">
+          <i class="fas fa-upload me-2"></i>Upload de Mapas
+        </h2>
+        
+        <div style="margin-bottom: 1.5rem;">
+          <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-bottom: 0.5rem; font-weight: 600;">
+            Quais formatos de arquivo são suportados?
+          </h3>
+          <p style="margin-left: 1rem;">O sistema suporta os seguintes formatos:</p>
+          <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+            <li>Excel: .xlsx, .xls</li>
+            <li>CSV: .csv</li>
+            <li>Google Earth: .kml, .kmz</li>
+          </ul>
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+          <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-bottom: 0.5rem; font-weight: 600;">
+            Qual é o tamanho máximo de arquivo permitido?
+          </h3>
+          <p style="margin-left: 1rem;">O tamanho máximo permitido é de 5MB por arquivo. Se você precisar enviar arquivos maiores, entre em contato com o suporte.</p>
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+          <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-bottom: 0.5rem; font-weight: 600;">
+            Meu arquivo não foi processado. O que fazer?
+          </h3>
+          <p style="margin-left: 1rem;">Verifique se o arquivo está em um dos formatos suportados e se o tamanho não excede 5MB. Certifique-se de que o arquivo não está corrompido. Se o problema persistir, entre em contato com o suporte.</p>
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+          <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-bottom: 0.5rem; font-weight: 600;">
+            Posso fazer upload de múltiplos arquivos ao mesmo tempo?
+          </h3>
+          <p style="margin-left: 1rem;">Atualmente, você pode fazer upload de um arquivo por vez. Faça upload de cada arquivo individualmente.</p>
+        </div>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">
+          <i class="fas fa-map me-2"></i>Verificador de Viabilidade
+        </h2>
+        
+        <div style="margin-bottom: 1.5rem;">
+          <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-bottom: 0.5rem; font-weight: 600;">
+            Como funciona o verificador de viabilidade?
+          </h3>
+          <p style="margin-left: 1rem;">O verificador analisa a viabilidade de localizações baseando-se na distância até a CTO (Central de Terminação Óptica) mais próxima:</p>
+          <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+            <li><strong>Viável:</strong> Até 300m da CTO</li>
+            <li><strong>Viabilidade Limitada:</strong> Entre 300m e 800m da CTO</li>
+            <li><strong>Sem Viabilidade:</strong> Acima de 800m da CTO</li>
+          </ul>
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+          <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-bottom: 0.5rem; font-weight: 600;">
+            Posso verificar múltiplas localizações ao mesmo tempo?
+          </h3>
+          <p style="margin-left: 1rem;">Sim, você pode selecionar múltiplos mapas no menu lateral e visualizar todas as localizações no mapa simultaneamente.</p>
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+          <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-bottom: 0.5rem; font-weight: 600;">
+            Como interpretar os resultados da verificação?
+          </h3>
+          <p style="margin-left: 1rem;">Os resultados são exibidos no mapa com cores diferentes:</p>
+          <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+            <li><strong>Verde:</strong> Viável (até 300m)</li>
+            <li><strong>Amarelo:</strong> Viabilidade Limitada (300m-800m)</li>
+            <li><strong>Vermelho:</strong> Sem Viabilidade (acima de 800m)</li>
+          </ul>
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+          <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-bottom: 0.5rem; font-weight: 600;">
+            Os resultados são salvos?
+          </h3>
+          <p style="margin-left: 1rem;">Sim, os resultados das verificações são salvos e podem ser visualizados no histórico de análises.</p>
+        </div>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">
+          <i class="fas fa-users me-2"></i>Gestão de Usuários
+        </h2>
+        
+        <div style="margin-bottom: 1.5rem;">
+          <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-bottom: 0.5rem; font-weight: 600;">
+            Quem pode criar usuários?
+          </h3>
+          <p style="margin-left: 1rem;">Administradores da empresa (Company Admin) e administradores RM (RM Admin) podem criar usuários. Administradores da empresa podem criar apenas usuários para sua própria empresa.</p>
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+          <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-bottom: 0.5rem; font-weight: 600;">
+            Quais são os tipos de usuários?
+          </h3>
+          <p style="margin-left: 1rem;">Existem três tipos de usuários:</p>
+          <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+            <li><strong>RM Admin:</strong> Administrador do sistema com acesso total</li>
+            <li><strong>Company Admin:</strong> Administrador da empresa com acesso à gestão da empresa</li>
+            <li><strong>Company User:</strong> Usuário comum com acesso ao verificador</li>
+          </ul>
+        </div>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">
+          <i class="fas fa-chart-bar me-2"></i>Relatórios e Estatísticas
+        </h2>
+        
+        <div style="margin-bottom: 1.5rem;">
+          <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-bottom: 0.5rem; font-weight: 600;">
+            Como gerar relatórios?
+          </h3>
+          <p style="margin-left: 1rem;">Acesse a seção de Relatórios no menu lateral (disponível para administradores). Lá você pode visualizar estatísticas e exportar dados em formato CSV ou JSON.</p>
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+          <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-bottom: 0.5rem; font-weight: 600;">
+            Quais informações estão disponíveis nos relatórios?
+          </h3>
+          <p style="margin-left: 1rem;">Os relatórios incluem estatísticas sobre mapas, verificações de viabilidade, usuários e uso do sistema.</p>
+        </div>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">
+          <i class="fas fa-shield-alt me-2"></i>Segurança e Privacidade
+        </h2>
+        
+        <div style="margin-bottom: 1.5rem;">
+          <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-bottom: 0.5rem; font-weight: 600;">
+            Meus dados estão seguros?
+          </h3>
+          <p style="margin-left: 1rem;">Sim, implementamos medidas de segurança rigorosas, incluindo criptografia de dados, isolamento completo entre empresas (multi-tenant) e controles de acesso baseados em função.</p>
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+          <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-bottom: 0.5rem; font-weight: 600;">
+            Outras empresas podem ver meus dados?
+          </h3>
+          <p style="margin-left: 1rem;">Não, os dados são completamente isolados entre empresas. Cada empresa só tem acesso aos seus próprios dados.</p>
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+          <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-bottom: 0.5rem; font-weight: 600;">
+            O sistema está em conformidade com a LGPD?
+          </h3>
+          <p style="margin-left: 1rem;">Sim, o sistema está em conformidade com a Lei Geral de Proteção de Dados (LGPD). Para mais informações, consulte nossa <a href="{% url 'lgpd' %}" style="color: var(--rm-primary);">página de Compliance LGPD</a>.</p>
+        </div>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">
+          <i class="fas fa-life-ring me-2"></i>Suporte e Contato
+        </h2>
+        
+        <div style="margin-bottom: 1.5rem;">
+          <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-bottom: 0.5rem; font-weight: 600;">
+            Como entrar em contato com o suporte?
+          </h3>
+          <p style="margin-left: 1rem;">Para obter suporte, acesse a <a href="{% url 'ajuda' %}" style="color: var(--rm-primary);">página de Ajuda</a> ou entre em contato com o administrador do sistema.</p>
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+          <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-bottom: 0.5rem; font-weight: 600;">
+            Onde encontro mais informações sobre o sistema?
+          </h3>
+          <p style="margin-left: 1rem;">Consulte o <a href="{% url 'manual_usuario' %}" style="color: var(--rm-primary);">Manual do Usuário</a> para informações detalhadas sobre como usar o sistema.</p>
+        </div>
+      </section>
+    </div>
+
+    <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--rm-card-border);">
+      <a href="{% url 'home_redirect' %}" class="btn" style="background: var(--rm-primary); color: white; padding: 0.75rem 1.5rem; border-radius: 0.375rem; text-decoration: none; display: inline-block;">
+        <i class="fas fa-arrow-left me-2"></i>Voltar
+      </a>
+      <a href="{% url 'ajuda' %}" class="btn" style="background: var(--rm-success); color: white; padding: 0.75rem 1.5rem; border-radius: 0.375rem; text-decoration: none; display: inline-block; margin-left: 1rem;">
+        <i class="fas fa-life-ring me-2"></i>Precisa de Ajuda?
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

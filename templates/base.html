@@ -242,7 +242,20 @@
       {% block content %}{% endblock %}
     </main>
     <footer class="footer" role="contentinfo">
-      <p>&copy; {% now "Y" %} Viabilidade - RM Systems. Todos os direitos reservados.</p>
+      <div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 1.5rem; padding: 1rem 0;">
+        <p style="margin: 0;">&copy; {% now "Y" %} Viabilidade - RM Systems. Todos os direitos reservados.</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;">
+          <a href="{% url 'termos_uso' %}" style="color: var(--rm-footer-text); text-decoration: none; font-size: 0.875rem;">Termos de Uso</a>
+          <span style="color: var(--rm-footer-text);">|</span>
+          <a href="{% url 'politica_privacidade' %}" style="color: var(--rm-footer-text); text-decoration: none; font-size: 0.875rem;">Política de Privacidade</a>
+          <span style="color: var(--rm-footer-text);">|</span>
+          <a href="{% url 'politica_cookies' %}" style="color: var(--rm-footer-text); text-decoration: none; font-size: 0.875rem;">Política de Cookies</a>
+          <span style="color: var(--rm-footer-text);">|</span>
+          <a href="{% url 'faq' %}" style="color: var(--rm-footer-text); text-decoration: none; font-size: 0.875rem;">FAQ</a>
+          <span style="color: var(--rm-footer-text);">|</span>
+          <a href="{% url 'ajuda' %}" style="color: var(--rm-footer-text); text-decoration: none; font-size: 0.875rem;">Ajuda</a>
+        </div>
+      </div>
     </footer>
     
     <!-- Sistema de Toast -->

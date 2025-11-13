@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Termos de Uso - RM Systems{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 900px; margin: 2rem auto; padding: 2rem;">
+  <div class="card" style="background: var(--rm-card-bg); border: 1px solid var(--rm-card-border); border-radius: 0.5rem; padding: 2rem; box-shadow: var(--rm-shadow-md);">
+    <h1 style="color: var(--rm-primary); margin-bottom: 1.5rem; font-size: 2rem;">
+      <i class="fas fa-file-contract me-2"></i>Termos de Uso
+    </h1>
+    
+    <p style="color: var(--rm-text-secondary); margin-bottom: 1rem;"><strong>Última atualização:</strong> {% now "d/m/Y" %}</p>
+    
+    <div style="line-height: 1.8; color: var(--rm-text-primary);">
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">1. Aceitação dos Termos</h2>
+        <p>Ao acessar e utilizar o sistema de verificação de viabilidade RM Systems ("Sistema"), você concorda em cumprir e estar vinculado aos seguintes Termos de Uso. Se você não concorda com algum destes termos, não deve utilizar o Sistema.</p>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">2. Descrição do Serviço</h2>
+        <p>O RM Systems oferece uma plataforma SaaS para verificação de viabilidade de mapas CTO (Central de Terminação Óptica), permitindo:</p>
+        <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+          <li>Upload e gerenciamento de mapas CTO em diversos formatos (.xlsx, .xls, .csv, .kml, .kmz)</li>
+          <li>Análise e verificação de viabilidade de localizações</li>
+          <li>Geração de relatórios e estatísticas</li>
+          <li>Gestão de usuários e empresas (multi-tenant)</li>
+        </ul>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">3. Contas de Usuário</h2>
+        <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-top: 1rem; margin-bottom: 0.5rem;">3.1. Registro</h3>
+        <p>Para utilizar o Sistema, é necessário criar uma conta fornecendo informações precisas e atualizadas. Você é responsável por manter a confidencialidade de suas credenciais de acesso.</p>
+        
+        <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-top: 1rem; margin-bottom: 0.5rem;">3.2. Responsabilidades</h3>
+        <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+          <li>Manter a segurança de sua conta e senha</li>
+          <li>Notificar imediatamente sobre qualquer uso não autorizado</li>
+          <li>Ser responsável por todas as atividades que ocorram em sua conta</li>
+        </ul>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">4. Uso Aceitável</h2>
+        <p>Você concorda em utilizar o Sistema apenas para fins legais e de acordo com estes Termos. É proibido:</p>
+        <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+          <li>Violar qualquer lei ou regulamento aplicável</li>
+          <li>Transmitir conteúdo malicioso, vírus ou código malicioso</li>
+          <li>Tentar obter acesso não autorizado ao Sistema ou a contas de outros usuários</li>
+          <li>Interferir ou interromper o funcionamento do Sistema</li>
+          <li>Usar o Sistema para fins fraudulentos ou enganosos</li>
+          <li>Reproduzir, duplicar, copiar ou revender o Sistema sem autorização</li>
+        </ul>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">5. Propriedade Intelectual</h2>
+        <p>Todo o conteúdo do Sistema, incluindo mas não limitado a textos, gráficos, logos, ícones, imagens, software e compilações, é de propriedade da RM Systems ou de seus fornecedores de conteúdo e está protegido por leis de direitos autorais e outras leis de propriedade intelectual.</p>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">6. Dados e Conteúdo do Usuário</h2>
+        <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-top: 1rem; margin-bottom: 0.5rem;">6.1. Propriedade dos Dados</h3>
+        <p>Você mantém todos os direitos sobre os dados e mapas que você faz upload no Sistema. Ao fazer upload, você nos concede uma licença limitada para armazenar, processar e exibir esses dados conforme necessário para fornecer o serviço.</p>
+        
+        <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-top: 1rem; margin-bottom: 0.5rem;">6.2. Isolamento Multi-tenant</h3>
+        <p>Garantimos o isolamento completo dos dados entre empresas. Seus dados não serão acessíveis por outras empresas, exceto conforme necessário para fornecer o serviço e conforme autorizado por você.</p>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">7. Disponibilidade do Serviço</h2>
+        <p>Embora nos esforcemos para manter o Sistema disponível e funcionando corretamente, não garantimos disponibilidade ininterrupta ou livre de erros. O Sistema pode estar temporariamente indisponível devido a manutenção, atualizações ou circunstâncias além do nosso controle.</p>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">8. Limitação de Responsabilidade</h2>
+        <p>O Sistema é fornecido "como está" e "conforme disponível". Não garantimos que o Sistema atenderá aos seus requisitos específicos ou estará livre de erros. Em nenhuma circunstância a RM Systems será responsável por danos diretos, indiretos, incidentais, especiais ou consequenciais resultantes do uso ou impossibilidade de uso do Sistema.</p>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">9. Modificações dos Termos</h2>
+        <p>Reservamos o direito de modificar estes Termos de Uso a qualquer momento. Alterações significativas serão comunicadas aos usuários. O uso continuado do Sistema após tais modificações constitui sua aceitação dos termos revisados.</p>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">10. Rescisão</h2>
+        <p>Podemos suspender ou encerrar sua conta e acesso ao Sistema a qualquer momento, por qualquer motivo, incluindo violação destes Termos, sem aviso prévio. Você também pode encerrar sua conta a qualquer momento através das configurações da conta.</p>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">11. Lei Aplicável</h2>
+        <p>Estes Termos de Uso são regidos pelas leis brasileiras. Qualquer disputa relacionada a estes termos será resolvida nos tribunais competentes do Brasil.</p>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">12. Contato</h2>
+        <p>Para questões sobre estes Termos de Uso, entre em contato conosco através do sistema de suporte ou por e-mail.</p>
+      </section>
+    </div>
+
+    <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--rm-card-border);">
+      <a href="{% url 'home_redirect' %}" class="btn" style="background: var(--rm-primary); color: white; padding: 0.75rem 1.5rem; border-radius: 0.375rem; text-decoration: none; display: inline-block;">
+        <i class="fas fa-arrow-left me-2"></i>Voltar
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Política de Cookies - RM Systems{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 900px; margin: 2rem auto; padding: 2rem;">
+  <div class="card" style="background: var(--rm-card-bg); border: 1px solid var(--rm-card-border); border-radius: 0.5rem; padding: 2rem; box-shadow: var(--rm-shadow-md);">
+    <h1 style="color: var(--rm-primary); margin-bottom: 1.5rem; font-size: 2rem;">
+      <i class="fas fa-cookie-bite me-2"></i>Política de Cookies
+    </h1>
+    
+    <p style="color: var(--rm-text-secondary); margin-bottom: 1rem;"><strong>Última atualização:</strong> {% now "d/m/Y" %}</p>
+    
+    <div style="line-height: 1.8; color: var(--rm-text-primary);">
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">1. O que são Cookies?</h2>
+        <p>Cookies são pequenos arquivos de texto que são armazenados no seu dispositivo (computador, tablet ou celular) quando você visita um site. Eles são amplamente utilizados para fazer os sites funcionarem de forma mais eficiente, bem como fornecer informações aos proprietários do site.</p>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">2. Como Utilizamos Cookies</h2>
+        <p>Utilizamos cookies e tecnologias similares para:</p>
+        <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+          <li>Manter você conectado ao Sistema</li>
+          <li>Lembrar suas preferências e configurações</li>
+          <li>Melhorar a segurança do Sistema</li>
+          <li>Analisar como o Sistema é utilizado</li>
+          <li>Personalizar sua experiência</li>
+        </ul>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">3. Tipos de Cookies que Utilizamos</h2>
+        
+        <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-top: 1rem; margin-bottom: 0.5rem;">3.1. Cookies Essenciais</h3>
+        <p>Estes cookies são necessários para o funcionamento do Sistema. Eles permitem funções básicas como navegação e acesso a áreas seguras do site. O Sistema não pode funcionar adequadamente sem estes cookies.</p>
+        <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+          <li><strong>Cookies de Sessão:</strong> Mantêm sua sessão ativa enquanto você utiliza o Sistema</li>
+          <li><strong>Cookies de Segurança (CSRF):</strong> Protegem contra ataques de falsificação de solicitação entre sites</li>
+          <li><strong>Cookies de Autenticação:</strong> Mantêm você autenticado no Sistema</li>
+        </ul>
+
+        <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-top: 1rem; margin-bottom: 0.5rem;">3.2. Cookies de Preferências</h3>
+        <p>Estes cookies permitem que o Sistema se lembre de informações que alteram a forma como o site se comporta ou parece, como sua preferência de idioma ou a região em que você está.</p>
+        <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+          <li><strong>Preferências de Tema:</strong> Lembram sua escolha de tema claro/escuro</li>
+          <li><strong>Preferências de Interface:</strong> Lembram configurações de visualização</li>
+        </ul>
+
+        <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-top: 1rem; margin-bottom: 0.5rem;">3.3. Cookies Analíticos</h3>
+        <p>Estes cookies nos ajudam a entender como os visitantes interagem com o Sistema, fornecendo informações sobre as áreas visitadas, o tempo gasto no site e quaisquer problemas encontrados. Isso nos ajuda a melhorar o desempenho do Sistema.</p>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">4. Cookies de Terceiros</h2>
+        <p>Alguns cookies podem ser definidos por serviços de terceiros que aparecem em nossas páginas, como:</p>
+        <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+          <li><strong>Google Translate:</strong> Para funcionalidades de tradução (quando disponível)</li>
+          <li><strong>Font Awesome:</strong> Para exibir ícones</li>
+        </ul>
+        <p>Estes cookies podem rastrear seu uso do Sistema. Recomendamos que você verifique as políticas de privacidade desses serviços para entender como eles utilizam cookies.</p>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">5. Duração dos Cookies</h2>
+        <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+          <li><strong>Cookies de Sessão:</strong> Expiram quando você fecha o navegador</li>
+          <li><strong>Cookies Persistentes:</strong> Permanecem no seu dispositivo por um período determinado ou até serem excluídos manualmente</li>
+        </ul>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">6. Como Gerenciar Cookies</h2>
+        <p>Você pode controlar e/ou excluir cookies conforme desejar. Você pode excluir todos os cookies que já estão no seu computador e pode configurar a maioria dos navegadores para impedir que sejam colocados. No entanto, se você fizer isso, pode ter que ajustar manualmente algumas preferências toda vez que visitar um site e alguns serviços e funcionalidades podem não funcionar.</p>
+        
+        <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-top: 1rem; margin-bottom: 0.5rem;">Instruções por Navegador:</h3>
+        <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+          <li><strong>Google Chrome:</strong> Configurações > Privacidade e segurança > Cookies e outros dados do site</li>
+          <li><strong>Mozilla Firefox:</strong> Opções > Privacidade e Segurança > Cookies e Dados do Site</li>
+          <li><strong>Safari:</strong> Preferências > Privacidade > Cookies e dados de sites</li>
+          <li><strong>Microsoft Edge:</strong> Configurações > Privacidade, pesquisa e serviços > Cookies</li>
+        </ul>
+
+        <p><strong>Importante:</strong> Desabilitar cookies essenciais pode afetar o funcionamento do Sistema e impedir que você acesse determinadas áreas.</p>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">7. Atualizações desta Política</h2>
+        <p>Podemos atualizar esta Política de Cookies periodicamente para refletir mudanças em nossas práticas ou por outras razões operacionais, legais ou regulatórias. Recomendamos que você revise esta página regularmente para estar informado sobre como utilizamos cookies.</p>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">8. Contato</h2>
+        <p>Se você tiver dúvidas sobre nossa Política de Cookies, entre em contato conosco através do sistema de suporte ou por e-mail.</p>
+      </section>
+    </div>
+
+    <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--rm-card-border);">
+      <a href="{% url 'home_redirect' %}" class="btn" style="background: var(--rm-primary); color: white; padding: 0.75rem 1.5rem; border-radius: 0.375rem; text-decoration: none; display: inline-block;">
+        <i class="fas fa-arrow-left me-2"></i>Voltar
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

@@ -34,6 +34,43 @@ from ftth_viewer.models import ViabilidadeCache
 logger = logging.getLogger(__name__)
 
 
+# ===== PÁGINAS LEGAIS E DOCUMENTAÇÃO =====
+
+def termos_uso_view(request):
+    """Página de Termos de Uso"""
+    return render(request, 'legal/termos_uso.html')
+
+
+def politica_privacidade_view(request):
+    """Página de Política de Privacidade"""
+    return render(request, 'legal/politica_privacidade.html')
+
+
+def politica_cookies_view(request):
+    """Página de Política de Cookies"""
+    return render(request, 'legal/politica_cookies.html')
+
+
+def lgpd_view(request):
+    """Página de Compliance LGPD"""
+    return render(request, 'legal/lgpd.html')
+
+
+def faq_view(request):
+    """Página de Perguntas Frequentes (FAQ)"""
+    return render(request, 'docs/faq.html')
+
+
+def ajuda_view(request):
+    """Página de Ajuda/Suporte"""
+    return render(request, 'docs/ajuda.html')
+
+
+def manual_usuario_view(request):
+    """Página do Manual do Usuário"""
+    return render(request, 'docs/manual_usuario.html')
+
+
 @ensure_csrf_cookie
 def login_view(request):
     return render(request, 'login.html')

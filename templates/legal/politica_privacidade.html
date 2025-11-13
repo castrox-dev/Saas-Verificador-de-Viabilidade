@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Política de Privacidade - RM Systems{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 900px; margin: 2rem auto; padding: 2rem;">
+  <div class="card" style="background: var(--rm-card-bg); border: 1px solid var(--rm-card-border); border-radius: 0.5rem; padding: 2rem; box-shadow: var(--rm-shadow-md);">
+    <h1 style="color: var(--rm-primary); margin-bottom: 1.5rem; font-size: 2rem;">
+      <i class="fas fa-shield-alt me-2"></i>Política de Privacidade
+    </h1>
+    
+    <p style="color: var(--rm-text-secondary); margin-bottom: 1rem;"><strong>Última atualização:</strong> {% now "d/m/Y" %}</p>
+    
+    <div style="line-height: 1.8; color: var(--rm-text-primary);">
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">1. Introdução</h2>
+        <p>A RM Systems ("nós", "nosso" ou "Empresa") está comprometida em proteger a privacidade de seus usuários. Esta Política de Privacidade descreve como coletamos, usamos, compartilhamos e protegemos suas informações pessoais quando você utiliza nosso sistema de verificação de viabilidade ("Sistema").</p>
+        <p>Ao utilizar o Sistema, você concorda com as práticas descritas nesta política.</p>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">2. Informações que Coletamos</h2>
+        
+        <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-top: 1rem; margin-bottom: 0.5rem;">2.1. Informações Fornecidas por Você</h3>
+        <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+          <li><strong>Dados da Conta:</strong> Nome, e-mail, nome de usuário, senha (criptografada)</li>
+          <li><strong>Informações da Empresa:</strong> Nome da empresa, CNPJ, endereço, telefone</li>
+          <li><strong>Dados de Upload:</strong> Mapas CTO e arquivos que você faz upload no Sistema</li>
+          <li><strong>Comunicações:</strong> Mensagens que você nos envia através do suporte</li>
+        </ul>
+
+        <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-top: 1rem; margin-bottom: 0.5rem;">2.2. Informações Coletadas Automaticamente</h3>
+        <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+          <li><strong>Dados de Uso:</strong> Como você utiliza o Sistema, páginas visitadas, ações realizadas</li>
+          <li><strong>Dados Técnicos:</strong> Endereço IP, tipo de navegador, sistema operacional, dados de dispositivo</li>
+          <li><strong>Cookies e Tecnologias Similares:</strong> Informações coletadas através de cookies (veja nossa <a href="{% url 'politica_cookies' %}" style="color: var(--rm-primary);">Política de Cookies</a>)</li>
+        </ul>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">3. Como Usamos suas Informações</h2>
+        <p>Utilizamos suas informações pessoais para:</p>
+        <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+          <li>Fornecer, manter e melhorar o Sistema</li>
+          <li>Processar seus uploads e análises de mapas</li>
+          <li>Autenticar sua identidade e gerenciar sua conta</li>
+          <li>Enviar notificações importantes sobre o serviço</li>
+          <li>Responder às suas solicitações e fornecer suporte</li>
+          <li>Detectar e prevenir fraudes, abusos e atividades ilegais</li>
+          <li>Cumprir obrigações legais e regulatórias</li>
+          <li>Realizar análises e pesquisas para melhorar nossos serviços</li>
+        </ul>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">4. Compartilhamento de Informações</h2>
+        <p>Não vendemos suas informações pessoais. Podemos compartilhar suas informações apenas nas seguintes circunstâncias:</p>
+        
+        <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-top: 1rem; margin-bottom: 0.5rem;">4.1. Isolamento Multi-tenant</h3>
+        <p>Seus dados são completamente isolados entre empresas. Outras empresas não têm acesso aos seus dados, exceto conforme necessário para fornecer o serviço e conforme autorizado por você.</p>
+
+        <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-top: 1rem; margin-bottom: 0.5rem;">4.2. Prestadores de Serviços</h3>
+        <p>Podemos compartilhar informações com prestadores de serviços terceirizados que nos ajudam a operar o Sistema (ex: hospedagem, análise de dados), sujeitos a acordos de confidencialidade.</p>
+
+        <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-top: 1rem; margin-bottom: 0.5rem;">4.3. Requisitos Legais</h3>
+        <p>Podemos divulgar informações se necessário para cumprir leis, regulamentos, processos legais ou solicitações governamentais.</p>
+
+        <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-top: 1rem; margin-bottom: 0.5rem;">4.4. Com seu Consentimento</h3>
+        <p>Podemos compartilhar informações com seu consentimento explícito ou a seu pedido.</p>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">5. Segurança dos Dados</h2>
+        <p>Implementamos medidas técnicas e organizacionais apropriadas para proteger suas informações pessoais, incluindo:</p>
+        <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+          <li>Criptografia de dados em trânsito (HTTPS/TLS)</li>
+          <li>Criptografia de senhas (hash seguro)</li>
+          <li>Isolamento completo de dados entre empresas (multi-tenant)</li>
+          <li>Controles de acesso baseados em função</li>
+          <li>Monitoramento de segurança e detecção de ameaças</li>
+          <li>Backups regulares dos dados</li>
+        </ul>
+        <p>No entanto, nenhum método de transmissão pela internet ou armazenamento eletrônico é 100% seguro. Embora nos esforcemos para proteger suas informações, não podemos garantir segurança absoluta.</p>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">6. Seus Direitos (LGPD)</h2>
+        <p>Conforme a Lei Geral de Proteção de Dados (LGPD), você tem os seguintes direitos:</p>
+        <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+          <li><strong>Acesso:</strong> Solicitar acesso às suas informações pessoais</li>
+          <li><strong>Correção:</strong> Solicitar correção de dados incompletos ou desatualizados</li>
+          <li><strong>Eliminação:</strong> Solicitar exclusão de suas informações pessoais</li>
+          <li><strong>Portabilidade:</strong> Solicitar portabilidade dos seus dados</li>
+          <li><strong>Revogação de Consentimento:</strong> Revogar consentimento quando aplicável</li>
+          <li><strong>Oposição:</strong> Opor-se ao processamento de seus dados em certas circunstâncias</li>
+        </ul>
+        <p>Para exercer esses direitos, entre em contato conosco através do sistema de suporte.</p>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">7. Retenção de Dados</h2>
+        <p>Mantemos suas informações pessoais pelo tempo necessário para cumprir os propósitos descritos nesta política, a menos que um período de retenção mais longo seja exigido ou permitido por lei. Quando seus dados não forem mais necessários, os excluiremos de forma segura.</p>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">8. Transferência Internacional</h2>
+        <p>Seus dados podem ser processados e armazenados em servidores localizados fora do Brasil. Ao utilizar o Sistema, você consente com essa transferência. Garantimos que implementamos salvaguardas adequadas para proteger seus dados.</p>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">9. Alterações nesta Política</h2>
+        <p>Podemos atualizar esta Política de Privacidade periodicamente. Notificaremos você sobre mudanças significativas através do Sistema ou por e-mail. A data de "Última atualização" no topo desta página indica quando a política foi revisada pela última vez.</p>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">10. Menores de Idade</h2>
+        <p>O Sistema não é destinado a menores de 18 anos. Não coletamos intencionalmente informações pessoais de menores. Se tomarmos conhecimento de que coletamos informações de um menor, tomaremos medidas para excluir essas informações.</p>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">11. Contato</h2>
+        <p>Se você tiver dúvidas ou preocupações sobre esta Política de Privacidade ou sobre como tratamos suas informações pessoais, entre em contato conosco através do sistema de suporte ou por e-mail.</p>
+        <p>Para mais informações sobre seus direitos sob a LGPD, consulte nossa <a href="{% url 'lgpd' %}" style="color: var(--rm-primary);">página de Compliance LGPD</a>.</p>
+      </section>
+    </div>
+
+    <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--rm-card-border);">
+      <a href="{% url 'home_redirect' %}" class="btn" style="background: var(--rm-primary); color: white; padding: 0.75rem 1.5rem; border-radius: 0.375rem; text-decoration: none; display: inline-block;">
+        <i class="fas fa-arrow-left me-2"></i>Voltar
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

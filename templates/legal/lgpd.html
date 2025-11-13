@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Compliance LGPD - RM Systems{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 900px; margin: 2rem auto; padding: 2rem;">
+  <div class="card" style="background: var(--rm-card-bg); border: 1px solid var(--rm-card-border); border-radius: 0.5rem; padding: 2rem; box-shadow: var(--rm-shadow-md);">
+    <h1 style="color: var(--rm-primary); margin-bottom: 1.5rem; font-size: 2rem;">
+      <i class="fas fa-gavel me-2"></i>Compliance LGPD
+    </h1>
+    
+    <p style="color: var(--rm-text-secondary); margin-bottom: 1rem;"><strong>Última atualização:</strong> {% now "d/m/Y" %}</p>
+    
+    <div style="line-height: 1.8; color: var(--rm-text-primary);">
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">1. Compromisso com a LGPD</h2>
+        <p>A RM Systems está comprometida em cumprir integralmente a <strong>Lei Geral de Proteção de Dados (Lei nº 13.709/2018 - LGPD)</strong> e garantir que todos os dados pessoais tratados através do nosso Sistema sejam protegidos e utilizados de forma responsável e transparente.</p>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">2. Nossos Papéis sob a LGPD</h2>
+        
+        <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-top: 1rem; margin-bottom: 0.5rem;">2.1. Controlador de Dados</h3>
+        <p>Como <strong>Controlador</strong>, determinamos os propósitos e os meios do tratamento de dados pessoais dos usuários do Sistema (dados de contas, informações de login).</p>
+
+        <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-top: 1rem; margin-bottom: 0.5rem;">2.2. Operador de Dados</h3>
+        <p>Como <strong>Operador</strong>, processamos dados em nome das empresas clientes (dados dos mapas e análises), conforme instruções estabelecidas pelas empresas, que são os controladores desses dados.</p>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">3. Princípios de Tratamento de Dados</h2>
+        <p>Seguimos rigorosamente os princípios estabelecidos pela LGPD:</p>
+        <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+          <li><strong>Finalidade:</strong> Tratamos dados apenas para finalidades específicas, explícitas e legítimas</li>
+          <li><strong>Adequação:</strong> O tratamento é compatível com as finalidades informadas</li>
+          <li><strong>Necessidade:</strong> Limitamos o tratamento ao mínimo necessário para alcançar as finalidades</li>
+          <li><strong>Livre Acesso:</strong> Garantimos transparência sobre o tratamento de dados</li>
+          <li><strong>Qualidade dos Dados:</strong> Mantemos os dados atualizados e precisos</li>
+          <li><strong>Transparência:</strong> Fornecemos informações claras e acessíveis sobre o tratamento</li>
+          <li><strong>Segurança:</strong> Implementamos medidas técnicas e organizacionais para proteger os dados</li>
+          <li><strong>Prevenção:</strong> Adotamos medidas para prevenir danos aos dados</li>
+          <li><strong>Não Discriminação:</strong> Não realizamos tratamento discriminatório</li>
+          <li><strong>Responsabilização:</strong> Demonstramos conformidade e adotamos medidas efetivas</li>
+        </ul>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">4. Base Legal para o Tratamento</h2>
+        <p>Tratamos dados pessoais com base nas seguintes bases legais previstas na LGPD:</p>
+        <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+          <li><strong>Execução de Contrato:</strong> Para fornecer os serviços solicitados</li>
+          <li><strong>Cumprimento de Obrigação Legal:</strong> Para cumprir obrigações legais e regulatórias</li>
+          <li><strong>Legítimo Interesse:</strong> Para melhorar nossos serviços e segurança</li>
+          <li><strong>Consentimento:</strong> Quando você nos dá consentimento explícito</li>
+        </ul>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">5. Direitos dos Titulares de Dados</h2>
+        <p>Conforme a LGPD, você possui os seguintes direitos em relação aos seus dados pessoais:</p>
+        
+        <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-top: 1rem; margin-bottom: 0.5rem;">5.1. Direitos Garantidos</h3>
+        <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+          <li><strong>Confirmação e Acesso:</strong> Saber se tratamos seus dados e ter acesso a eles</li>
+          <li><strong>Correção:</strong> Solicitar correção de dados incompletos, inexatos ou desatualizados</li>
+          <li><strong>Anonimização, Bloqueio ou Eliminação:</strong> Solicitar anonimização, bloqueio ou eliminação de dados desnecessários, excessivos ou tratados em desconformidade com a LGPD</li>
+          <li><strong>Portabilidade:</strong> Solicitar portabilidade dos dados para outro fornecedor</li>
+          <li><strong>Eliminação:</strong> Solicitar eliminação de dados tratados com base em consentimento</li>
+          <li><strong>Informação sobre Compartilhamento:</strong> Obter informações sobre entidades públicas e privadas com as quais compartilhamos dados</li>
+          <li><strong>Informação sobre Possibilidade de Não Consentir:</strong> Ser informado sobre a possibilidade de não fornecer consentimento e as consequências</li>
+          <li><strong>Revogação do Consentimento:</strong> Revogar seu consentimento a qualquer momento</li>
+        </ul>
+
+        <h3 style="color: var(--rm-text-primary); font-size: 1.2rem; margin-top: 1rem; margin-bottom: 0.5rem;">5.2. Como Exercer seus Direitos</h3>
+        <p>Para exercer qualquer um dos direitos acima, entre em contato conosco através do sistema de suporte ou por e-mail. Responderemos sua solicitação no prazo de até 15 dias, conforme exigido pela LGPD.</p>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">6. Medidas de Segurança</h2>
+        <p>Implementamos medidas técnicas e organizacionais adequadas para proteger os dados pessoais, incluindo:</p>
+        <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+          <li><strong>Criptografia:</strong> Dados em trânsito (HTTPS/TLS) e em repouso</li>
+          <li><strong>Controle de Acesso:</strong> Acesso restrito e baseado em função</li>
+          <li><strong>Isolamento Multi-tenant:</strong> Isolamento completo de dados entre empresas</li>
+          <li><strong>Monitoramento:</strong> Monitoramento contínuo de segurança</li>
+          <li><strong>Backup:</strong> Backups regulares e seguros dos dados</li>
+          <li><strong>Treinamento:</strong> Treinamento de pessoal sobre proteção de dados</li>
+          <li><strong>Políticas de Segurança:</strong> Políticas e procedimentos documentados</li>
+        </ul>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">7. Compartilhamento de Dados</h2>
+        <p>Não vendemos dados pessoais. Compartilhamos dados apenas:</p>
+        <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+          <li>Com prestadores de serviços que nos ajudam a operar o Sistema (sujeitos a acordos de confidencialidade e proteção de dados)</li>
+          <li>Quando exigido por lei ou ordem judicial</li>
+          <li>Com seu consentimento explícito</li>
+        </ul>
+        <p>Todos os prestadores de serviços que acessam dados pessoais são contratualmente obrigados a manter a mesma proteção que exigimos internamente.</p>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">8. Retenção de Dados</h2>
+        <p>Mantemos dados pessoais apenas pelo tempo necessário para cumprir as finalidades para as quais foram coletados, salvo se um período de retenção mais longo for exigido ou permitido por lei. Quando os dados não forem mais necessários, os eliminamos de forma segura.</p>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">9. Notificação de Incidentes</h2>
+        <p>Em caso de incidente de segurança que possa acarretar risco ou dano relevante para os titulares de dados, notificaremos a Autoridade Nacional de Proteção de Dados (ANPD) e os titulares afetados conforme exigido pela LGPD.</p>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">10. Encarregado de Proteção de Dados (DPO)</h2>
+        <p>Para questões relacionadas à proteção de dados e aos seus direitos sob a LGPD, você pode entrar em contato com nosso Encarregado de Proteção de Dados através do sistema de suporte ou por e-mail.</p>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">11. Autoridade Nacional de Proteção de Dados (ANPD)</h2>
+        <p>Se você acredita que seus dados pessoais foram tratados de forma inadequada, você tem o direito de apresentar uma reclamação à ANPD:</p>
+        <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+          <li><strong>Website:</strong> <a href="https://www.gov.br/anpd" target="_blank" rel="noopener noreferrer" style="color: var(--rm-primary);">www.gov.br/anpd</a></li>
+          <li><strong>Ouvidoria:</strong> <a href="https://falabr.cgu.gov.br" target="_blank" rel="noopener noreferrer" style="color: var(--rm-primary);">falabr.cgu.gov.br</a></li>
+        </ul>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">12. Atualizações</h2>
+        <p>Esta página pode ser atualizada periodicamente para refletir mudanças em nossas práticas de proteção de dados ou na legislação aplicável. Recomendamos que você revise esta página regularmente.</p>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2 style="color: var(--rm-primary); font-size: 1.5rem; margin-bottom: 1rem; margin-top: 2rem;">13. Contato</h2>
+        <p>Para questões sobre proteção de dados e compliance com a LGPD, entre em contato conosco através do sistema de suporte ou por e-mail.</p>
+        <p>Para mais informações, consulte também nossa <a href="{% url 'politica_privacidade' %}" style="color: var(--rm-primary);">Política de Privacidade</a>.</p>
+      </section>
+    </div>
+
+    <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--rm-card-border);">
+      <a href="{% url 'home_redirect' %}" class="btn" style="background: var(--rm-primary); color: white; padding: 0.75rem 1.5rem; border-radius: 0.375rem; text-decoration: none; display: inline-block;">
+        <i class="fas fa-arrow-left me-2"></i>Voltar
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

@@ -6,6 +6,7 @@ from django.views.generic import RedirectView
 from django.contrib.auth import views as auth_views
 from django.views.static import serve
 from django.http import Http404
+from core import views as core_views
 from core.views import home_redirect, dashboard_redirect
 from core.admin import rm_admin_site
 from core.error_views import custom_404, force_404
@@ -24,6 +25,15 @@ urlpatterns = [
     
     # URLs do verificador (novo app FTTH Viewer)
     path("verificador/", include(("ftth_viewer.urls", "ftth_viewer"), namespace="verificador")),
+    
+    # URLs de documentação e páginas legais (acessíveis a todos, sem autenticação)
+    path("termos-uso/", core_views.termos_uso_view, name="termos_uso"),
+    path("politica-privacidade/", core_views.politica_privacidade_view, name="politica_privacidade"),
+    path("politica-cookies/", core_views.politica_cookies_view, name="politica_cookies"),
+    path("lgpd/", core_views.lgpd_view, name="lgpd"),
+    path("faq/", core_views.faq_view, name="faq"),
+    path("ajuda/", core_views.ajuda_view, name="ajuda"),
+    path("manual/", core_views.manual_usuario_view, name="manual_usuario"),
     
     # URLs específicas por empresa
     re_path(r'^(?P<company_slug>[\w-]+)/', include(("core.urls_company", "company"), namespace="company")),
