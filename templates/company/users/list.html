@@ -11,11 +11,9 @@
           <i class="fas fa-users me-2"></i>
           Usuários da Empresa
         </h2>
-        {% comment %}
         <a href="{% url 'company:user_create' company.slug %}" class="btn btn-primary">
           <i class="fas fa-user-plus me-2"></i> Novo Usuário
         </a>
-        {% endcomment %}
       </div>
 
       {% if messages %}

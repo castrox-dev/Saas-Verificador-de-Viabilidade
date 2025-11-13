@@ -1153,25 +1153,76 @@ def rm_company_edit(request, company_id):
 @login_required
 @company_access_required(require_admin=True)
 def company_user_create(request, company_slug):
+    """Cria um novo usuário no painel da empresa"""
+    logger.debug(f"company_user_create: method={request.method}, company_slug={company_slug}, user={request.user.username}")
+    
     company = get_object_or_404(Company, slug=company_slug)
+    
+    # Verificar se o usuário tem permissão para criar usuários nesta empresa
+    if not request.user.is_company_admin:
+        messages.error(request, 'Você não tem permissão para criar usuários.')
+        return redirect('company:user_list', company_slug=company_slug)
+    
     if request.method == 'POST':
+        logger.debug(f"company_user_create POST: dados recebidos - {request.POST.dict()}")
         form = CustomUserForm(request.POST, current_user=request.user)
+        
+        logger.debug(f"company_user_create: formulário criado, is_valid={form.is_valid()}")
+        if not form.is_valid():
+            logger.warning(f"Formulário inválido:")
+            logger.warning(f"  Erros de campos: {form.errors.as_json()}")
+            if form.non_field_errors():
+                logger.warning(f"  Erros gerais: {list(form.non_field_errors())}")
+        
         if form.is_valid():
-            with transaction.atomic():
-                user = form.save(commit=False)
-                user.company = company
-                # Papel padrão para criação pela empresa
-                if not getattr(user, 'role', None):
-                    user.role = 'COMPANY_USER'
-                if user.role == 'RM':
-                    messages.error(request, 'Não é possível criar usuário RM pela empresa.')
-                else:
-                    user.save()
-                    messages.success(request, 'Usuário criado com sucesso!')
-                    return redirect('company:user_list', company_slug=company_slug)
+            try:
+                with transaction.atomic():
+                    logger.debug(f"Salvando usuário...")
+                    user = form.save(commit=False)
+                    # Forçar empresa para garantir que o usuário seja da empresa correta
+                    user.company = company
+                    # Papel padrão para criação pela empresa (se não definido)
+                    if not getattr(user, 'role', None) or user.role == 'RM':
+                        user.role = 'COMPANY_USER'
+                    
+                    # Validar que não está tentando criar RM
+                    if user.role == 'RM':
+                        messages.error(request, 'Não é possível criar usuário RM pela empresa.')
+                        form.add_error('role', 'Não é possível criar usuário RM pela empresa.')
+                    else:
+                        # Salvar o usuário
+                        user.save()
+                        logger.info(f"Usuário criado com sucesso: {user.username} (role: {user.role}, company: {user.company.name if user.company else 'N/A'})")
+                        messages.success(request, f'Usuário {user.username} criado com sucesso!')
+                        return redirect('company:user_list', company_slug=company_slug)
+            except ValidationError as e:
+                # Erros de validação são tratados no formulário
+                logger.warning(f"Erro de validação ao criar usuário: {str(e)}")
+                logger.warning(f"Erros no formulário após ValidationError: {dict(form.errors)}")
+                pass  # Continuar para exibir o formulário com erros
+            except Exception as e:
+                logger.error(f"Erro ao criar usuário: {str(e)}", exc_info=True)
+                import traceback
+                logger.error(f"Traceback completo: {traceback.format_exc()}")
+                messages.error(request, f'Erro ao criar usuário: {str(e)}')
+        
+        # Logar erros do formulário se houver
+        if not form.is_valid() or form.errors:
+            logger.warning(f"Formulário tem erros:")
+            for field, errors in form.errors.items():
+                logger.warning(f"  Campo '{field}': {list(errors)}")
+            if form.non_field_errors():
+                logger.warning(f"  Erros gerais: {list(form.non_field_errors())}")
     else:
         form = CustomUserForm(current_user=request.user)
-    return render(request, 'company/users/form.html', {'form': form, 'company': company})
+    
+    # Adicionar title para o template
+    context = {
+        'form': form,
+        'company': company,
+        'title': 'Criar Usuário'
+    }
+    return render(request, 'company/users/form.html', context)
 
 
 @login_required
