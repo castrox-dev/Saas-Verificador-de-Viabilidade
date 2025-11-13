@@ -548,7 +548,7 @@ input[type="text"]:focus,input[type="email"]:focus,input[type="password"]:focus{
   gap:8px;
 }
 
-/* Sistema de Notificações Toast */
+/* Sistema de Notificações Toast - Padrão RM Systems */
 .toast-container{
   position:fixed;
   top:24px;
@@ -559,79 +559,204 @@ input[type="text"]:focus,input[type="email"]:focus,input[type="password"]:focus{
   gap:12px;
   max-width:400px;
 }
+
 .toast{
-  background:white;
-  border-radius:12px;
+  background:var(--rm-card-bg);
+  border-radius:var(--rm-border-radius-lg);
   padding:16px 20px;
-  box-shadow:0 8px 32px rgba(0,0,0,0.12);
+  box-shadow:var(--rm-shadow-lg);
   border-left:4px solid;
   display:flex;
-  align-items:center;
-  gap:12px;
-  transform:translateX(100%);
+  align-items:flex-start;
+  gap:14px;
+  transform:translateX(calc(100% + 24px));
   opacity:0;
-  transition:all 0.3s ease;
+  transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position:relative;
   overflow:hidden;
+  min-width:320px;
+  max-width:100%;
+  border:1px solid var(--rm-border-primary);
 }
+
 .toast.show{
   transform:translateX(0);
   opacity:1;
 }
+
 .toast.success{
-  border-left-color:var(--success);
+  border-left-color:var(--rm-success);
+  background:var(--rm-card-bg);
 }
+
+.toast.success .toast-icon{
+  color:var(--rm-success);
+}
+
+.toast.success .toast-title{
+  color:var(--rm-success-dark);
+}
+
 .toast.error{
-  border-left-color:var(--error);
+  border-left-color:var(--rm-error);
+  background:var(--rm-card-bg);
 }
+
+.toast.error .toast-icon{
+  color:var(--rm-error);
+}
+
+.toast.error .toast-title{
+  color:var(--rm-error-dark);
+}
+
 .toast.warning{
-  border-left-color:var(--warning);
+  border-left-color:var(--rm-warning);
+  background:var(--rm-card-bg);
 }
+
+.toast.warning .toast-icon{
+  color:var(--rm-warning);
+}
+
+.toast.warning .toast-title{
+  color:var(--rm-warning-dark);
+}
+
 .toast.info{
-  border-left-color:var(--primary);
+  border-left-color:var(--rm-info);
+  background:var(--rm-card-bg);
 }
+
+.toast.info .toast-icon{
+  color:var(--rm-info);
+}
+
+.toast.info .toast-title{
+  color:var(--rm-primary-dark);
+}
+
 .toast-icon{
-  font-size:1.25rem;
+  font-size:1.5rem;
   flex-shrink:0;
+  line-height:1;
+  margin-top:2px;
 }
+
 .toast-content{
   flex:1;
+  min-width:0;
 }
+
 .toast-title{
-  margin:0 0 4px;
+  margin:0 0 6px;
   font-weight:600;
-  font-size:0.875rem;
-  color:var(--gray-dark);
+  font-size:0.9375rem;
+  color:var(--rm-text-primary);
+  line-height:1.3;
 }
+
 .toast-message{
   margin:0;
-  font-size:0.8rem;
-  color:var(--muted);
-  line-height:1.4;
+  font-size:0.875rem;
+  color:var(--rm-text-secondary);
+  line-height:1.5;
+  word-wrap:break-word;
 }
+
 .toast-close{
   background:none;
   border:none;
-  font-size:1.125rem;
-  color:var(--muted);
+  font-size:1.5rem;
+  color:var(--rm-text-tertiary);
   cursor:pointer;
-  padding:4px;
-  border-radius:4px;
+  padding:4px 8px;
+  margin:-4px -8px -4px 0;
+  border-radius:var(--rm-border-radius-sm);
   transition:all 0.2s ease;
   flex-shrink:0;
+  line-height:1;
+  opacity:0.7;
+  width:28px;
+  height:28px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
+
 .toast-close:hover{
-  background:var(--bg);
-  color:var(--gray-dark);
+  background:var(--rm-bg-secondary);
+  color:var(--rm-text-primary);
+  opacity:1;
 }
+
 .toast-progress{
   position:absolute;
   bottom:0;
   left:0;
   height:3px;
-  background:currentColor;
-  opacity:0.3;
+  background:var(--rm-text-tertiary);
+  opacity:0.2;
   transition:width linear;
+  border-radius:0 0 var(--rm-border-radius-lg) 0;
+}
+
+.toast.success .toast-progress{
+  background:var(--rm-success);
+  opacity:0.4;
+}
+
+.toast.error .toast-progress{
+  background:var(--rm-error);
+  opacity:0.4;
+}
+
+.toast.warning .toast-progress{
+  background:var(--rm-warning);
+  opacity:0.4;
+}
+
+.toast.info .toast-progress{
+  background:var(--rm-info);
+  opacity:0.4;
+}
+
+/* Modo Escuro - Ajustes para Toasts */
+[data-theme="dark"] .toast{
+  background:var(--rm-card-bg);
+  border-color:var(--rm-border-primary);
+  box-shadow:0 8px 32px rgba(0,0,0,0.4);
+}
+
+[data-theme="dark"] .toast.success{
+  background:var(--rm-card-bg);
+}
+
+[data-theme="dark"] .toast.error{
+  background:var(--rm-card-bg);
+}
+
+[data-theme="dark"] .toast.warning{
+  background:var(--rm-card-bg);
+}
+
+[data-theme="dark"] .toast.info{
+  background:var(--rm-card-bg);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .toast-container{
+    top:16px;
+    right:16px;
+    left:16px;
+    max-width:none;
+  }
+  
+  .toast{
+    min-width:auto;
+    max-width:100%;
+  }
 }
 
 /* Mensagens Django (fallback) */

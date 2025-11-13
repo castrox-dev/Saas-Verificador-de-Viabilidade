@@ -193,14 +193,27 @@ document.addEventListener('DOMContentLoaded', function() {
         const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
         
         if (!allowedTypes.includes(fileExtension)) {
-            alert('Tipo de arquivo não suportado. Use .xlsx, .xls, .csv, .kml ou .kmz');
+            if (window.showError) {
+                window.showError('Tipo de arquivo não suportado. Use .xlsx, .xls, .csv, .kml ou .kmz', 'Tipo Inválido', 6000);
+            } else {
+                alert('Tipo de arquivo não suportado. Use .xlsx, .xls, .csv, .kml ou .kmz');
+            }
             return;
         }
 
         // Validate file size (50MB)
         if (file.size > 50 * 1024 * 1024) {
-            alert('Arquivo muito grande. Tamanho máximo: 50MB');
+            if (window.showError) {
+                window.showError('Arquivo muito grande. Tamanho máximo: 50MB', 'Arquivo Grande', 6000);
+            } else {
+                alert('Arquivo muito grande. Tamanho máximo: 50MB');
+            }
             return;
+        }
+        
+        // Mostrar notificação de arquivo selecionado
+        if (window.showInfo) {
+            window.showInfo(`Arquivo "${file.name}" selecionado e pronto para upload`, 'Arquivo Selecionado', 3000);
         }
 
         // Upload the file
@@ -215,7 +228,14 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show loading state
         const uploadArea = document.getElementById('uploadArea');
         const originalContent = uploadArea.innerHTML;
-        uploadArea.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i><br>Enviando arquivo...</div>';
+        uploadArea.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin fa-2x" style="color: var(--rm-primary); margin-bottom: 12px;"></i><br><strong>Enviando arquivo...</strong><br><small style="color: var(--rm-text-secondary);">Por favor, aguarde</small></div>';
+        
+        // Mostrar notificação de progresso (duração 0 = não fecha automaticamente)
+        if (window.showInfo) {
+            const progressToast = window.showInfo('Enviando arquivo...', 'Upload em Andamento', 0);
+            // Fechar toast de progresso após o upload completar
+            window.currentProgressToast = progressToast;
+        }
 
         const csrfToken = getCsrfToken();
         fetch('{% url "company:map_upload" company_slug=company.slug %}', {
@@ -236,18 +256,52 @@ document.addEventListener('DOMContentLoaded', function() {
             return response.json();
         })
         .then(data => {
+            // Fechar toast de progresso
+            if (window.currentProgressToast && window.toastManager) {
+                window.toastManager.remove(window.currentProgressToast);
+                window.currentProgressToast = null;
+            }
+            
             if (data.success) {
-                try { window.showSuccess(`Arquivo "${data.file_name || file.name}" enviado com sucesso!`, 'Upload'); } catch(e) {}
-                location.reload(); // Reload to show new file
+                // Mensagem de sucesso seguindo padrão do tema
+                const successMessage = data.message || `Arquivo "${data.file_name || file.name}" enviado com sucesso!`;
+                if (window.showSuccess) {
+                    window.showSuccess(successMessage, 'Upload Concluído', 5000);
+                } else {
+                    alert(successMessage);
+                }
+                // Aguardar um pouco para o usuário ver a notificação antes de recarregar
+                setTimeout(() => {
+                    location.reload(); // Reload to show new file
+                }, 1500);
             } else {
-                try { window.showError('Erro ao enviar arquivo: ' + (data.message || 'Erro desconhecido'), 'Upload'); } catch(e) { alert('Erro ao enviar arquivo: ' + (data.message || 'Erro desconhecido')); }
+                // Mensagem de erro seguindo padrão do tema
+                const errorMessage = data.message || 'Erro desconhecido ao enviar arquivo';
+                if (window.showError) {
+                    window.showError(errorMessage, 'Erro no Upload', 7000);
+                } else {
+                    alert('Erro ao enviar arquivo: ' + errorMessage);
+                }
                 uploadArea.innerHTML = originalContent;
                 setupEventListeners();
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            try { window.showError('Erro ao enviar arquivo. Tente novamente.', 'Upload'); } catch(e) { alert('Erro ao enviar arquivo. Tente novamente.'); }
+            
+            // Fechar toast de progresso
+            if (window.currentProgressToast && window.toastManager) {
+                window.toastManager.remove(window.currentProgressToast);
+                window.currentProgressToast = null;
+            }
+            
+            // Mensagem de erro de conexão seguindo padrão do tema
+            const errorMessage = 'Erro ao enviar arquivo. Verifique sua conexão e tente novamente.';
+            if (window.showError) {
+                window.showError(errorMessage, 'Erro no Upload', 7000);
+            } else {
+                alert(errorMessage);
+            }
             uploadArea.innerHTML = originalContent;
             setupEventListeners();
         });
