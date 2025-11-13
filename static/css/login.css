@@ -429,12 +429,12 @@ body {
 .login-footer a {
   color: var(--rm-footer-text, #9ca3af);
   text-decoration: none;
-  transition: color 0.2s ease;
+  transition: text-decoration 0.2s ease;
   font-size: clamp(9px, 1vw, 11px);
 }
 
 .login-footer a:hover {
-  color: var(--rm-text-primary, #d1d5db);
+  color: var(--rm-footer-text, #9ca3af);
   text-decoration: underline;
 }
 
@@ -480,13 +480,12 @@ body {
 .login-footer__links a {
   color: var(--rm-footer-text, #9ca3af);
   text-decoration: none;
-  transition: color 0.2s ease, opacity 0.2s ease;
+  transition: text-decoration 0.2s ease;
   padding: 2px 0;
 }
 
 .login-footer__links a:hover {
-  color: var(--rm-text-primary, #d1d5db);
-  opacity: 0.9;
+  color: var(--rm-footer-text, #9ca3af);
   text-decoration: underline;
 }
 

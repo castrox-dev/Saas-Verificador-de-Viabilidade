@@ -67,6 +67,17 @@ body {
   font-size: 0.875rem;
 }
 
+.footer a {
+  color: var(--rm-footer-text);
+  text-decoration: none;
+  transition: text-decoration 0.2s ease;
+}
+
+.footer a:hover {
+  color: var(--rm-footer-text);
+  text-decoration: underline;
+}
+
 /* === MESSAGES RESPONSIVAS === */
 .messages {
   padding: 1rem 2rem;
