@@ -140,10 +140,10 @@ class CompanyForm(forms.ModelForm):
         return self.cleaned_data.get('phone', '')
 
 class CustomUserForm(UserCreationForm):
-    email = forms.EmailField(required=True)
-    first_name = forms.CharField(max_length=30, required=True)
-    last_name = forms.CharField(max_length=30, required=True)
-    phone = forms.CharField(max_length=20, required=False)
+    email = forms.EmailField(required=True, label='E-mail')
+    first_name = forms.CharField(max_length=30, required=True, label='Nome')
+    last_name = forms.CharField(max_length=30, required=True, label='Sobrenome')
+    phone = forms.CharField(max_length=20, required=False, label='Telefone')
 
     class Meta:
         model = CustomUser
@@ -183,6 +183,29 @@ class CustomUserForm(UserCreationForm):
     def __init__(self, *args, **kwargs):
         self.current_user = kwargs.pop('current_user', None)
         super().__init__(*args, **kwargs)
+        
+        # Definir labels em português para campos de senha (herdados de UserCreationForm)
+        if 'password1' in self.fields:
+            self.fields['password1'].label = 'Senha'
+        if 'password2' in self.fields:
+            self.fields['password2'].label = 'Confirmar Senha'
+        
+        # Adicionar labels em português para todos os campos
+        self.fields['username'].label = 'Usuário'
+        if 'email' in self.fields:
+            self.fields['email'].label = 'E-mail'
+        if 'first_name' in self.fields:
+            self.fields['first_name'].label = 'Nome'
+        if 'last_name' in self.fields:
+            self.fields['last_name'].label = 'Sobrenome'
+        if 'phone' in self.fields:
+            self.fields['phone'].label = 'Telefone'
+        if 'role' in self.fields:
+            self.fields['role'].label = 'Função'
+        if 'company' in self.fields:
+            self.fields['company'].label = 'Empresa'
+        if 'is_active' in self.fields:
+            self.fields['is_active'].label = 'Usuário ativo'
         
         # Configurar campos baseado no usuário atual
         if self.current_user:
@@ -313,6 +336,23 @@ class CustomUserChangeForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.current_user = kwargs.pop('current_user', None)
         super().__init__(*args, **kwargs)
+        
+        # Adicionar labels em português para todos os campos
+        self.fields['username'].label = 'Usuário'
+        if 'email' in self.fields:
+            self.fields['email'].label = 'E-mail'
+        if 'first_name' in self.fields:
+            self.fields['first_name'].label = 'Nome'
+        if 'last_name' in self.fields:
+            self.fields['last_name'].label = 'Sobrenome'
+        if 'phone' in self.fields:
+            self.fields['phone'].label = 'Telefone'
+        if 'role' in self.fields:
+            self.fields['role'].label = 'Função'
+        if 'company' in self.fields:
+            self.fields['company'].label = 'Empresa'
+        if 'is_active' in self.fields:
+            self.fields['is_active'].label = 'Usuário ativo'
         
         # Configurar campos baseado no usuário atual
         if self.current_user:
