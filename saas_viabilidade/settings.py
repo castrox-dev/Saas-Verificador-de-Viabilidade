@@ -122,19 +122,31 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # CSRF and cookie security
 CSRF_TRUSTED_ORIGINS_ENV = os.getenv("CSRF_TRUSTED_ORIGINS", "")
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in CSRF_TRUSTED_ORIGINS_ENV.split(",") if o.strip()]
+
+# Se não houver CSRF_TRUSTED_ORIGINS configurado, adicionar hosts permitidos automaticamente
+if not CSRF_TRUSTED_ORIGINS and ALLOWED_HOSTS:
+    # Adicionar https:// para cada host permitido
+    for host in ALLOWED_HOSTS:
+        if host and host != '*':
+            # Adicionar com e sem www
+            CSRF_TRUSTED_ORIGINS.append(f"https://{host}")
+            if not host.startswith('www.'):
+                CSRF_TRUSTED_ORIGINS.append(f"https://www.{host}")
+
 # Configurações de sessão - Segurança aprimorada
 SESSION_COOKIE_AGE = 3600  # 1 hora
 SESSION_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = 'Strict'
+SESSION_COOKIE_SAMESITE = 'Lax' if DEBUG else 'Lax'  # Lax é mais compatível que Strict
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_SAVE_EVERY_REQUEST = True
 
 # Configurações CSRF - Segurança aprimorada
 CSRF_COOKIE_SECURE = not DEBUG
-CSRF_COOKIE_HTTPONLY = True
-CSRF_COOKIE_SAMESITE = 'Strict'
-CSRF_USE_SESSIONS = True
+CSRF_COOKIE_HTTPONLY = False  # False para permitir leitura via JavaScript se necessário
+CSRF_COOKIE_SAMESITE = 'Lax'  # Lax é mais compatível e ainda seguro
+CSRF_USE_SESSIONS = False  # Usar cookies ao invés de sessões para melhor compatibilidade
+CSRF_FAILURE_VIEW = 'core.error_views.custom_403'  # View personalizada para erro CSRF
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = "same-origin"
 X_FRAME_OPTIONS = "DENY"

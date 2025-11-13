@@ -81,9 +81,20 @@ pip install -r requirements.txt && python manage.py collectstatic --noinput
 ### Erro: "Content Security Policy violation"
 
 **Solução:**
-O CSP foi atualizado para permitir arquivos do próprio domínio. Se ainda houver problemas, verifique:
+O CSP foi atualizado para permitir arquivos do próprio domínio dinamicamente. Se ainda houver problemas, verifique:
 1. Se o domínio está correto nas variáveis de ambiente
 2. Se o CSP está permitindo o domínio do Railway
+3. O CSP agora inclui `blob:` e `data:` para fontes, o que deve resolver a maioria dos problemas
+
+### Erro: "CSRF verification failed" (403)
+
+**Causa:** O token CSRF não está sendo enviado corretamente ou o domínio não está em `CSRF_TRUSTED_ORIGINS`.
+
+**Solução:**
+1. Configure `CSRF_TRUSTED_ORIGINS` no Railway com o domínio completo (ex: `https://verificador.up.railway.app`)
+2. Se não configurar, o sistema tentará adicionar automaticamente baseado em `ALLOWED_HOSTS`
+3. Certifique-se de que `DEBUG=False` em produção
+4. As configurações de CSRF foram ajustadas para usar `SameSite=Lax` e cookies ao invés de sessões para melhor compatibilidade
 
 ## Checklist de Deploy
 

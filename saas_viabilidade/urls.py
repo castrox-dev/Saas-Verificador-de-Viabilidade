@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.generic import RedirectView
 from django.contrib.auth import views as auth_views
 from core.views import home_redirect, dashboard_redirect
 from core.admin import rm_admin_site
@@ -11,6 +12,9 @@ urlpatterns = [
     path("admin/", rm_admin_site.urls),
     # Rota genérica de dashboard que redireciona conforme papel do usuário
     path("dashboard/", dashboard_redirect, name="dashboard"),
+    
+    # Favicon - redireciona para o arquivo estático
+    path("favicon.ico", RedirectView.as_view(url=settings.STATIC_URL + "favicon.ico", permanent=True), name="favicon"),
     
     # URLs RM Systems
     path("rm/", include(("core.urls_rm", "rm"), namespace="rm")),

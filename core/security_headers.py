@@ -13,18 +13,22 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
         # Content Security Policy - Restritivo mas permitindo estilos inline para desenvolvimento
         # Permite arquivos estáticos do próprio domínio
         request_host = request.get_host()
+        # Remover porta se presente para CSP (CSP não aceita portas)
+        host_without_port = request_host.split(':')[0]
+        protocol = 'https' if request.is_secure() else 'http'
+        
         csp = (
-            f"default-src 'self' https://{request_host}; "
-            f"script-src 'self' 'unsafe-inline' https://{request_host} https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com; "
-            f"style-src 'self' 'unsafe-inline' https://{request_host} https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com https://unpkg.com; "
-            f"font-src 'self' data: https://{request_host} https://fonts.gstatic.com https://fonts.googleapis.com https://cdnjs.cloudflare.com https://unpkg.com; "
-            f"img-src 'self' data: https://{request_host} https:; "
-            f"connect-src 'self' https://{request_host} https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://viacep.com.br https://brasilapi.com.br; "
+            f"default-src 'self' {protocol}://{host_without_port}; "
+            f"script-src 'self' 'unsafe-inline' {protocol}://{host_without_port} https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com; "
+            f"style-src 'self' 'unsafe-inline' {protocol}://{host_without_port} https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com https://unpkg.com; "
+            f"font-src 'self' data: blob: {protocol}://{host_without_port} https://fonts.gstatic.com https://fonts.googleapis.com https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net; "
+            f"img-src 'self' data: blob: {protocol}://{host_without_port} https:; "
+            f"connect-src 'self' {protocol}://{host_without_port} https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://viacep.com.br https://brasilapi.com.br; "
             "frame-ancestors 'none'; "
             "base-uri 'self'; "
             "form-action 'self'; "
             "object-src 'none'; "
-            f"media-src 'self' https://{request_host}"
+            f"media-src 'self' {protocol}://{host_without_port}"
         )
         response['Content-Security-Policy'] = csp
         
