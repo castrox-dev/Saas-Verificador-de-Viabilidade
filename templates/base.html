@@ -126,15 +126,27 @@
       body.error-page .sidebar-overlay,
       body.error-page .settings-button,
       body.error-page .skip-link,
-      body.error-page .footer,
-      body.error-page .main-container {
+      body.error-page .footer {
         display: none !important;
+      }
+      /* Ajustar main-container para páginas de erro */
+      body.error-page .main-container {
+        padding: 0 !important;
+        margin: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+      }
+      /* Garantir que o conteúdo de erro apareça e ocupe a tela toda */
+      body.error-page .error-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 9999;
       }
       body.error-page {
         background: transparent !important;
-      }
-      /* Garantir que o conteúdo de erro ocupe a tela toda */
-      body.error-page {
         padding: 0 !important;
         margin: 0 !important;
       }
