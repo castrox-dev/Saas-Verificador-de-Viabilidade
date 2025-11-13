@@ -16,24 +16,40 @@
     .sidebar-col { display: none; }
     
     .main-content { 
-        padding: 30px; 
+        padding: 50px; 
         background-color: var(--rm-bg-primary);
         display: flex; 
-        justify-content: center; 
+        justify-content: flex-start; 
         align-items: flex-start; 
         min-height: calc(100vh - 76px);
+        width: 100%;
+        max-width: 100%;
     }
     
     .content-card { 
         background: var(--rm-card-bg); 
         border-radius: var(--rm-border-radius-xl);
-        padding: 30px; 
+        padding: 50px; 
         box-shadow: var(--rm-card-shadow); 
         border: 1px solid var(--rm-card-border); 
         color: var(--rm-text-primary);
         width: 100%; 
-        max-width: 1200px; 
-        margin: 0 auto; 
+        max-width: 100%; 
+        margin: 0; 
+    }
+    
+    /* Garantir que container e rows ocupem toda a largura */
+    .container-fluid {
+        width: 100%;
+        max-width: 100%;
+        padding-left: 0;
+        padding-right: 0;
+    }
+    
+    .row {
+        width: 100%;
+        margin-left: 0;
+        margin-right: 0;
     }
     
     .sidebar {
@@ -166,10 +182,11 @@
         border-radius: var(--rm-border-radius-lg);
         box-shadow: var(--rm-card-shadow);
         color: var(--rm-text-primary);
+        width: 100%;
     }
     
     .card-body {
-        padding: 20px;
+        padding: 24px;
     }
     
     .card-title {
@@ -297,42 +314,54 @@
         </div>
 
         <!-- Main Content -->
-        <div class="col-md-9 col-lg-10">
-            <div class="main-content">
-                <div class="content-card">
+        <div class="col-12" style="width: 100%; max-width: 100%; padding: 0;">
+            <div class="main-content" style="width: 100%; max-width: 100%; padding: 40px;">
+                <div class="content-card" style="width: 100%; max-width: 100%;">
                     <!-- Header -->
-                    <div class="d-flex align-items-center justify-content-between mb-4">
-                        <div>
-                            <h1 class="h3 mb-1">
+                    <div class="d-flex align-items-center justify-content-between mb-5" style="width: 100%;">
+                        <div style="flex: 1;">
+                            <h1 class="h3 mb-2" style="font-size: 1.75rem; font-weight: 600;">
                                 <i class="fas fa-building me-2" style="color: var(--rm-primary);"></i>
                                 Portal da Empresa
                             </h1>
-                            <p class="text-muted mb-0">Gestão e visualização de dados da empresa</p>
+                            <p class="text-muted mb-0" style="font-size: 1rem;">Gestão e visualização de dados da empresa</p>
                         </div>
-                        <a class="btn btn-outline-secondary" href="{% url 'rm:company_list' %}" target="_self" rel="noopener noreferrer">
-                            <i class="fas fa-arrow-left me-2"></i>
-                            Voltar para Empresas
-                        </a>
+                        <div style="flex-shrink: 0; margin-left: 20px;">
+                            <a class="btn btn-outline-secondary" href="{% url 'rm:company_list' %}" target="_self" rel="noopener noreferrer">
+                                <i class="fas fa-arrow-left me-2"></i>
+                                Voltar para Empresas
+                            </a>
+                        </div>
                     </div>
 
                     <!-- Informações da Empresa -->
-                    <div class="mb-4 p-3" style="background: var(--rm-bg-secondary); border-radius: var(--rm-border-radius-md); border: 1px solid var(--rm-border-primary);">
-                        <h2 class="h4 mb-2" style="color: var(--rm-primary);">
+                    <div class="mb-4 p-4" style="background: var(--rm-bg-secondary); border-radius: var(--rm-border-radius-md); border: 1px solid var(--rm-border-primary); width: 100%;">
+                        <h2 class="h4 mb-3" style="color: var(--rm-primary);">
                             <i class="fas fa-info-circle me-2"></i>
                             {{ company.name }}
                         </h2>
-                        <p class="text-muted mb-0">
-                            <strong>Slug:</strong> <code>{{ company.slug }}</code>
+                        <div class="d-flex flex-wrap align-items-center gap-3">
+                            <div>
+                                <strong style="color: var(--rm-text-secondary);">Slug:</strong> 
+                                <code style="margin-left: 8px;">{{ company.slug }}</code>
+                            </div>
                             {% if company.email %}
-                            <span class="ms-3">
-                                <strong>Email:</strong> {{ company.email }}
-                            </span>
+                            <div>
+                                <strong style="color: var(--rm-text-secondary);">Email:</strong> 
+                                <span style="color: var(--rm-text-primary); margin-left: 8px;">{{ company.email }}</span>
+                            </div>
                             {% endif %}
-                        </p>
+                            {% if company.cnpj %}
+                            <div>
+                                <strong style="color: var(--rm-text-secondary);">CNPJ:</strong> 
+                                <span style="color: var(--rm-text-primary); margin-left: 8px;">{{ company.cnpj }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
                     </div>
 
                     <!-- Cards de Ação -->
-                    <div class="row g-3 mb-4">
+                    <div class="row g-4 mb-5" style="width: 100%;">
                         <div class="col-12 col-md-4">
                             <div class="card card-action h-100">
                                 <div class="card-body">
@@ -387,7 +416,7 @@
                     </div>
 
                     <!-- Resumo e Mapas Recentes -->
-                    <div class="row g-3">
+                    <div class="row g-4" style="width: 100%;">
                         <div class="col-12 col-lg-6">
                             <div class="card h-100">
                                 <div class="card-body">
