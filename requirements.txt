@@ -18,3 +18,13 @@ xlrd>=2.0.0      # Para ler arquivos XLS antigos
 django-redis>=5.2.0  # Para cache Redis (opcional)
 dj-database-url==2.3.0
 psycopg[binary]==3.2.3
+
+# Servidor WSGI para produção
+gunicorn>=21.2.0  # Linux/Mac
+waitress>=2.1.2  # Windows (alternativa ao gunicorn)
+
+# Servir arquivos estáticos em produção
+whitenoise>=6.5.0
+
+# Monitoramento (opcional)
+# sentry-sdk>=1.32.0  # Descomente se usar Sentry
