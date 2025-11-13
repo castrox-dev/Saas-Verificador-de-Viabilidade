@@ -2,6 +2,16 @@
    ESTILOS PARA PÁGINAS DE LOGIN - DESIGN DA IMAGEM
    ======================================== */
 
+/* Remover scrollbar globalmente */
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE e Edge */
+}
+
+*::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
 /* === VARIÁVEIS DE CORES BASEADAS NA IMAGEM === */
 :root {
   /* Cores da imagem */
@@ -63,7 +73,10 @@ body {
   height: 100%;
   margin: 0;
   padding: 0;
-  overflow: hidden; /* Prevenir scroll na raiz */
+  overflow: hidden !important; /* Prevenir scroll na raiz */
+  position: fixed;
+  width: 100%;
+  height: 100%;
 }
 
 body {
@@ -76,7 +89,12 @@ body {
   transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden !important;
 }
 
 .side-by-side-layout {
@@ -85,9 +103,10 @@ body {
   flex: 1 1 0;
   min-height: 0;
   height: calc(100vh - 50px); /* Altura total menos espaço do footer */
-  overflow: hidden;
+  overflow: hidden !important;
   position: relative;
   max-height: calc(100vh - 50px);
+  box-sizing: border-box;
 }
 
 .side-by-side-layout::before {
@@ -107,10 +126,11 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem 1.5rem;
+  padding: clamp(1rem, 2vw, 2rem) clamp(1rem, 1.5vw, 1.5rem);
   position: relative;
   z-index: 1;
-  overflow: hidden;
+  overflow: hidden !important;
+  box-sizing: border-box;
 }
 .info-content {
   max-width: 500px;
@@ -118,10 +138,11 @@ body {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 1.25rem;
+  gap: clamp(0.75rem, 1.5vw, 1.25rem);
   height: 100%;
   justify-content: center;
-  overflow: hidden;
+  overflow: hidden !important;
+  box-sizing: border-box;
 }
 .two-column,
 .logo-column {
@@ -144,7 +165,7 @@ body {
   font-size: clamp(1.5rem, 3.5vw, 2rem);
   font-weight: 700;
   line-height: 1.2;
-  margin-bottom: 0.75rem;
+  margin-bottom: clamp(0.5rem, 1vw, 0.75rem);
   color: var(--img-text-primary);
   text-align: left;
 }
@@ -157,7 +178,7 @@ body {
 .main-subtitle {
   font-size: clamp(0.85rem, 1.3vw, 0.95rem);
   color: var(--img-text-secondary);
-  margin-bottom: 1.5rem;
+  margin-bottom: clamp(1rem, 2vw, 1.5rem);
   text-align: left;
   line-height: 1.4;
 }
@@ -165,7 +186,7 @@ body {
 .compact-features {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: clamp(0.5rem, 1vw, 0.75rem);
   margin-bottom: 0;
 }
 
@@ -203,25 +224,26 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1.5rem;
+  padding: clamp(1rem, 1.5vw, 1.5rem);
   background: transparent;
-  overflow: hidden;
+  overflow: hidden !important;
   position: relative;
   z-index: 1;
   height: 100%;
+  box-sizing: border-box;
 }
 
 .login-card {
   background: var(--img-card-bg);
   border: 1px solid var(--img-card-border);
   border-radius: 16px;
-  padding: 1.5rem;
+  padding: clamp(1.25rem, 1.5vw, 1.5rem);
   width: 100%;
   max-width: 340px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
   max-height: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden !important;
+  box-sizing: border-box;
 }
 
 .logo-container {
@@ -437,15 +459,15 @@ body {
 
 @media (max-width: 768px) {
   body {
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: hidden !important;
   }
   
   .side-by-side-layout {
     flex-direction: column;
-    height: auto;
+    height: calc(100vh - 60px);
     min-height: calc(100vh - 60px);
-    overflow-y: auto;
+    max-height: calc(100vh - 60px);
+    overflow: hidden !important;
   }
   
   .info-side {
