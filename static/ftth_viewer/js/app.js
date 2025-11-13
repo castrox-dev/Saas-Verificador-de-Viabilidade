@@ -1790,16 +1790,55 @@ async function loadKML(filename, mapId = null, options = {}) {
     try {
         const resp = await fetch(url, { signal: controller.signal });
         clearTimeout(timeoutId);
+        
+        // Verificar se a resposta foi bem-sucedida
+        if (!resp.ok) {
+            // Tentar obter mensagem de erro do JSON se possível
+            let errorMessage = `Erro ${resp.status}: ${resp.statusText}`;
+            try {
+                const contentType = resp.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    const errorData = await resp.json();
+                    errorMessage = errorData.erro || errorData.message || errorMessage;
+                } else {
+                    // Se não for JSON, pode ser HTML (página de erro)
+                    const text = await resp.text();
+                    if (text.includes('<!doctype') || text.includes('<html')) {
+                        errorMessage = `Erro do servidor (${resp.status}): O servidor retornou uma página de erro ao invés de dados JSON`;
+                    }
+                }
+            } catch (parseErr) {
+                // Se não conseguir fazer parse, usar mensagem padrão
+                console.warn('Não foi possível fazer parse da resposta de erro:', parseErr);
+            }
+            throw new Error(errorMessage);
+        }
+        
+        // Verificar se a resposta é JSON
+        const contentType = resp.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await resp.text();
+            throw new Error(`Resposta não é JSON. Content-Type: ${contentType || 'não especificado'}`);
+        }
+        
+        // Fazer parse do JSON
         data = await resp.json();
         
-        // Salvar no cache
-        smartCache.set('coordinates', cacheKey, data);
+        // Salvar no cache apenas se for sucesso
+        if (data && !data.erro) {
+            smartCache.set('coordinates', cacheKey, data);
+        }
         
         const duration = performanceMonitor.endTimer(timer, 'loadKML-api');
         console.log(`⚡ Arquivo carregado em ${duration.toFixed(2)}ms`);
     } catch (err) {
         clearTimeout(timeoutId);
-        console.error('Falha ao buscar coordenadas:', err);
+        // Não logar erro se for "Arquivo não encontrado" - já é esperado
+        if (err.message && (err.message.includes('não encontrado') || err.message.includes('not found'))) {
+            console.warn('Arquivo não encontrado:', filename, '-', err.message);
+        } else {
+            console.error('Falha ao buscar coordenadas:', err);
+        }
         performanceMonitor.recordError();
         performanceMonitor.endTimer(timer, 'loadKML-error');
         throw err;

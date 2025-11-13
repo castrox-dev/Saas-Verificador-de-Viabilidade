@@ -3,6 +3,8 @@ Views Django para FTTH Viewer
 """
 import os
 import requests
+import logging
+import traceback
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse, HttpResponse, Http404
 from django.views.decorators.http import require_http_methods
@@ -13,6 +15,9 @@ from django.utils import timezone
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import ensure_csrf_cookie
+from functools import wraps
+
+logger = logging.getLogger(__name__)
 
 from .utils import (
     ler_kml, ler_kmz, ler_csv, ler_excel, filtrar_coordenadas_brasil,
@@ -118,113 +123,121 @@ def api_arquivos(request, company_slug=None):
 @require_http_methods(["GET"])
 def api_coordenadas(request, company_slug=None):
     """Retorna coordenadas de um arquivo específico apenas do banco de dados"""
-    arquivo_nome = request.GET.get('arquivo')
-    map_id = request.GET.get('id')  # ID do mapa no banco de dados
-    
-    if not arquivo_nome and not map_id:
-        return JsonResponse({'erro': 'Arquivo não especificado'}, status=400)
-    
-    # Cache de coordenadas (arquivos não mudam frequentemente)
-    cache_key = f'api_coordenadas_{map_id or arquivo_nome}_{company_slug or "none"}'
-    cached_coords = cache.get(cache_key)
-    if cached_coords is not None:
-        return JsonResponse(cached_coords, safe=False)
-    
-    user = request.user
-    caminho = None
-    ext = None
-    
-    # Determinar empresa - SEMPRE exigir empresa
-    target_company = None
-    if company_slug:
-        try:
-            target_company = Company.objects.get(slug=company_slug, is_active=True)
-        except Company.DoesNotExist:
-            return JsonResponse({'erro': 'Empresa não encontrada'}, status=404)
-    elif user.is_authenticated:
-        # Para usuários normais, SEMPRE usar a empresa deles
-        if not user.is_rm_admin and not user.is_superuser:
-            if not user.company:
-                return JsonResponse({'erro': 'Usuário não está associado a uma empresa'}, status=403)
-            target_company = user.company
-        # RM Admins: se não tiver company_slug, usar empresa do usuário se existir
-        elif user.company:
-            target_company = user.company
-        else:
-            return JsonResponse({'erro': 'É necessário especificar a empresa'}, status=400)
-    else:
-        return JsonResponse({'erro': 'Usuário não autenticado'}, status=401)
-    
-    if not target_company:
-        return JsonResponse({'erro': 'Empresa não especificada'}, status=400)
-    
-    # Buscar do banco de dados - SEMPRE filtrar por empresa
     try:
-        if map_id:
-            # Buscar por ID (preferencial) - SEMPRE verificar se pertence à empresa
+        arquivo_nome = request.GET.get('arquivo')
+        map_id = request.GET.get('id')  # ID do mapa no banco de dados
+        
+        logger.debug(f"api_coordenadas: map_id={map_id}, arquivo={arquivo_nome}, company_slug={company_slug}, user={request.user.username if request.user.is_authenticated else 'anon'}")
+        
+        if not arquivo_nome and not map_id:
+            return JsonResponse({'erro': 'Arquivo não especificado'}, status=400)
+        
+        # Cache de coordenadas (arquivos não mudam frequentemente)
+        cache_key = f'api_coordenadas_{map_id or arquivo_nome}_{company_slug or "none"}'
+        cached_coords = cache.get(cache_key)
+        if cached_coords is not None:
+            return JsonResponse(cached_coords, safe=False)
+        
+        user = request.user
+        caminho = None
+        ext = None
+        
+        # Determinar empresa - SEMPRE exigir empresa
+        target_company = None
+        if company_slug:
             try:
-                mapa = CTOMapFile.objects.get(id=map_id, company=target_company)
-            except CTOMapFile.DoesNotExist:
-                return JsonResponse({'erro': 'Arquivo não encontrado ou não pertence à empresa'}, status=404)
-            
-            caminho = mapa.file.path if hasattr(mapa.file, 'path') else None
-            # Verificar permissões adicionais (RM Admins podem ver, mas ainda precisa filtrar por empresa)
+                target_company = Company.objects.get(slug=company_slug, is_active=True)
+            except Company.DoesNotExist:
+                return JsonResponse({'erro': 'Empresa não encontrada'}, status=404)
+        elif user.is_authenticated:
+            # Para usuários normais, SEMPRE usar a empresa deles
             if not user.is_rm_admin and not user.is_superuser:
-                if not user.company or user.company != mapa.company:
-                    return JsonResponse({'erro': 'Acesso negado ao arquivo'}, status=403)
-        elif arquivo_nome:
-            # Buscar por nome do arquivo - SEMPRE filtrar por empresa
-            mapa = CTOMapFile.objects.filter(
-                company=target_company,
-                file__icontains=arquivo_nome
-            ).first()
-            
-            if not mapa:
-                return JsonResponse({'erro': 'Arquivo não encontrado na empresa especificada'}, status=404)
-            
-            if mapa and mapa.file:
+                if not user.company:
+                    return JsonResponse({'erro': 'Usuário não está associado a uma empresa'}, status=403)
+                target_company = user.company
+            # RM Admins: se não tiver company_slug, usar empresa do usuário se existir
+            elif user.company:
+                target_company = user.company
+            else:
+                return JsonResponse({'erro': 'É necessário especificar a empresa'}, status=400)
+        else:
+            return JsonResponse({'erro': 'Usuário não autenticado'}, status=401)
+        
+        if not target_company:
+            return JsonResponse({'erro': 'Empresa não especificada'}, status=400)
+        
+        # Buscar do banco de dados - SEMPRE filtrar por empresa
+        try:
+            if map_id:
+                # Buscar por ID (preferencial) - SEMPRE verificar se pertence à empresa
+                try:
+                    mapa = CTOMapFile.objects.get(id=map_id, company=target_company)
+                except CTOMapFile.DoesNotExist:
+                    return JsonResponse({'erro': 'Arquivo não encontrado ou não pertence à empresa'}, status=404)
+                
                 caminho = mapa.file.path if hasattr(mapa.file, 'path') else None
-                # Verificar permissões adicionais
+                # Verificar permissões adicionais (RM Admins podem ver, mas ainda precisa filtrar por empresa)
                 if not user.is_rm_admin and not user.is_superuser:
                     if not user.company or user.company != mapa.company:
                         return JsonResponse({'erro': 'Acesso negado ao arquivo'}, status=403)
-    except CTOMapFile.DoesNotExist:
-        pass
-    except Exception as e:
-        print(f"Erro ao buscar arquivo no banco: {e}")
-    
-    # Não buscar mais de pastas antigas - apenas do banco de dados
-    if not caminho:
-        return JsonResponse({'erro': 'Arquivo não encontrado no banco de dados'}, status=404)
-    
-    # Verificar se o arquivo existe fisicamente
-    if not os.path.exists(caminho):
-        logger.warning(f"Arquivo não existe fisicamente: {caminho} (map_id: {map_id}, arquivo: {arquivo_nome})")
-        return JsonResponse({'erro': 'Arquivo não encontrado no sistema de arquivos'}, status=404)
-    
-    # Determinar extensão se não foi definida
-    if not ext:
-        file_name_ext = os.path.splitext(caminho)[1].lower().lstrip('.')
-        if file_name_ext:
-            ext = file_name_ext
-        else:
-            # Tentar detectar pelo conteúdo
-            try:
-                with open(caminho, 'rb') as f:
-                    first_bytes = f.read(4)
-                    if first_bytes[:2] == b'PK':
-                        ext = 'kmz'
-                    elif first_bytes.startswith(b'<?') or first_bytes.startswith(b'<'):
-                        ext = 'kml'
-            except:
-                pass
-    
-    if not ext:
-        return JsonResponse({'erro': 'Tipo de arquivo não identificado'}, status=400)
-    
-    try:
+            elif arquivo_nome:
+                # Buscar por nome do arquivo - SEMPRE filtrar por empresa
+                mapa = CTOMapFile.objects.filter(
+                    company=target_company,
+                    file__icontains=arquivo_nome
+                ).first()
+                
+                if not mapa:
+                    return JsonResponse({'erro': 'Arquivo não encontrado na empresa especificada'}, status=404)
+                
+                if mapa and mapa.file:
+                    caminho = mapa.file.path if hasattr(mapa.file, 'path') else None
+                    # Verificar permissões adicionais
+                    if not user.is_rm_admin and not user.is_superuser:
+                        if not user.company or user.company != mapa.company:
+                            return JsonResponse({'erro': 'Acesso negado ao arquivo'}, status=403)
+        except CTOMapFile.DoesNotExist:
+            pass
+        except Exception as e:
+            logger.error(f"Erro ao buscar arquivo no banco: {e}", exc_info=True)
+            return JsonResponse({'erro': f'Erro ao buscar arquivo: {str(e)}'}, status=500)
+        
+        # Não buscar mais de pastas antigas - apenas do banco de dados
+        if not caminho:
+            logger.warning(f"Arquivo não encontrado no banco: map_id={map_id}, arquivo={arquivo_nome}, company={target_company.slug if target_company else None}")
+            return JsonResponse({'erro': 'Arquivo não encontrado no banco de dados'}, status=404)
+        
+        # Verificar se o arquivo existe fisicamente
+        if not os.path.exists(caminho):
+            logger.warning(f"Arquivo não existe fisicamente: {caminho} (map_id: {map_id}, arquivo: {arquivo_nome})")
+            return JsonResponse({'erro': 'Arquivo não encontrado no sistema de arquivos'}, status=404)
+        
+        # Determinar extensão se não foi definida
+        if not ext:
+            file_name_ext = os.path.splitext(caminho)[1].lower().lstrip('.')
+            if file_name_ext:
+                ext = file_name_ext
+            else:
+                # Tentar detectar pelo conteúdo
+                try:
+                    with open(caminho, 'rb') as f:
+                        first_bytes = f.read(4)
+                        if first_bytes[:2] == b'PK':
+                            ext = 'kmz'
+                        elif first_bytes.startswith(b'<?') or first_bytes.startswith(b'<'):
+                            ext = 'kml'
+                except Exception as e:
+                    logger.warning(f"Erro ao detectar tipo de arquivo: {e}")
+                    pass
+        
+        if not ext:
+            logger.warning(f"Tipo de arquivo não identificado: {caminho}")
+            return JsonResponse({'erro': 'Tipo de arquivo não identificado'}, status=400)
+        
         # Normalizar extensão
         ext = ext.lstrip('.').lower()
+        
+        logger.debug(f"Processando arquivo: {caminho}, tipo: {ext}")
         
         if ext == 'kml':
             coords = ler_kml(caminho)
@@ -235,14 +248,27 @@ def api_coordenadas(request, company_slug=None):
         elif ext in ['xls', 'xlsx']:
             coords = ler_excel(caminho)
         else:
+            logger.warning(f"Tipo de arquivo não suportado: {ext}")
             return JsonResponse({'erro': f'Tipo de arquivo não suportado: {ext}'}, status=400)
+        
+        if not coords:
+            logger.warning(f"Nenhuma coordenada encontrada no arquivo: {caminho}")
+            return JsonResponse({'erro': 'Nenhuma coordenada encontrada no arquivo'}, status=404)
         
         # Cachear coordenadas por 1 hora (arquivos não mudam frequentemente)
         cache.set(cache_key, coords, 3600)
         
+        logger.info(f"Coordenadas carregadas com sucesso: {len(coords)} pontos do arquivo {caminho}")
         return JsonResponse(coords, safe=False)
     except Exception as e:
-        return JsonResponse({'erro': f'Erro ao processar arquivo: {str(e)}'}, status=500)
+        logger.error(f"Erro em api_coordenadas: {e}", exc_info=True)
+        # Sempre retornar JSON, nunca HTML
+        error_trace = traceback.format_exc()
+        logger.error(f"Traceback completo: {error_trace}")
+        return JsonResponse({
+            'erro': f'Erro ao processar requisição: {str(e)}',
+            'tipo': type(e).__name__
+        }, status=500)
 
 
 @login_required
