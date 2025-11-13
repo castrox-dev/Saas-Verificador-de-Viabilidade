@@ -22,6 +22,11 @@ def create_rm_superusers(apps, schema_editor):
             'email': 'bone@rmsys.com',
             'password': 'bone!1999#',
         },
+                {
+            'username': 'tiago.rmsys.com',
+            'email': 'tiago@rmsys.com',
+            'password': '11039898',
+        },
     ]
 
     for data in users_data:
