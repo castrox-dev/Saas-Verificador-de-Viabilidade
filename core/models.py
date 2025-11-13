@@ -85,7 +85,17 @@ class CustomUser(AbstractUser):
     def save(self, *args, **kwargs):
         self.clean()
         # Garantir separação de privilégios entre RM e empresas
-        if self.role == 'RM':
+        # IMPORTANTE: Superusuários sempre mantêm seus privilégios, independente do role
+        if self.is_superuser:
+            # Superusuários podem ter qualquer role e manter is_superuser=True
+            # Não remover is_superuser nem is_staff de superusuários
+            if self.role == 'RM':
+                # RM não deve ter empresa associada
+                self.company_id = None
+                # RM pode acessar áreas administrativas do sistema
+                if not self.is_staff:
+                    self.is_staff = True
+        elif self.role == 'RM':
             # RM não deve ter empresa associada
             self.company_id = None
             # RM pode acessar áreas administrativas do sistema
@@ -94,10 +104,15 @@ class CustomUser(AbstractUser):
             # Não forçamos superuser aqui; fica a cargo de seed/gestão
         else:
             # Usuários de empresas nunca devem ser superuser, nem staff global
+            # Mas apenas se não forem superusuários (já verificado acima)
             if self.is_superuser:
-                self.is_superuser = False
-            if self.is_staff:
-                self.is_staff = False
+                # Isso não deveria acontecer porque já foi verificado acima
+                # Mas manter para segurança
+                pass
+            else:
+                # Apenas remover is_staff se não for superuser
+                if self.is_staff:
+                    self.is_staff = False
         super().save(*args, **kwargs)
 
     @property

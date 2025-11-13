@@ -10,6 +10,9 @@ class RMOnlyAdminSite(AdminSite):
 
     def has_permission(self, request):
         user = request.user
+        # Permite acesso para superusuários OU usuários ativos, staff e com role RM
+        if user.is_superuser:
+            return True
         # Permite acesso somente para usuários ativos, staff e com role RM
         return user.is_active and user.is_staff and getattr(user, 'role', None) == 'RM'
 

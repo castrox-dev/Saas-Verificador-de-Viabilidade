@@ -8,8 +8,11 @@ logger = logging.getLogger(__name__)
 
 
 def is_rm_admin(user):
-    """Verifica se o usuário é administrador RM"""
-    return user.is_authenticated and user.is_rm_admin
+    """Verifica se o usuário é administrador RM ou superusuário"""
+    # Superusuários sempre têm acesso, mesmo sem autenticação explícita
+    if hasattr(user, 'is_superuser') and user.is_superuser:
+        return True
+    return user.is_authenticated and getattr(user, 'is_rm_admin', False)
 
 
 def is_company_admin(user):
@@ -45,11 +48,16 @@ def belongs_to_same_company(user, target_user):
 # Função de teste com logs para debug
 def _rm_admin_test(user):
     """Testa se o usuário é RM admin ou superuser, com logs para debug"""
+    # Superusuários sempre têm acesso, mesmo sem autenticação explícita
+    if hasattr(user, 'is_superuser') and user.is_superuser:
+        logger.debug(f"rm_admin_required: Acesso permitido para superusuário {user.username}")
+        return True
+    
     if not user.is_authenticated:
         logger.warning(f"rm_admin_required: Usuário não autenticado")
         return False
     
-    is_admin = is_rm_admin(user) or user.is_superuser
+    is_admin = is_rm_admin(user)
     if not is_admin:
         logger.warning(
             f"rm_admin_required: Acesso negado para {user.username} "
@@ -161,33 +169,45 @@ class SameCompanyRequiredMixin:
 
 # Mixins para Class-Based Views
 class RMAdminRequiredMixin:
-    """Mixin que exige que o usuário seja administrador RM"""
+    """Mixin que exige que o usuário seja administrador RM ou superusuário"""
 
     def dispatch(self, request, *args, **kwargs):
+        # Superusuários sempre têm acesso
+        if hasattr(request.user, 'is_superuser') and request.user.is_superuser:
+            return super().dispatch(request, *args, **kwargs)
         if not is_rm_admin(request.user):
             raise PermissionDenied("Acesso restrito a administradores RM.")
         return super().dispatch(request, *args, **kwargs)
 
 class CompanyAdminRequiredMixin:
-    """Mixin que exige que o usuário seja administrador da empresa"""
+    """Mixin que exige que o usuário seja administrador da empresa ou superusuário"""
 
     def dispatch(self, request, *args, **kwargs):
+        # Superusuários sempre têm acesso
+        if hasattr(request.user, 'is_superuser') and request.user.is_superuser:
+            return super().dispatch(request, *args, **kwargs)
         if not (is_rm_admin(request.user) or is_company_admin(request.user)):
             raise PermissionDenied("Acesso restrito a administradores.")
         return super().dispatch(request, *args, **kwargs)
 
 class UserManagementRequiredMixin:
-    """Mixin que exige permissão para gerenciar usuários"""
+    """Mixin que exige permissão para gerenciar usuários ou ser superusuário"""
 
     def dispatch(self, request, *args, **kwargs):
+        # Superusuários sempre têm acesso
+        if hasattr(request.user, 'is_superuser') and request.user.is_superuser:
+            return super().dispatch(request, *args, **kwargs)
         if not can_manage_users(request.user):
             raise PermissionDenied("Você não tem permissão para gerenciar usuários.")
         return super().dispatch(request, *args, **kwargs)
 
 class MapUploadRequiredMixin:
-    """Mixin que exige permissão para upload de mapas"""
+    """Mixin que exige permissão para upload de mapas ou ser superusuário"""
 
     def dispatch(self, request, *args, **kwargs):
+        # Superusuários sempre têm acesso
+        if hasattr(request.user, 'is_superuser') and request.user.is_superuser:
+            return super().dispatch(request, *args, **kwargs)
         if not can_upload_maps(request.user):
             raise PermissionDenied("Você não tem permissão para fazer upload de mapas.")
         return super().dispatch(request, *args, **kwargs)

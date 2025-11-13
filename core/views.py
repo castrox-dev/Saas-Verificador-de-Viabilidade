@@ -58,8 +58,12 @@ def home_redirect(request):
 @ensure_csrf_cookie
 @login_rate_limit
 def rm_login_view(request):
+    """
+    View de login RM - acessível para todos, incluindo superusuários.
+    Não requer autenticação prévia para acessar a página.
+    """
     # Log para debug de CSRF
-    logger.debug(f"rm_login_view: method={request.method}, path={request.path}, host={request.get_host()}")
+    logger.debug(f"rm_login_view: method={request.method}, path={request.path}, host={request.get_host()}, user={request.user.username if request.user.is_authenticated else 'anon'}, is_superuser={request.user.is_superuser if request.user.is_authenticated else False}")
     logger.debug(f"rm_login_view: is_secure={request.is_secure()}, META.get('HTTP_ORIGIN')={request.META.get('HTTP_ORIGIN', 'N/A')}")
     logger.debug(f"rm_login_view: CSRF cookie presente={request.META.get('CSRF_COOKIE', 'N/A')}")
     
