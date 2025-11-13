@@ -45,11 +45,19 @@ DATABASE_URL=postgresql://...
 
 ### 2. Comando de Start
 
-No Railway, configure o comando de start como:
+O projeto agora usa um script `start.sh` que garante que as migrações sejam executadas. O Railway deve usar automaticamente o `Procfile` ou você pode configurar manualmente:
 
 ```bash
-python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn saas_viabilidade.wsgi:application --bind 0.0.0.0:$PORT
+bash start.sh
 ```
+
+O script `start.sh`:
+- Verifica se `DATABASE_URL` está configurada
+- Executa as migrações do banco de dados
+- Coleta arquivos estáticos
+- Inicia o servidor Gunicorn
+
+**Importante:** Certifique-se de que o arquivo `start.sh` tem permissão de execução no Railway.
 
 ### 3. Build Command (opcional)
 
