@@ -11,18 +11,20 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
     
     def process_response(self, request, response):
         # Content Security Policy - Restritivo mas permitindo estilos inline para desenvolvimento
+        # Permite arquivos estáticos do próprio domínio
+        request_host = request.get_host()
         csp = (
-            "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com; "
-            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com https://unpkg.com; "
-            "font-src 'self' data: https://fonts.gstatic.com https://fonts.googleapis.com https://cdnjs.cloudflare.com https://unpkg.com; "
-            "img-src 'self' data: https:; "
-            "connect-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://viacep.com.br https://brasilapi.com.br; "
+            f"default-src 'self' https://{request_host}; "
+            f"script-src 'self' 'unsafe-inline' https://{request_host} https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com; "
+            f"style-src 'self' 'unsafe-inline' https://{request_host} https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com https://unpkg.com; "
+            f"font-src 'self' data: https://{request_host} https://fonts.gstatic.com https://fonts.googleapis.com https://cdnjs.cloudflare.com https://unpkg.com; "
+            f"img-src 'self' data: https://{request_host} https:; "
+            f"connect-src 'self' https://{request_host} https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://viacep.com.br https://brasilapi.com.br; "
             "frame-ancestors 'none'; "
             "base-uri 'self'; "
             "form-action 'self'; "
             "object-src 'none'; "
-            "media-src 'self'"
+            f"media-src 'self' https://{request_host}"
         )
         response['Content-Security-Policy'] = csp
         

@@ -27,6 +27,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # Deve vir logo após SecurityMiddleware
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -98,6 +99,14 @@ STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 ]
+
+# Configuração do WhiteNoise para servir arquivos estáticos
+# WhiteNoise permite que o Django sirva arquivos estáticos diretamente
+# Usar WhiteNoise sempre, mas com configurações diferentes para dev/prod
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+WHITENOISE_MAX_AGE = 31536000 if not DEBUG else 0  # Cache de 1 ano em produção, sem cache em dev
+WHITENOISE_USE_FINDERS = DEBUG  # Em dev, usar finders para arquivos não coletados
+WHITENOISE_AUTOREFRESH = DEBUG  # Em dev, recarregar automaticamente
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
