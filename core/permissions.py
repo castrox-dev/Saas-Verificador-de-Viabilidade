@@ -2,6 +2,9 @@ from django.contrib.auth.decorators import user_passes_test
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseForbidden, JsonResponse
 from functools import wraps
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def is_rm_admin(user):
@@ -39,8 +42,30 @@ def belongs_to_same_company(user, target_user):
 
     return user.company == target_user.company
 
+# Função de teste com logs para debug
+def _rm_admin_test(user):
+    """Testa se o usuário é RM admin ou superuser, com logs para debug"""
+    if not user.is_authenticated:
+        logger.warning(f"rm_admin_required: Usuário não autenticado")
+        return False
+    
+    is_admin = is_rm_admin(user) or user.is_superuser
+    if not is_admin:
+        logger.warning(
+            f"rm_admin_required: Acesso negado para {user.username} "
+            f"(role: {getattr(user, 'role', 'N/A')}, "
+            f"is_superuser: {user.is_superuser}, "
+            f"is_rm_admin: {getattr(user, 'is_rm_admin', False)})"
+        )
+    else:
+        logger.debug(
+            f"rm_admin_required: Acesso permitido para {user.username} "
+            f"(role: {getattr(user, 'role', 'N/A')}, is_superuser: {user.is_superuser})"
+        )
+    return is_admin
+
 # Decorators para views usando user_passes_test
-rm_admin_required = user_passes_test(lambda u: is_rm_admin(u) or u.is_superuser, login_url='/rm/login/')
+rm_admin_required = user_passes_test(_rm_admin_test, login_url='/rm/login/')
 company_admin_required = user_passes_test(
     lambda u: is_rm_admin(u) or is_company_admin(u) or u.is_superuser,
     login_url='/rm/login/'

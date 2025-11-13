@@ -73,26 +73,37 @@ def rm_login_view(request):
         if user is not None:
             # Verificar se o usuário está ativo
             if not user.is_active:
+                logger.warning(f"Tentativa de login com conta desativada: {user.username}")
                 messages.error(request, 'Sua conta está desativada. Contate o administrador.')
             # Verificar se é admin RM ou superuser
             elif user.is_rm_admin or user.is_superuser:
                 login(request, user)
-                # Log para debug (remover em produção se necessário)
+                # Log detalhado para debug
                 logger.info(f"Login bem-sucedido: {user.username} (role: {user.role}, is_superuser: {user.is_superuser}, is_rm_admin: {user.is_rm_admin})")
+                logger.info(f"Sessão criada: session_key={request.session.session_key}, user_id={user.id}")
+                # Verificar novamente após login
+                if not request.user.is_authenticated:
+                    logger.error(f"ERRO: Usuário não autenticado após login() - {user.username}")
+                if not (request.user.is_rm_admin or request.user.is_superuser):
+                    logger.error(f"ERRO: Usuário não tem permissão RM após login - {request.user.username} (role: {request.user.role})")
                 # Redirecionar para o dashboard administrativo RM
                 next_url = request.GET.get('next') or request.POST.get('next')
                 if next_url:
                     try:
+                        logger.info(f"Redirecionando para next_url: {next_url}")
                         return redirect(next_url)
-                    except:
+                    except Exception as e:
+                        logger.error(f"Erro ao redirecionar para next_url {next_url}: {e}")
                         return redirect('rm:admin_dashboard')
                 else:
+                    logger.info(f"Redirecionando para rm:admin_dashboard")
                     return redirect('rm:admin_dashboard')
             else:
                 # Usuário autenticado mas não é admin RM - pode tentar login da empresa
-                logger.warning(f"Tentativa de login RM sem permissão: {user.username} (role: {user.role})")
+                logger.warning(f"Tentativa de login RM sem permissão: {user.username} (role: {user.role}, is_rm_admin: {user.is_rm_admin}, is_superuser: {user.is_superuser})")
                 messages.error(request, 'Você não tem permissão para acessar esta área. Tente fazer login através da página da sua empresa.')
         else:
+            logger.warning(f"Tentativa de login com credenciais inválidas: username={input_id}")
             messages.error(request, 'Credenciais inválidas.')
     return render(request, 'login.html')
 
@@ -114,6 +125,7 @@ def company_list(request):
 @rm_admin_required
 def rm_admin_dashboard(request):
     """Dashboard administrativo RM"""
+    logger.info(f"rm_admin_dashboard acessado por: {request.user.username} (role: {request.user.role}, is_superuser: {request.user.is_superuser}, is_rm_admin: {request.user.is_rm_admin})")
     from django.utils import timezone
     
     # Usar cache para estatísticas que não mudam frequentemente
