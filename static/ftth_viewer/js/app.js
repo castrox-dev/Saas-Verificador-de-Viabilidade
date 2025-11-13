@@ -1766,16 +1766,17 @@ function setupCTOButtonListeners() {
                 
                 if (isNotFound) {
                     // Arquivo não encontrado - mostrar mensagem mais informativa
-                    console.warn('Mapa não encontrado:', filename);
+                    console.warn('⚠️ Mapa não encontrado:', filename || mapId);
+                    console.info('💡 Este erro é esperado quando arquivos não foram enviados após o deploy no Railway.');
                     
                     // Construir mensagem com solução se disponível
-                    let notificationMessage = `Mapa não encontrado: ${filename}`;
+                    let notificationMessage = `Mapa não encontrado: ${filename || mapId || 'arquivo'}`;
                     if (error.solucao) {
                         notificationMessage += `\n\n💡 ${error.solucao}`;
                     } else if (errorMessage.includes('Railway') || errorMessage.includes('efêmero')) {
                         notificationMessage += '\n\n💡 No Railway, arquivos são efêmeros. Faça upload do arquivo novamente através da interface web.';
                     } else {
-                        notificationMessage += '\n\n💡 Faça upload do arquivo novamente através da interface web.';
+                        notificationMessage += '\n\n💡 Faça upload do arquivo novamente através da interface web após o deploy.';
                     }
                     
                     showNotification(notificationMessage, 'warning');
@@ -1921,13 +1922,27 @@ async function loadKML(filename, mapId = null, options = {}) {
         console.log(`⚡ Arquivo carregado em ${duration.toFixed(2)}ms`);
     } catch (err) {
         clearTimeout(timeoutId);
-        // Não logar erro se for "Arquivo não encontrado" - já é esperado
-        if (err.message && (err.message.includes('não encontrado') || err.message.includes('not found'))) {
-            console.warn('Arquivo não encontrado:', filename, '-', err.message);
+        
+        // Tratar erros 404 como warnings (arquivos não encontrados são esperados no Railway)
+        const isNotFound = err.status === 404 || 
+                          (err.message && (err.message.includes('não encontrado') || 
+                                          err.message.includes('not found') || 
+                                          err.message.includes('404')));
+        
+        if (isNotFound) {
+            // Arquivo não encontrado - logar como warning (não erro crítico)
+            console.warn('⚠️ Arquivo não encontrado:', filename || mapId, '-', err.message?.substring(0, 100) || 'Arquivo não disponível no servidor');
+            console.info('💡 Este erro é esperado quando arquivos não foram enviados após o deploy no Railway (filesystem efêmero).');
         } else {
-            console.error('Falha ao buscar coordenadas:', err);
+            // Outros erros - logar como erro crítico
+            console.error('❌ Falha ao buscar coordenadas:', err);
         }
-        performanceMonitor.recordError();
+        
+        // Não registrar como erro no monitor de performance se for 404 esperado
+        if (!isNotFound) {
+            performanceMonitor.recordError();
+        }
+        
         performanceMonitor.endTimer(timer, 'loadKML-error');
         throw err;
     }
@@ -1942,11 +1957,18 @@ async function loadKML(filename, mapId = null, options = {}) {
             errorMessage += `\n\nℹ️ Detalhes: ${data.detalhes}`;
         }
         
-        // Não logar erro se for "Arquivo não encontrado" - é esperado em alguns casos
-        if (data.erro.includes('não encontrado') || data.erro.includes('not found')) {
-            console.warn('Arquivo não encontrado:', filename, '-', data.erro);
+        // Tratar erros 404 como warnings (arquivos não encontrados são esperados no Railway)
+        const isNotFound = data.erro.includes('não encontrado') || 
+                          data.erro.includes('not found') || 
+                          data.erro.includes('404');
+        
+        if (isNotFound) {
+            // Arquivo não encontrado - logar como warning (não erro crítico)
+            console.warn('⚠️ Arquivo não encontrado:', filename || mapId, '-', data.erro);
+            console.info('💡 Este erro é esperado quando arquivos não foram enviados após o deploy no Railway (filesystem efêmero).');
         } else {
-            console.error('Erro da API:', data.erro);
+            // Outros erros - logar como erro crítico
+            console.error('❌ Erro da API:', data.erro);
         }
         
         const error = new Error(errorMessage);
