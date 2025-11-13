@@ -1723,9 +1723,18 @@ function setupCTOButtonListeners() {
                 if (overlay) overlay.classList.remove('active');
                 document.body.classList.remove('no-scroll');
             }
-        } catch (error) {
-                console.error('Erro ao carregar mapa selecionado:', error);
-                showNotification(`Erro ao carregar mapa: ${filename}`, 'error');
+            } catch (error) {
+                // Tratar erros de forma mais específica
+                const errorMessage = error.message || error.toString();
+                if (errorMessage.includes('não encontrado') || errorMessage.includes('not found')) {
+                    // Arquivo não encontrado - não é um erro crítico, apenas avisar o usuário
+                    console.warn('Mapa não encontrado:', filename);
+                    showNotification(`Mapa não encontrado: ${filename}`, 'warning');
+                } else {
+                    // Outros erros - logar e mostrar mensagem de erro
+                    console.error('Erro ao carregar mapa selecionado:', error);
+                    showNotification(`Erro ao carregar mapa: ${filename}`, 'error');
+                }
                 checkbox.checked = false;
                 setCheckboxStateForKey(mapKey, false);
         } finally {
@@ -1797,7 +1806,12 @@ async function loadKML(filename, mapId = null, options = {}) {
     }
 
     if (data && data.erro) {
-        console.error('Erro da API:', data.erro);
+        // Não logar erro se for "Arquivo não encontrado" - é esperado em alguns casos
+        if (data.erro.includes('não encontrado') || data.erro.includes('not found')) {
+            console.warn('Arquivo não encontrado:', filename, '-', data.erro);
+        } else {
+            console.error('Erro da API:', data.erro);
+        }
         throw new Error(data.erro);
     }
     if (!Array.isArray(data) || data.length === 0) {

@@ -194,8 +194,13 @@ def api_coordenadas(request, company_slug=None):
         print(f"Erro ao buscar arquivo no banco: {e}")
     
     # Não buscar mais de pastas antigas - apenas do banco de dados
-    if not caminho or not os.path.exists(caminho):
+    if not caminho:
         return JsonResponse({'erro': 'Arquivo não encontrado no banco de dados'}, status=404)
+    
+    # Verificar se o arquivo existe fisicamente
+    if not os.path.exists(caminho):
+        logger.warning(f"Arquivo não existe fisicamente: {caminho} (map_id: {map_id}, arquivo: {arquivo_nome})")
+        return JsonResponse({'erro': 'Arquivo não encontrado no sistema de arquivos'}, status=404)
     
     # Determinar extensão se não foi definida
     if not ext:
