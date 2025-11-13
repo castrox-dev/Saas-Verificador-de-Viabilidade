@@ -1,0 +1,425 @@
+/* ========================================
+   ESTILOS PARA PÁGINAS DE ERRO
+   Ocupam 100vh sem scroll e são responsivos
+   ======================================== */
+
+/* === RESET E LAYOUT BASE === */
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    position: fixed;
+    top: 0;
+    left: 0;
+}
+
+body.error-page {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    height: 100vh;
+    width: 100vw;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    box-sizing: border-box;
+}
+
+/* Dark mode background */
+[data-theme="dark"] body.error-page {
+    background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+}
+
+/* === CONTAINER DE ERRO === */
+.error-container {
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(1rem, 2vw, 1.5rem);
+    box-sizing: border-box;
+    position: fixed;
+    top: 0;
+    left: 0;
+    overflow: hidden;
+}
+
+.error-content {
+    text-align: center;
+    max-width: 550px;
+    width: 100%;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: clamp(1.5rem, 3vw, 2rem);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.75rem, 1.5vw, 1rem);
+}
+
+/* === ÍCONE DE ERRO === */
+.error-icon {
+    font-size: clamp(3rem, 6vw, 4rem);
+    color: var(--rm-danger, #ef4444);
+    margin-bottom: clamp(0.5rem, 1vw, 1rem);
+    line-height: 1;
+}
+
+/* === CÓDIGO DE ERRO === */
+.error-code {
+    font-size: clamp(4rem, 10vw, 6rem);
+    font-weight: 900;
+    color: var(--rm-danger, #ef4444);
+    line-height: 1;
+    margin-bottom: clamp(0.25rem, 0.5vw, 0.5rem);
+}
+
+/* === TÍTULO DE ERRO === */
+.error-title {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-weight: 600;
+    color: var(--rm-text-primary, #1f2937);
+    margin-bottom: clamp(0.5rem, 1vw, 1rem);
+    line-height: 1.2;
+}
+
+/* Dark mode title */
+[data-theme="dark"] .error-title {
+    color: var(--rm-text-primary, #f7fafc);
+}
+
+/* === MENSAGEM DE ERRO === */
+.error-message {
+    font-size: clamp(0.95rem, 1.8vw, 1.1rem);
+    color: var(--rm-text-secondary, #6b7280);
+    margin-bottom: clamp(1rem, 2vw, 1.5rem);
+    line-height: 1.6;
+}
+
+/* Dark mode message */
+[data-theme="dark"] .error-message {
+    color: var(--rm-text-secondary, #cbd5e0);
+}
+
+/* === AÇÕES DE ERRO === */
+.error-actions {
+    display: flex;
+    gap: clamp(0.75rem, 1.5vw, 1rem);
+    justify-content: center;
+    margin-bottom: clamp(1rem, 2vw, 1.5rem);
+    flex-wrap: wrap;
+}
+
+.error-actions .btn {
+    padding: clamp(0.75rem, 1.5vw, 0.875rem) clamp(1.25rem, 2.5vw, 1.5rem);
+    font-size: clamp(0.9rem, 1.6vw, 1rem);
+    font-weight: 500;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    border: none;
+    min-width: 140px;
+}
+
+.error-actions .btn-primary {
+    background: var(--rm-primary, #1D4ED8);
+    color: white;
+}
+
+.error-actions .btn-primary:hover {
+    background: var(--rm-primary-dark, #1e40af);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(29, 78, 216, 0.3);
+}
+
+.error-actions .btn-outline-secondary {
+    background: transparent;
+    color: var(--rm-text-primary, #1f2937);
+    border: 2px solid var(--rm-border, #e5e7eb);
+}
+
+.error-actions .btn-outline-secondary:hover {
+    background: var(--rm-bg-secondary, #f3f4f6);
+    border-color: var(--rm-border-hover, #d1d5db);
+}
+
+[data-theme="dark"] .error-actions .btn-outline-secondary {
+    color: var(--rm-text-primary, #f7fafc);
+    border-color: var(--rm-border, #4a5568);
+}
+
+[data-theme="dark"] .error-actions .btn-outline-secondary:hover {
+    background: var(--rm-bg-secondary, #2d3748);
+    border-color: var(--rm-border-hover, #4a5568);
+}
+
+/* === AJUDA DE ERRO === */
+.error-help {
+    text-align: left;
+    background: var(--rm-card-bg, #f8fafc);
+    padding: clamp(1rem, 2vw, 1.5rem);
+    border-radius: 8px;
+    border-left: 4px solid var(--rm-danger, #ef4444);
+    margin-top: clamp(0.5rem, 1vw, 1rem);
+}
+
+/* Dark mode help box */
+[data-theme="dark"] .error-help {
+    background: var(--rm-card-bg, #2d3748);
+    border-left-color: var(--rm-danger, #ef4444);
+}
+
+.error-help h6 {
+    color: var(--rm-text-primary, #1f2937);
+    margin-bottom: clamp(0.75rem, 1.5vw, 1rem);
+    font-size: clamp(0.95rem, 1.6vw, 1rem);
+    font-weight: 600;
+}
+
+[data-theme="dark"] .error-help h6 {
+    color: var(--rm-text-primary, #f7fafc);
+}
+
+.error-help ul {
+    margin: 0;
+    padding-left: clamp(1.25rem, 2.5vw, 1.5rem);
+    color: var(--rm-text-secondary, #6b7280);
+    font-size: clamp(0.85rem, 1.4vw, 0.95rem);
+    line-height: 1.6;
+}
+
+[data-theme="dark"] .error-help ul {
+    color: var(--rm-text-secondary, #cbd5e0);
+}
+
+.error-help li {
+    margin-bottom: clamp(0.375rem, 0.75vw, 0.5rem);
+}
+
+/* === SOLUÇÕES E CONTATO === */
+.error-solutions,
+.error-contact {
+    margin-top: clamp(1rem, 2vw, 1.5rem);
+    padding-top: clamp(1rem, 2vw, 1.5rem);
+    border-top: 1px solid var(--rm-border, #e5e7eb);
+}
+
+[data-theme="dark"] .error-solutions,
+[data-theme="dark"] .error-contact {
+    border-top-color: var(--rm-border, #4a5568);
+}
+
+.error-contact strong {
+    color: var(--rm-text-primary, #1f2937);
+    font-size: clamp(0.9rem, 1.5vw, 1rem);
+}
+
+[data-theme="dark"] .error-contact strong {
+    color: var(--rm-text-primary, #f7fafc);
+}
+
+.error-contact p {
+    margin: clamp(0.375rem, 0.75vw, 0.5rem) 0 0 0;
+    color: var(--rm-text-secondary, #6b7280);
+    font-size: clamp(0.85rem, 1.4vw, 0.95rem);
+    line-height: 1.6;
+}
+
+[data-theme="dark"] .error-contact p {
+    color: var(--rm-text-secondary, #cbd5e0);
+}
+
+/* === CORES ESPECÍFICAS POR TIPO DE ERRO === */
+/* 400 - Bad Request */
+.error-code[data-error="400"],
+.error-icon[data-error="400"] {
+    color: var(--rm-info, #3b82f6);
+}
+
+.error-help[data-error="400"] {
+    border-left-color: var(--rm-info, #3b82f6);
+}
+
+/* 403 - Forbidden */
+.error-code[data-error="403"],
+.error-icon[data-error="403"] {
+    color: var(--rm-danger, #ef4444);
+}
+
+.error-help[data-error="403"] {
+    border-left-color: var(--rm-danger, #ef4444);
+}
+
+/* 404 - Not Found */
+.error-code[data-error="404"],
+.error-icon[data-error="404"] {
+    color: var(--rm-primary, #1D4ED8);
+}
+
+.error-help[data-error="404"] {
+    border-left-color: var(--rm-primary, #1D4ED8);
+}
+
+/* 500 - Internal Server Error */
+.error-code[data-error="500"],
+.error-icon[data-error="500"] {
+    color: var(--rm-warning, #f59e0b);
+}
+
+.error-help[data-error="500"] {
+    border-left-color: var(--rm-warning, #f59e0b);
+}
+
+/* === RESPONSIVIDADE === */
+@media (max-width: 768px) {
+    .error-container {
+        padding: 1rem;
+    }
+    
+    .error-content {
+        max-height: calc(100vh - 2rem);
+        padding: 1.25rem;
+        gap: 0.75rem;
+    }
+    
+    .error-code {
+        font-size: 3.5rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .error-icon {
+        font-size: 3rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .error-title {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .error-message {
+        font-size: 0.95rem;
+        margin-bottom: 1rem;
+    }
+    
+    .error-actions {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+    
+    .error-actions .btn {
+        width: 100%;
+        max-width: 100%;
+        min-width: auto;
+    }
+    
+    .error-help {
+        padding: 1rem;
+        margin-top: 0.5rem;
+    }
+    
+    .error-help h6 {
+        font-size: 0.95rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .error-help ul {
+        font-size: 0.85rem;
+        padding-left: 1.25rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .error-container {
+        padding: 0.75rem;
+    }
+    
+    .error-content {
+        max-height: calc(100vh - 1.5rem);
+        padding: 1rem;
+        gap: 0.65rem;
+    }
+    
+    .error-code {
+        font-size: 3rem;
+    }
+    
+    .error-icon {
+        font-size: 2.5rem;
+    }
+    
+    .error-title {
+        font-size: 1.25rem;
+    }
+    
+    .error-message {
+        font-size: 0.9rem;
+    }
+    
+    .error-actions {
+        gap: 0.65rem;
+    }
+    
+    .error-actions .btn {
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .error-help {
+        padding: 0.875rem;
+    }
+    
+    .error-help h6 {
+        font-size: 0.9rem;
+        margin-bottom: 0.65rem;
+    }
+    
+    .error-help ul {
+        font-size: 0.8rem;
+        padding-left: 1.15rem;
+    }
+    
+    .error-help li {
+        margin-bottom: 0.35rem;
+    }
+}
+
+/* === SCROLLBAR PERSONALIZADA === */
+.error-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.error-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.error-content::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+}
+
+.error-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .error-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+[data-theme="dark"] .error-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
