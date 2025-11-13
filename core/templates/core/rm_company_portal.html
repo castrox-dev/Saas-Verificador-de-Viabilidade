@@ -1,93 +1,429 @@
+{% extends "base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Portal da Empresa - {{ company.name }}</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <style>
-    .card-action { transition: transform .08s ease-in-out; }
-    .card-action:hover { transform: translateY(-2px); }
-  </style>
-</head>
-<body>
-  <div class="container py-4">
-    <div class="d-flex align-items-center justify-content-between mb-3">
-      <h1 class="h3 mb-0">Portal da Empresa</h1>
-      <a class="btn btn-outline-secondary" href="{% url 'rm:company_list' %}">Voltar para Empresas</a>
-    </div>
 
-    <div class="mb-4">
-      <h2 class="h4">{{ company.name }}</h2>
-      <p class="text-muted mb-0">Slug: <code>{{ company.slug }}</code></p>
-    </div>
+{% block title %}Portal da Empresa - {{ company.name }} - RM Systems{% endblock %}
 
-    <div class="row g-3 mb-4">
-      <div class="col-12 col-md-4">
-        <div class="card card-action h-100">
-          <div class="card-body">
-            <h5 class="card-title">Gerir Membros</h5>
-            <p class="card-text mb-3">Adicionar, editar e ativar/desativar usuários desta empresa.</p>
-            <a class="btn btn-primary" href="{% url 'company:user_list' company_slug=company.slug %}">Abrir gestão de membros</a>
-          </div>
-        </div>
-      </div>
-      <div class="col-12 col-md-4">
-        <div class="card card-action h-100">
-          <div class="card-body">
-            <h5 class="card-title">Mapas</h5>
-            <p class="card-text mb-3">Visualizar e baixar mapas CTO desta empresa.</p>
-            <a class="btn btn-primary" href="{% url 'rm:map_list' %}?company={{ company.slug }}">Abrir lista de mapas</a>
-          </div>
-        </div>
-      </div>
-      <div class="col-12 col-md-4">
-        <div class="card card-action h-100">
-          <div class="card-body">
-            <h5 class="card-title">Verificador</h5>
-            <p class="card-text mb-3">Fazer upload de novos mapas para verificação.</p>
-            <a class="btn btn-success" href="{% url 'company:ftth_viewer:index' company_slug=company.slug %}">Abrir verificador</a>
-          </div>
-        </div>
-      </div>
-    </div>
+{% block extra_head %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<style>
+    body {
+        background-color: var(--rm-bg-primary);
+        color: var(--rm-text-primary);
+    }
+    
+    /* Ocultar coluna de sidebar e centralizar conteúdo */
+    .sidebar-col { display: none; }
+    
+    .main-content { 
+        padding: 30px; 
+        background-color: var(--rm-bg-primary);
+        display: flex; 
+        justify-content: center; 
+        align-items: flex-start; 
+        min-height: calc(100vh - 76px);
+    }
+    
+    .content-card { 
+        background: var(--rm-card-bg); 
+        border-radius: var(--rm-border-radius-xl);
+        padding: 30px; 
+        box-shadow: var(--rm-card-shadow); 
+        border: 1px solid var(--rm-card-border); 
+        color: var(--rm-text-primary);
+        width: 100%; 
+        max-width: 1200px; 
+        margin: 0 auto; 
+    }
+    
+    .sidebar {
+        background: var(--rm-sidebar-bg);
+        min-height: calc(100vh - 76px);
+        box-shadow: var(--rm-shadow);
+        border-right: 1px solid var(--rm-sidebar-border);
+    }
+    
+    .sidebar .nav-link {
+        color: var(--rm-text-primary);
+        padding: 15px 20px;
+        border-bottom: 1px solid var(--rm-border-primary);
+        transition: all 0.3s;
+    }
+    
+    .sidebar .nav-link:hover {
+        background-color: var(--rm-bg-secondary);
+        color: var(--rm-primary);
+        transform: translateX(5px);
+    }
+    
+    .sidebar .nav-link.active {
+        background-color: var(--rm-primary);
+        color: var(--rm-white);
+    }
+    
+    /* Cards de Ação */
+    .card-action { 
+        transition: all 0.3s ease;
+        background: var(--rm-card-bg);
+        border: 1px solid var(--rm-card-border);
+        border-radius: var(--rm-border-radius-lg);
+        box-shadow: var(--rm-card-shadow);
+    }
+    
+    .card-action:hover { 
+        transform: translateY(-4px);
+        box-shadow: var(--rm-shadow-lg);
+        border-color: var(--rm-primary);
+    }
+    
+    .card-action .card-title {
+        color: var(--rm-text-primary);
+        font-weight: 600;
+        margin-bottom: 12px;
+    }
+    
+    .card-action .card-text {
+        color: var(--rm-text-secondary);
+        margin-bottom: 20px;
+    }
+    
+    /* Botões */
+    .btn-primary {
+        background: var(--rm-primary);
+        border: none;
+        border-radius: var(--rm-border-radius-md);
+        padding: 10px 20px;
+        color: var(--rm-white);
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: var(--rm-shadow-sm);
+    }
+    
+    .btn-primary:hover {
+        background: var(--rm-primary-dark);
+        transform: translateY(-2px);
+        box-shadow: var(--rm-shadow-md);
+        color: var(--rm-white);
+    }
+    
+    .btn-success {
+        background: var(--rm-success);
+        border: none;
+        border-radius: var(--rm-border-radius-md);
+        padding: 10px 20px;
+        color: var(--rm-white);
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: var(--rm-shadow-sm);
+    }
+    
+    .btn-success:hover {
+        background: var(--rm-success-dark);
+        transform: translateY(-2px);
+        box-shadow: var(--rm-shadow-md);
+        color: var(--rm-white);
+    }
+    
+    .btn-outline-secondary {
+        background: transparent;
+        border: 1px solid var(--rm-border-primary);
+        border-radius: var(--rm-border-radius-md);
+        padding: 10px 20px;
+        color: var(--rm-text-secondary);
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-outline-secondary:hover {
+        background: var(--rm-bg-secondary);
+        border-color: var(--rm-primary);
+        color: var(--rm-primary);
+        transform: translateY(-2px);
+    }
+    
+    .btn-outline-primary {
+        background: transparent;
+        border: 1px solid var(--rm-primary);
+        border-radius: var(--rm-border-radius-md);
+        padding: 6px 12px;
+        color: var(--rm-primary);
+        font-weight: 600;
+        transition: all 0.3s ease;
+        font-size: 0.875rem;
+    }
+    
+    .btn-outline-primary:hover {
+        background: var(--rm-primary);
+        color: var(--rm-white);
+        transform: translateY(-1px);
+        box-shadow: var(--rm-shadow-sm);
+    }
+    
+    /* Cards de Resumo */
+    .card {
+        background: var(--rm-card-bg);
+        border: 1px solid var(--rm-card-border);
+        border-radius: var(--rm-border-radius-lg);
+        box-shadow: var(--rm-card-shadow);
+        color: var(--rm-text-primary);
+    }
+    
+    .card-body {
+        padding: 20px;
+    }
+    
+    .card-title {
+        color: var(--rm-text-primary);
+        font-weight: 600;
+        margin-bottom: 16px;
+    }
+    
+    .list-unstyled {
+        list-style: none;
+        padding: 0;
+    }
+    
+    .list-unstyled li {
+        padding: 8px 0;
+        border-bottom: 1px solid var(--rm-border-primary);
+        color: var(--rm-text-secondary);
+    }
+    
+    .list-unstyled li:last-child {
+        border-bottom: none;
+    }
+    
+    .list-unstyled strong {
+        color: var(--rm-text-primary);
+        font-weight: 600;
+    }
+    
+    /* List Group */
+    .list-group-item {
+        background: var(--rm-card-bg);
+        border: 1px solid var(--rm-border-primary);
+        color: var(--rm-text-primary);
+        padding: 12px 16px;
+    }
+    
+    .list-group-item:first-child {
+        border-top-left-radius: var(--rm-border-radius-md);
+        border-top-right-radius: var(--rm-border-radius-md);
+    }
+    
+    .list-group-item:last-child {
+        border-bottom-left-radius: var(--rm-border-radius-md);
+        border-bottom-right-radius: var(--rm-border-radius-md);
+    }
+    
+    .text-muted {
+        color: var(--rm-text-secondary) !important;
+    }
+    
+    code {
+        background: var(--rm-bg-secondary);
+        color: var(--rm-primary);
+        padding: 2px 6px;
+        border-radius: var(--rm-border-radius-sm);
+        font-size: 0.875rem;
+    }
+    
+    /* Títulos */
+    h1, h2, h3, h4, h5, h6 {
+        color: var(--rm-text-primary);
+        font-weight: 600;
+    }
+    
+    /* Modo Escuro */
+    [data-theme="dark"] .card-action:hover {
+        border-color: var(--rm-primary-light);
+    }
+    
+    [data-theme="dark"] code {
+        background: var(--rm-bg-tertiary);
+        color: var(--rm-primary-light);
+    }
+</style>
+{% endblock %}
 
-    <div class="row g-3">
-      <div class="col-12 col-lg-6">
-        <div class="card h-100">
-          <div class="card-body">
-            <h5 class="card-title mb-3">Resumo</h5>
-            <ul class="list-unstyled mb-0">
-              <li>Total de usuários: <strong>{{ total_users }}</strong></li>
-              <li>Usuários ativos: <strong>{{ active_users }}</strong></li>
-              <li>Total de mapas: <strong>{{ total_maps }}</strong></li>
-            </ul>
-          </div>
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar (oculta) -->
+        <div class="col-md-3 col-lg-2 px-0 sidebar-col">
+            <div class="sidebar">
+                <nav class="nav flex-column">
+                    <a class="nav-link" href="{% url 'rm:admin_dashboard' %}">
+                        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                    </a>
+                    <a class="nav-link active" href="{% url 'rm:company_list' %}">
+                        <i class="fas fa-building me-2"></i>Empresas
+                    </a>
+                    <a class="nav-link" href="{% url 'rm:user_list' %}">
+                        <i class="fas fa-users me-2"></i>Usuários
+                    </a>
+                    <a class="nav-link" href="{% url 'rm:map_by_company' %}">
+                        <i class="fas fa-map me-2"></i>Mapas CTO
+                    </a>
+                    <a class="nav-link" href="{% url 'rm:reports' %}">
+                        <i class="fas fa-chart-bar me-2"></i>Relatórios
+                    </a>
+                </nav>
+            </div>
         </div>
-      </div>
-      <div class="col-12 col-lg-6">
-        <div class="card h-100">
-          <div class="card-body">
-            <h5 class="card-title mb-3">Mais recentes</h5>
-            {% if recent_maps %}
-            <ul class="list-group list-group-flush">
-              {% for m in recent_maps %}
-              <li class="list-group-item d-flex justify-content-between align-items-center">
-                <span>{{ m.original_filename }} <small class="text-muted">({{ m.uploaded_at|date:"d/m/Y H:i" }})</small></span>
-                <a class="btn btn-sm btn-outline-primary" href="{% url 'rm:map_download' m.pk %}">Baixar</a>
-              </li>
-              {% endfor %}
-            </ul>
-            {% else %}
-            <p class="text-muted mb-0">Sem uploads recentes.</p>
-            {% endif %}
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+        <!-- Main Content -->
+        <div class="col-md-9 col-lg-10">
+            <div class="main-content">
+                <div class="content-card">
+                    <!-- Header -->
+                    <div class="d-flex align-items-center justify-content-between mb-4">
+                        <div>
+                            <h1 class="h3 mb-1">
+                                <i class="fas fa-building me-2" style="color: var(--rm-primary);"></i>
+                                Portal da Empresa
+                            </h1>
+                            <p class="text-muted mb-0">Gestão e visualização de dados da empresa</p>
+                        </div>
+                        <a class="btn btn-outline-secondary" href="{% url 'rm:company_list' %}">
+                            <i class="fas fa-arrow-left me-2"></i>
+                            Voltar para Empresas
+                        </a>
+                    </div>
+
+                    <!-- Informações da Empresa -->
+                    <div class="mb-4 p-3" style="background: var(--rm-bg-secondary); border-radius: var(--rm-border-radius-md); border: 1px solid var(--rm-border-primary);">
+                        <h2 class="h4 mb-2" style="color: var(--rm-primary);">
+                            <i class="fas fa-info-circle me-2"></i>
+                            {{ company.name }}
+                        </h2>
+                        <p class="text-muted mb-0">
+                            <strong>Slug:</strong> <code>{{ company.slug }}</code>
+                            {% if company.email %}
+                            <span class="ms-3">
+                                <strong>Email:</strong> {{ company.email }}
+                            </span>
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <!-- Cards de Ação -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-12 col-md-4">
+                            <div class="card card-action h-100">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div style="width: 48px; height: 48px; background: var(--rm-gradient-primary); border-radius: var(--rm-border-radius-md); display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                                            <i class="fas fa-users fa-lg" style="color: var(--rm-white);"></i>
+                                        </div>
+                                        <h5 class="card-title mb-0">Gerir Membros</h5>
+                                    </div>
+                                    <p class="card-text mb-3">Adicionar, editar e ativar/desativar usuários desta empresa.</p>
+                                    <a class="btn btn-primary w-100" href="{% url 'company:user_list' company_slug=company.slug %}">
+                                        <i class="fas fa-user-cog me-2"></i>
+                                        Abrir gestão de membros
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <div class="card card-action h-100">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div style="width: 48px; height: 48px; background: var(--rm-success); border-radius: var(--rm-border-radius-md); display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                                            <i class="fas fa-map fa-lg" style="color: var(--rm-white);"></i>
+                                        </div>
+                                        <h5 class="card-title mb-0">Mapas</h5>
+                                    </div>
+                                    <p class="card-text mb-3">Visualizar e baixar mapas CTO desta empresa.</p>
+                                    <a class="btn btn-primary w-100" href="{% url 'rm:map_list' %}?company={{ company.slug }}">
+                                        <i class="fas fa-map-marked-alt me-2"></i>
+                                        Abrir lista de mapas
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <div class="card card-action h-100">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div style="width: 48px; height: 48px; background: var(--rm-info); border-radius: var(--rm-border-radius-md); display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                                            <i class="fas fa-check-circle fa-lg" style="color: var(--rm-white);"></i>
+                                        </div>
+                                        <h5 class="card-title mb-0">Verificador</h5>
+                                    </div>
+                                    <p class="card-text mb-3">Fazer upload de novos mapas para verificação.</p>
+                                    <a class="btn btn-success w-100" href="{% url 'company:ftth_viewer:index' company_slug=company.slug %}">
+                                        <i class="fas fa-upload me-2"></i>
+                                        Abrir verificador
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Resumo e Mapas Recentes -->
+                    <div class="row g-3">
+                        <div class="col-12 col-lg-6">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title mb-3">
+                                        <i class="fas fa-chart-pie me-2" style="color: var(--rm-primary);"></i>
+                                        Resumo
+                                    </h5>
+                                    <ul class="list-unstyled mb-0">
+                                        <li>
+                                            <i class="fas fa-users me-2" style="color: var(--rm-text-secondary);"></i>
+                                            Total de usuários: <strong>{{ total_users }}</strong>
+                                        </li>
+                                        <li>
+                                            <i class="fas fa-user-check me-2" style="color: var(--rm-success);"></i>
+                                            Usuários ativos: <strong>{{ active_users }}</strong>
+                                        </li>
+                                        <li>
+                                            <i class="fas fa-map me-2" style="color: var(--rm-info);"></i>
+                                            Total de mapas: <strong>{{ total_maps }}</strong>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-lg-6">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title mb-3">
+                                        <i class="fas fa-clock me-2" style="color: var(--rm-primary);"></i>
+                                        Mapas Mais Recentes
+                                    </h5>
+                                    {% if recent_maps %}
+                                    <ul class="list-group list-group-flush">
+                                        {% for m in recent_maps %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <div class="flex-grow-1">
+                                                <i class="fas fa-file-archive me-2" style="color: var(--rm-text-secondary);"></i>
+                                                <span style="color: var(--rm-text-primary);">{{ m.original_filename|default:m.file_name|default:"Arquivo" }}</span>
+                                                <br>
+                                                <small class="text-muted">{{ m.uploaded_at|date:"d/m/Y H:i" }}</small>
+                                            </div>
+                                            <a class="btn btn-sm btn-outline-primary" href="{% url 'rm:map_download' m.pk %}" title="Baixar arquivo">
+                                                <i class="fas fa-download"></i>
+                                            </a>
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                    {% else %}
+                                    <div class="text-center text-muted py-4">
+                                        <i class="fas fa-inbox fa-2x mb-3" style="opacity: 0.5;"></i>
+                                        <p class="mb-0">Sem uploads recentes.</p>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
