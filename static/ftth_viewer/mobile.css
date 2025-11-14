@@ -390,8 +390,8 @@ body.no-scroll {
 
 /* ===== MAPA RESPONSIVO ===== */
 #map {
-    /* Configurações de toque otimizadas */
-    touch-action: pan-x pan-y pinch-zoom;
+    /* Configurações de toque otimizadas - PERMITIR TODOS OS GESTOS */
+    touch-action: pan-x pan-y pinch-zoom double-tap-zoom;
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     -khtml-user-select: none;
@@ -401,6 +401,8 @@ body.no-scroll {
     -webkit-tap-highlight-color: transparent;
     /* Prevenir scroll da página quando arrastando o mapa */
     overscroll-behavior: none;
+    overscroll-behavior-x: none;
+    overscroll-behavior-y: none;
     -webkit-overflow-scrolling: touch;
     /* Melhorias de performance para mobile */
     will-change: transform;
@@ -409,6 +411,12 @@ body.no-scroll {
     /* Melhorar responsividade */
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
+    /* Garantir que o mapa capture todos os eventos de toque */
+    pointer-events: auto;
+    /* Melhorar detecção de toque */
+    -ms-touch-action: pan-x pan-y pinch-zoom;
+    /* Permitir zoom com gestos de pinch */
+    -ms-content-zooming: zoom;
 }
 
 /* Melhorar área de toque do mapa no mobile */
@@ -422,25 +430,45 @@ body.no-scroll {
         bottom: 0;
         width: 100%;
         height: 100%;
-        /* Melhorar responsividade do toque */
-        touch-action: pan-x pan-y pinch-zoom;
+        /* Melhorar responsividade do toque - PERMITIR TODOS OS GESTOS */
+        touch-action: pan-x pan-y pinch-zoom double-tap-zoom;
         -webkit-touch-callout: none;
-        /* Prevenir zoom acidental com double-tap */
+        /* Permitir zoom com pinch e double-tap */
         -ms-touch-action: pan-x pan-y pinch-zoom;
+        -ms-content-zooming: zoom;
         /* Melhorar performance de renderização */
         will-change: transform;
         transform: translateZ(0);
         -webkit-transform: translateZ(0);
         /* Prevenir scroll da página */
         overscroll-behavior: none;
+        overscroll-behavior-x: none;
+        overscroll-behavior-y: none;
         -webkit-overflow-scrolling: touch;
+        /* Garantir captura de eventos */
+        pointer-events: auto;
+        /* Melhorar área de toque - garantir que todo o espaço seja utilizável */
+        -webkit-user-drag: none;
+        -khtml-user-drag: none;
+        -moz-user-drag: none;
+        -o-user-drag: none;
+        user-drag: none;
     }
     
     /* Melhorar camadas do Leaflet no mobile */
     .leaflet-container {
-        touch-action: pan-x pan-y pinch-zoom;
+        touch-action: pan-x pan-y pinch-zoom double-tap-zoom !important;
         -webkit-tap-highlight-color: transparent;
         background: #f4f4f4;
+        /* Garantir que o container capture eventos */
+        pointer-events: auto !important;
+        /* Melhorar detecção de gestos */
+        -ms-touch-action: pan-x pan-y pinch-zoom;
+        -ms-content-zooming: zoom;
+        /* Prevenir conflitos de scroll */
+        overscroll-behavior: none;
+        overscroll-behavior-x: none;
+        overscroll-behavior-y: none;
     }
     
     /* Melhorar performance de arraste */
@@ -448,6 +476,27 @@ body.no-scroll {
         will-change: transform;
         transform: translateZ(0);
         -webkit-transform: translateZ(0);
+        /* Permitir gestos de toque */
+        touch-action: pan-x pan-y pinch-zoom;
+        pointer-events: auto;
+    }
+    
+    /* Garantir que todas as camadas do mapa permitam gestos */
+    .leaflet-tile-pane,
+    .leaflet-overlay-pane,
+    .leaflet-shadow-pane,
+    .leaflet-marker-pane,
+    .leaflet-tooltip-pane,
+    .leaflet-popup-pane {
+        touch-action: none;
+        pointer-events: none;
+    }
+    
+    /* Os elementos interativos devem permitir toque */
+    .leaflet-interactive,
+    .leaflet-clickable {
+        touch-action: manipulation;
+        pointer-events: auto;
     }
     
     /* Melhorar tiles do mapa */
@@ -509,6 +558,49 @@ body.no-scroll {
     .leaflet-popup-tip,
     .leaflet-control {
         touch-action: manipulation;
+    }
+    
+    /* IMPORTANTE: Garantir que elementos sobrepostos não bloqueiem gestos do mapa */
+    .top-bar,
+    .header,
+    .overlay,
+    .sidebar {
+        pointer-events: auto;
+        /* Não interferir no mapa quando fechados */
+    }
+    
+    .sidebar:not(.active),
+    .overlay:not(.active) {
+        pointer-events: none;
+    }
+    
+    /* Garantir que o mapa sempre capture eventos de toque quando visível */
+    #map {
+        pointer-events: auto !important;
+        z-index: 1;
+    }
+    
+    /* Evitar que a sidebar bloqueie o mapa quando fechada */
+    .sidebar:not(.active) {
+        pointer-events: none;
+    }
+    
+    /* Elementos de UI devem permitir cliques mas não bloquear gestos do mapa */
+    .top-bar *,
+    .header * {
+        pointer-events: auto;
+    }
+    
+    /* Área do mapa deve estar sempre acessível */
+    #map,
+    #map * {
+        touch-action: pan-x pan-y pinch-zoom double-tap-zoom;
+    }
+    
+    /* Exceção para controles do Leaflet */
+    .leaflet-control {
+        touch-action: manipulation;
+        pointer-events: auto;
     }
 }
 

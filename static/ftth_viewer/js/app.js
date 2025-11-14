@@ -652,35 +652,65 @@ const mapOptions = {
     preferCanvas: true,
     maxBounds: brazilBounds,
     maxBoundsViscosity: 1.0,
-    // Melhorias para mobile
+    // Melhorias para mobile - GARANTIR TODOS OS GESTOS ESTÃO HABILITADOS
     dragging: true,
-    touchZoom: true,
-    doubleClickZoom: true,
+    touchZoom: true, // CRÍTICO: Habilitar zoom por toque (pinch)
+    doubleClickZoom: true, // Habilitar double-tap zoom no mobile
     scrollWheelZoom: !isMobile, // Desabilitar zoom com scroll no mobile (usa pinch)
     boxZoom: false, // Desabilitar box zoom no mobile
     keyboard: false, // Desabilitar teclado no mobile
     // Configurações de performance para mobile
     fadeAnimation: !isMobile, // Desabilitar fade no mobile para melhor performance
     zoomAnimation: true,
-    zoomAnimationThreshold: 4,
-    // Melhorias de toque
+    zoomAnimationThreshold: isMobile ? 3 : 4, // Threshold menor no mobile para melhor resposta
+    // Melhorias de toque - AJUSTADAS PARA MELHOR RESPONSIVIDADE
     tap: true,
-    tapTolerance: 15, // Tolerância maior para toque no mobile
+    tapTolerance: isMobile ? 30 : 15, // Tolerância MUITO maior para toque no mobile (evitar conflitos)
     // Configurações de arraste melhoradas para mobile
     inertia: true, // Habilitar inércia para arraste mais suave
-    inertiaDeceleration: 3000, // Desaceleração mais suave
-    inertiaMaxSpeed: 1500, // Velocidade máxima de inércia
-    easeLinearity: 0.25, // Suavidade do movimento
+    inertiaDeceleration: isMobile ? 2000 : 3000, // Desaceleração mais rápida no mobile
+    inertiaMaxSpeed: isMobile ? 2000 : 1500, // Velocidade máxima maior no mobile para melhor resposta
+    easeLinearity: isMobile ? 0.3 : 0.25, // Mais linear no mobile para movimento mais previsível
     worldCopyJump: false,
     // Melhorias de renderização (Leaflet usa preferCanvas para isso)
-    // Configurações de zoom
+    // Configurações de zoom - AJUSTADAS PARA MOBILE
     minZoom: 5,
     maxZoom: 19,
-    zoomSnap: 0.25, // Zoom mais suave
+    zoomSnap: isMobile ? 0 : 0.25, // Sem snap no mobile para zoom mais fluido
     zoomDelta: isMobile ? 1 : 1.5
 };
 
 const map = L.map('map', mapOptions);
+
+// Garantir que todos os handlers de toque estejam habilitados após criação do mapa
+if (isMobile) {
+    // Forçar habilitar todos os handlers de toque no mobile
+    map.touchZoom.enable();
+    map.doubleClickZoom.enable();
+    map.dragging.enable();
+    
+    // Melhorar detecção de gestos de pinch
+    const mapElement = document.getElementById('map');
+    if (mapElement) {
+        // Remover qualquer bloqueio de gestos
+        mapElement.style.touchAction = 'pan-x pan-y pinch-zoom double-tap-zoom';
+        
+        // Prevenir que eventos sejam bloqueados
+        mapElement.addEventListener('touchstart', function(e) {
+            // Permitir múltiplos toques para pinch zoom
+            if (e.touches.length > 1) {
+                e.preventDefault = () => {}; // Não prevenir para permitir pinch
+            }
+        }, { passive: true });
+        
+        mapElement.addEventListener('touchmove', function(e) {
+            // Permitir movimento para arraste e zoom
+            if (e.touches.length > 1) {
+                e.preventDefault = () => {}; // Não prevenir para permitir pinch
+            }
+        }, { passive: true });
+    }
+}
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
@@ -742,6 +772,50 @@ resetMapView();
 
 // Tornar acessível globalmente
 window.map = map;
+
+// Função para garantir que gestos estejam sempre habilitados no mobile
+function ensureMobileGesturesEnabled() {
+    if (isMobile && map) {
+        // Forçar habilitar todos os handlers críticos
+        try {
+            map.touchZoom.enable();
+            map.doubleClickZoom.enable();
+            map.dragging.enable();
+            
+            const mapElement = document.getElementById('map');
+            if (mapElement) {
+                // Garantir que o CSS permita gestos
+                mapElement.style.touchAction = 'pan-x pan-y pinch-zoom double-tap-zoom';
+                
+                // Remover qualquer bloqueio de eventos
+                const leafletContainer = mapElement.querySelector('.leaflet-container');
+                if (leafletContainer) {
+                    leafletContainer.style.touchAction = 'pan-x pan-y pinch-zoom double-tap-zoom';
+                }
+            }
+        } catch (e) {
+            console.warn('Erro ao garantir gestos mobile:', e);
+        }
+    }
+}
+
+// Garantir gestos após carregamento completo
+document.addEventListener('DOMContentLoaded', function() {
+    if (isMobile) {
+        // Aguardar um pouco para garantir que o mapa está totalmente inicializado
+        setTimeout(ensureMobileGesturesEnabled, 500);
+        
+        // Re-verificar após eventos de toque (caso algo desabilite)
+        document.addEventListener('touchend', function() {
+            setTimeout(ensureMobileGesturesEnabled, 100);
+        }, { passive: true });
+    }
+});
+
+// Chamar quando o mapa estiver pronto
+map.whenReady(function() {
+    ensureMobileGesturesEnabled();
+});
 
 // Helpers: CEP validation, CEP search via ViaCEP, and notifications
 function extractCEP(query) {
@@ -3336,13 +3410,27 @@ function toggleCursorMode() {
         // Restaurar cursor do mapa
         document.getElementById('map').style.cursor = '';
         
-        // Reabilitar arrastar e zoom do mapa
+        // Reabilitar arrastar e zoom do mapa - GARANTIR TUDO ESTÁ HABILITADO NO MOBILE
         map.dragging.enable();
         map.scrollWheelZoom.enable();
         map.doubleClickZoom.enable();
-        map.touchZoom.enable();
+        map.touchZoom.enable(); // CRÍTICO: Zoom por pinch no mobile
         map.boxZoom.enable();
         map.keyboard.enable();
+        
+        // No mobile, garantir que todos os gestos estejam habilitados
+        if (isMobile) {
+            // Forçar habilitar todos os handlers críticos para mobile
+            map.touchZoom.enable();
+            map.doubleClickZoom.enable();
+            map.dragging.enable();
+            
+            // Garantir que o elemento do mapa permita gestos
+            const mapElement = document.getElementById('map');
+            if (mapElement) {
+                mapElement.style.touchAction = 'pan-x pan-y pinch-zoom double-tap-zoom';
+            }
+        }
         
         // Remover evento de clique no mapa
         map.off('click', onMapClick);
@@ -3801,8 +3889,20 @@ function toggleAddCTOMode() {
         map.dragging.enable();
         map.scrollWheelZoom.enable();
         map.doubleClickZoom.enable();
-        map.touchZoom.enable();
+        map.touchZoom.enable(); // CRÍTICO: Zoom por pinch no mobile
         map.boxZoom.enable();
+        
+        // No mobile, garantir que todos os gestos estejam habilitados
+        if (isMobile) {
+            map.touchZoom.enable();
+            map.doubleClickZoom.enable();
+            map.dragging.enable();
+            
+            const mapElement = document.getElementById('map');
+            if (mapElement) {
+                mapElement.style.touchAction = 'pan-x pan-y pinch-zoom double-tap-zoom';
+            }
+        }
         map.keyboard.enable();
         
         // Remover handler
