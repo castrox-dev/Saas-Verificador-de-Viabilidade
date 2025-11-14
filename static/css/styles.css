@@ -60,6 +60,99 @@ body {
   overflow-x: hidden;
 }
 
+/* === GARANTIR SCROLL NO MOBILE EM TODAS AS PÁGINAS === */
+/* Regras globais para mobile - devem ser aplicadas em TODAS as páginas */
+@media (max-width: 768px) {
+  /* Regras com MÁXIMA especificidade para garantir scroll no mobile */
+  html,
+  html body,
+  body,
+  body.no-scroll {
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    position: relative !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    max-height: none !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-y: contain !important;
+    touch-action: pan-y !important;
+  }
+  
+  /* Remover qualquer bloqueio de scroll */
+  body.no-scroll {
+    overflow: auto !important;
+    position: relative !important;
+    height: auto !important;
+  }
+  
+  /* Garantir que containers principais permitam scroll */
+  .main-container,
+  .container,
+  .main-content,
+  .content-wrapper,
+  .container-fluid {
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+    position: relative !important;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+  }
+  
+  /* Garantir que cards não bloqueiem scroll */
+  .card,
+  .card-body,
+  .card-header,
+  .card-footer {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+  
+  /* Garantir que tabelas sejam scrolláveis */
+  .table-responsive,
+  .table-wrapper {
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  
+  /* Garantir que formulários permitam scroll */
+  .form,
+  .form-container,
+  form {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+  
+  /* Garantir que divs de conteúdo permitam scroll */
+  .content,
+  .page-content,
+  .wrapper {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+  }
+}
+
+/* Regras adicionais para mobile pequeno */
+@media (max-width: 480px) {
+  html,
+  html body,
+  body,
+  body.no-scroll {
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    position: relative !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    max-height: none !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-y: contain !important;
+    touch-action: pan-y !important;
+  }
+}
+
 
 /* Menu de Navegação do Dashboard */
 .dashboard-nav {

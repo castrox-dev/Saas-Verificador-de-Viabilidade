@@ -723,18 +723,77 @@ def company_map_list(request, company_slug):
 def company_map_download(request, company_slug, pk):
     """Download de mapa da empresa"""
     company = get_object_or_404(Company, slug=company_slug)
-    if request.user.company != company:
-        return HttpResponseForbidden()
+    
+    # Verificar permissões
+    if not request.user.is_rm_admin and not request.user.is_superuser:
+        if not request.user.company or request.user.company != company:
+            return HttpResponseForbidden("Acesso negado")
 
     map_file = get_object_or_404(CTOMapFile, pk=pk, company=company)
 
-    if os.path.exists(map_file.file.path):
-        with open(map_file.file.path, 'rb') as f:
-            response = HttpResponse(f.read(), content_type='application/octet-stream')
-            response['Content-Disposition'] = f'attachment; filename="{map_file.file_name}"'
+    # Verificar se o arquivo existe fisicamente
+    if not map_file.file:
+        messages.error(request, f'O arquivo "{map_file.file_name}" não foi encontrado no servidor.')
+        return redirect('company:map_list', company_slug=company_slug)
+    
+    # Verificar se tem atributo path
+    if not hasattr(map_file.file, 'path'):
+        messages.error(request, f'O arquivo "{map_file.file_name}" não pode ser acessado.')
+        return redirect('company:map_list', company_slug=company_slug)
+    
+    file_path = map_file.file.path
+    
+    # Verificar se o arquivo existe fisicamente
+    if not os.path.exists(file_path):
+        # Verificar se está no Railway e se o volume está configurado
+        is_railway = os.getenv("RAILWAY_ENVIRONMENT") is not None or os.getenv("RAILWAY_PUBLIC_DOMAIN") is not None
+        railway_volume_path = os.getenv("RAILWAY_VOLUME_PATH", "/data")
+        has_volume = is_railway and os.path.exists(railway_volume_path)
+        
+        if is_railway and not has_volume:
+            messages.error(request, 
+                f'⚠️ RAILWAY VOLUME NÃO CONFIGURADO!\n\n'
+                f'O arquivo "{map_file.file_name}" foi perdido porque o Railway Volume não está configurado.\n\n'
+                f'Por favor, configure um Railway Volume e faça upload do arquivo novamente.')
+        else:
+            messages.error(request, 
+                f'O arquivo "{map_file.file_name}" não foi encontrado no servidor.\n\n'
+                f'Possíveis causas:\n'
+                f'- O arquivo foi enviado antes da configuração do volume\n'
+                f'- O container foi reiniciado antes do deploy com volume\n\n'
+                f'✅ Faça upload do arquivo novamente através da interface web.')
+        
+        return redirect('company:map_list', company_slug=company_slug)
+    
+    # Tentar fazer o download
+    try:
+        # Determinar content-type baseado na extensão
+        file_ext = os.path.splitext(map_file.file_name)[1].lower()
+        content_types = {
+            '.kml': 'application/vnd.google-earth.kml+xml',
+            '.kmz': 'application/vnd.google-earth.kmz',
+            '.csv': 'text/csv',
+            '.xls': 'application/vnd.ms-excel',
+            '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        }
+        content_type = content_types.get(file_ext, 'application/octet-stream')
+        
+        # Ler e servir o arquivo
+        with open(file_path, 'rb') as f:
+            response = HttpResponse(f.read(), content_type=content_type)
+            # Usar nome seguro para o arquivo
+            safe_filename = map_file.file_name.encode('utf-8', 'replace').decode('utf-8')
+            response['Content-Disposition'] = f'attachment; filename="{safe_filename}"'
+            response['Content-Length'] = os.path.getsize(file_path)
             return response
-    else:
-        raise Http404("Arquivo não encontrado")
+    except IOError as e:
+        logger.error(f"Erro ao ler arquivo {file_path}: {str(e)}")
+        messages.error(request, f'Erro ao ler o arquivo "{map_file.file_name}". Tente novamente.')
+        return redirect('company:map_list', company_slug=company_slug)
+    except Exception as e:
+        logger.error(f"Erro inesperado ao fazer download do arquivo {pk}: {str(e)}")
+        messages.error(request, f'Erro ao fazer download do arquivo. Tente novamente.')
+        return redirect('company:map_list', company_slug=company_slug)
 
 
 @login_required

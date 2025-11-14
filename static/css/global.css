@@ -118,25 +118,39 @@ body {
 
 /* === RESPONSIVIDADE MOBILE === */
 @media (max-width: 768px) {
-  /* Garantir scroll suave no mobile */
+  /* Garantir scroll suave no mobile - REGRAS COM MÁXIMA ESPECIFICIDADE */
   html,
-  body {
+  html body,
+  body,
+  body.no-scroll {
     overflow-x: hidden !important;
     overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
-    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-y: contain !important;
+    touch-action: pan-y !important;
     position: relative !important;
     height: auto !important;
-    min-height: 100vh;
+    min-height: 100vh !important;
+    max-height: none !important;
+  }
+  
+  /* Remover bloqueio de scroll mesmo com classe no-scroll */
+  body.no-scroll {
+    overflow: auto !important;
+    overflow-x: hidden !important;
+    position: relative !important;
+    height: auto !important;
   }
   
   .main-container {
     min-height: calc(100vh - 76px);
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
-    touch-action: pan-y;
+    overflow-y: visible !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-y: contain !important;
+    touch-action: pan-y !important;
+    position: relative !important;
+    height: auto !important;
   }
   
   .topbar {
@@ -181,26 +195,40 @@ body {
 }
 
 @media (max-width: 480px) {
-  /* MOBILE PEQUENO: Scroll ainda mais suave */
+  /* MOBILE PEQUENO: Scroll ainda mais suave - REGRAS COM MÁXIMA ESPECIFICIDADE */
   html,
-  body {
+  html body,
+  body,
+  body.no-scroll {
     overflow-x: hidden !important;
     overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
-    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-y: contain !important;
+    touch-action: pan-y !important;
     position: relative !important;
     height: auto !important;
-    min-height: 100vh;
+    min-height: 100vh !important;
+    max-height: none !important;
+  }
+  
+  /* Remover bloqueio de scroll mesmo com classe no-scroll */
+  body.no-scroll {
+    overflow: auto !important;
+    overflow-x: hidden !important;
+    position: relative !important;
+    height: auto !important;
   }
   
   .main-container {
     min-height: calc(100vh - 76px);
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
-    touch-action: pan-y;
+    overflow-y: visible !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-y: contain !important;
+    touch-action: pan-y !important;
     padding: 0.5rem;
+    position: relative !important;
+    height: auto !important;
   }
   
   .topbar h1 {

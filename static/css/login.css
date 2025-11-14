@@ -94,6 +94,23 @@ body {
   overflow: hidden;
 }
 
+/* MOBILE: Permitir scroll desde o início - regra com alta especificidade */
+@media (max-width: 768px) {
+  html,
+  html body,
+  body {
+    overflow: auto !important;
+    overflow-x: hidden !important;
+    position: relative !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    max-height: none !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-y: contain !important;
+    touch-action: pan-y !important;
+  }
+}
+
 .side-by-side-layout {
   display: flex;
   width: 100%;
@@ -535,51 +552,57 @@ body {
 }
 
 @media (max-width: 768px) {
-  /* MOBILE: Permitir scroll vertical */
+  /* MOBILE: Permitir scroll vertical - regras com alta especificidade */
   html,
+  html body,
   body {
     overflow: auto !important;
     overflow-x: hidden !important;
     position: relative !important;
     height: auto !important;
-    min-height: 100vh;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
-    touch-action: pan-y;
+    min-height: 100vh !important;
+    max-height: none !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-y: contain !important;
+    touch-action: pan-y !important;
   }
   
   body {
     position: relative !important;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
+    min-height: 100vh !important;
+    display: flex !important;
+    flex-direction: column !important;
   }
   
   .side-by-side-layout {
-    flex-direction: column;
-    min-height: auto;
-    height: auto;
-    max-height: none;
+    flex-direction: column !important;
+    min-height: auto !important;
+    height: auto !important;
+    max-height: none !important;
     overflow: visible !important;
-    flex: 1;
-    padding-bottom: 20px;
+    flex: 1 !important;
+    padding-bottom: 20px !important;
+    position: relative !important;
   }
   
   .info-side {
-    flex: none;
-    padding: 1.5rem 1rem;
-    min-height: auto;
-    max-height: none;
+    flex: none !important;
+    padding: 1.5rem 1rem !important;
+    min-height: auto !important;
+    max-height: none !important;
     overflow: visible !important;
+    position: relative !important;
+    height: auto !important;
   }
   
   .info-content {
-    text-align: center;
-    align-items: center;
-    gap: 1rem;
-    max-width: 100%;
+    text-align: center !important;
+    align-items: center !important;
+    gap: 1rem !important;
+    max-width: 100% !important;
     overflow: visible !important;
-    height: auto;
+    height: auto !important;
+    position: relative !important;
   }
   
   .info-container {
@@ -606,16 +629,24 @@ body {
   }
   
   .login-side {
-    flex: none;
-    padding: 1.5rem 1rem;
-    min-height: auto;
+    flex: none !important;
+    padding: 1.5rem 1rem !important;
+    min-height: auto !important;
     overflow: visible !important;
-    height: auto;
+    height: auto !important;
+    position: relative !important;
   }
   
   .login-card {
     overflow: visible !important;
-    max-height: none;
+    max-height: none !important;
+    position: relative !important;
+  }
+  
+  /* Garantir que o formulário seja scrollável */
+  .form {
+    overflow: visible !important;
+    position: relative !important;
   }
   
   .logo-container {
@@ -670,17 +701,19 @@ body {
 }
 
 @media (max-width: 480px) {
-  /* MOBILE PEQUENO: Garantir scroll suave */
+  /* MOBILE PEQUENO: Garantir scroll suave - regras com alta especificidade */
   html,
+  html body,
   body {
     overflow: auto !important;
     overflow-x: hidden !important;
     position: relative !important;
     height: auto !important;
-    min-height: 100vh;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
-    touch-action: pan-y;
+    min-height: 100vh !important;
+    max-height: none !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-y: contain !important;
+    touch-action: pan-y !important;
   }
   
   .side-by-side-layout {
