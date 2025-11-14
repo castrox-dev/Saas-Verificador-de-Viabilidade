@@ -1182,14 +1182,24 @@ async function searchUnified(query) {
         }
     }
 
-    // Buscar coordenadas usando Nominatim
+    // Buscar coordenadas usando API do backend (que faz proxy para Nominatim)
     try {
-        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&countrycodes=br&limit=1`);
-        const results = await response.json();
+        const response = await fetch(`${API_BASE}/geocode?endereco=${encodeURIComponent(searchQuery)}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
 
-        if (results && results.length > 0) {
-            const result = results[0];
-            await processSearchResultWithConfirmation(parseFloat(result.lat), parseFloat(result.lon), addressText);
+        // Verificar se há erro na resposta
+        if (result.erro) {
+            throw new Error(result.erro);
+        }
+
+        // Verificar se temos coordenadas válidas
+        if (result.lat && result.lng) {
+            await processSearchResultWithConfirmation(parseFloat(result.lat), parseFloat(result.lng), result.endereco_completo || addressText);
             hideSearchResults();
         } else {
             // Endereço não encontrado - marcar no centro do mapa atual e mostrar popup de confirmação
@@ -1199,7 +1209,7 @@ async function searchUnified(query) {
         }
     } catch (error) {
         console.error('Erro na busca:', error);
-        showNotification('Erro ao buscar localização', 'error');
+        showNotification('Erro ao buscar localização: ' + (error.message || 'Erro desconhecido'), 'error');
         hideSearchResults();
     }
 }

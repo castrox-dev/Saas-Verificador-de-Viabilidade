@@ -36,7 +36,7 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
             f"style-src 'self' 'unsafe-inline' {protocol}://{host_without_port} https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com https://unpkg.com https://www.gstatic.com; "
             f"font-src 'self' data: blob: {protocol}://{host_without_port} https://fonts.gstatic.com https://fonts.googleapis.com https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net; "
             f"img-src 'self' data: blob: {protocol}://{host_without_port} https:; "
-            f"connect-src 'self' {protocol}://{host_without_port} https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://viacep.com.br https://brasilapi.com.br https://www.gstatic.com; "
+            f"connect-src 'self' {protocol}://{host_without_port} https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://router.project-osrm.org https://viacep.com.br https://brasilapi.com.br https://www.gstatic.com; "
             f"worker-src 'self' {protocol}://{host_without_port} blob:; "
             f"manifest-src 'self' {protocol}://{host_without_port}; "
             "frame-ancestors 'none'; "
