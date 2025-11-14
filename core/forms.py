@@ -167,7 +167,10 @@ class CustomUserForm(UserCreationForm):
             }),
             'phone': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': '(11) 99999-9999'
+                'placeholder': '(11) 99999-9999',
+                'maxlength': '15',
+                'pattern': '[\(][0-9]{2}[\)][ ][0-9]{4,5}[-][0-9]{4}',
+                'title': 'Digite o telefone no formato (DDD) 99999-9999'
             }),
             'role': forms.Select(attrs={
                 'class': 'form-control'
@@ -229,6 +232,29 @@ class CustomUserForm(UserCreationForm):
                 # Usuários normais não podem criar outros usuários
                 raise ValidationError('Sem permissão para criar usuários')
 
+    def clean_phone(self):
+        phone = self.cleaned_data.get('phone', '')
+        if phone:
+            # Remove caracteres não numéricos
+            digits = ''.join(filter(str.isdigit, phone))
+            # Valida se tem 10 ou 11 dígitos (DDD + número)
+            if len(digits) not in (10, 11):
+                raise ValidationError('Telefone deve conter DDD + número (10 ou 11 dígitos). Exemplo: (11) 99999-9999')
+            # Valida DDD (deve ser entre 11 e 99)
+            ddd = digits[:2]
+            if not (11 <= int(ddd) <= 99):
+                raise ValidationError('DDD inválido. Deve estar entre 11 e 99.')
+            # Formatar no padrão brasileiro
+            if len(digits) == 10:
+                # Telefone fixo: (DDD) XXXX-XXXX
+                number = f"{digits[2:6]}-{digits[6:]}"
+            else:
+                # Celular: (DDD) 9XXXX-XXXX
+                number = f"{digits[2:7]}-{digits[7:]}"
+            formatted = f"({ddd}) {number}"
+            self.cleaned_data['phone'] = formatted
+        return self.cleaned_data.get('phone', '')
+    
     def clean(self):
         cleaned_data = super().clean()
         role = cleaned_data.get('role')
@@ -327,7 +353,13 @@ class CustomUserChangeForm(forms.ModelForm):
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'email@exemplo.com'}),
             'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome'}),
             'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Sobrenome'}),
-            'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '(11) 99999-9999'}),
+            'phone': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': '(11) 99999-9999',
+                'maxlength': '15',
+                'pattern': '[\(][0-9]{2}[\)][ ][0-9]{4,5}[-][0-9]{4}',
+                'title': 'Digite o telefone no formato (DDD) 99999-9999'
+            }),
             'role': forms.Select(attrs={'class': 'form-control'}),
             'company': forms.Select(attrs={'class': 'form-control'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'})
@@ -371,6 +403,29 @@ class CustomUserChangeForm(forms.ModelForm):
             else:
                 raise ValidationError('Sem permissão para editar usuários')
 
+    def clean_phone(self):
+        phone = self.cleaned_data.get('phone', '')
+        if phone:
+            # Remove caracteres não numéricos
+            digits = ''.join(filter(str.isdigit, phone))
+            # Valida se tem 10 ou 11 dígitos (DDD + número)
+            if len(digits) not in (10, 11):
+                raise ValidationError('Telefone deve conter DDD + número (10 ou 11 dígitos). Exemplo: (11) 99999-9999')
+            # Valida DDD (deve ser entre 11 e 99)
+            ddd = digits[:2]
+            if not (11 <= int(ddd) <= 99):
+                raise ValidationError('DDD inválido. Deve estar entre 11 e 99.')
+            # Formatar no padrão brasileiro
+            if len(digits) == 10:
+                # Telefone fixo: (DDD) XXXX-XXXX
+                number = f"{digits[2:6]}-{digits[6:]}"
+            else:
+                # Celular: (DDD) 9XXXX-XXXX
+                number = f"{digits[2:7]}-{digits[7:]}"
+            formatted = f"({ddd}) {number}"
+            self.cleaned_data['phone'] = formatted
+        return self.cleaned_data.get('phone', '')
+    
     def clean(self):
         cleaned_data = super().clean()
         role = cleaned_data.get('role')

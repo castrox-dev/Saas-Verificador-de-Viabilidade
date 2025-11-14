@@ -253,4 +253,44 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        const phoneInput = document.getElementById('id_phone');
+
+        if (phoneInput) {
+          const formatPhone = (raw) => {
+            const digits = (raw || '').replace(/\D/g, '').slice(0, 11);
+            if (!digits) {
+              return '';
+            }
+            if (digits.length <= 2) {
+              return `(${digits}`;
+            }
+            if (digits.length <= 6) {
+              return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+            }
+            if (digits.length <= 10) {
+              return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+            }
+            return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+          };
+
+          const enforcePhoneMask = () => {
+            const formatted = formatPhone(phoneInput.value);
+            phoneInput.value = formatted;
+            const digits = formatted.replace(/\D/g, '');
+            if (digits && ![10, 11].includes(digits.length)) {
+              phoneInput.setCustomValidity('Telefone deve conter DDD + número (10 ou 11 dígitos).');
+            } else {
+              phoneInput.setCustomValidity('');
+            }
+          };
+
+          phoneInput.addEventListener('input', enforcePhoneMask);
+          phoneInput.addEventListener('blur', enforcePhoneMask);
+          enforcePhoneMask();
+        }
+      });
+    </script>
 {% endblock %}

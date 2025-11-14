@@ -1326,6 +1326,7 @@ def company_user_create(request, company_slug):
 def company_user_edit(request, company_slug, user_id):
     company = get_object_or_404(Company, slug=company_slug)
     user_obj = get_object_or_404(CustomUser, id=user_id, company=company)
+    
     if request.method == 'POST':
         form = CustomUserChangeForm(request.POST, instance=user_obj, current_user=request.user)
         if form.is_valid():
@@ -1340,7 +1341,14 @@ def company_user_edit(request, company_slug, user_id):
                     return redirect('company:user_list', company_slug=company_slug)
     else:
         form = CustomUserChangeForm(instance=user_obj, current_user=request.user)
-    return render(request, 'company/users/form.html', {'form': form, 'company': company, 'user_obj': user_obj})
+    
+    context = {
+        'form': form,
+        'company': company,
+        'user_obj': user_obj,
+        'title': 'Editar Usuário'
+    }
+    return render(request, 'company/users/form.html', context)
 
 
 @login_required
