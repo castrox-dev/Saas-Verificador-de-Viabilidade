@@ -43,7 +43,14 @@
         body {
           touch-action: pan-y !important;
           overscroll-behavior-y: contain !important;
-          padding-bottom: 2rem !important;
+          padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px) + 60px) !important;
+          min-height: 100vh !important;
+          min-height: calc(100vh - env(safe-area-inset-bottom, 0px) - 60px) !important;
+        }
+        
+        html {
+          min-height: 100vh !important;
+          min-height: calc(100vh - env(safe-area-inset-bottom, 0px) - 60px) !important;
         }
         
         /* Garantir que o footer não sobreponha - FORÇA MÁXIMA */
@@ -56,12 +63,9 @@
           right: auto !important;
           z-index: 1 !important;
           margin-top: 3rem !important;
-          margin-bottom: 2rem !important;
+          margin-bottom: calc(2rem + env(safe-area-inset-bottom, 0px) + 60px) !important;
           padding: 2rem 1rem !important;
-        }
-        
-        body {
-          padding-bottom: 2rem !important;
+          padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px)) !important;
         }
         
         .login-card {
