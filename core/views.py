@@ -1352,54 +1352,43 @@ def company_user_edit(request, company_slug, user_id):
 
 
 @login_required
-@company_access_required_json(require_admin=True)
+@company_access_required(require_admin=True)
 @require_http_methods(["POST"])
 def company_user_delete(request, company_slug, user_id):
     """Deleta um usuário da empresa"""
+    company = get_object_or_404(Company, slug=company_slug)
+    
     try:
-        company = get_object_or_404(Company, slug=company_slug)
         user_obj = get_object_or_404(CustomUser, id=user_id, company=company)
         
         # Não permitir deletar superusuários ou RM admins
         if user_obj.is_superuser or user_obj.is_rm_admin:
-            return JsonResponse({
-                'success': False,
-                'message': 'Não é possível deletar este tipo de usuário.'
-            }, status=403)
+            messages.error(request, 'Não é possível deletar este tipo de usuário.')
+            return redirect('company:user_list', company_slug=company_slug)
         
         # Não permitir deletar o próprio usuário
         if user_obj.id == request.user.id:
-            return JsonResponse({
-                'success': False,
-                'message': 'Não é possível deletar seu próprio usuário.'
-            }, status=400)
+            messages.error(request, 'Não é possível deletar seu próprio usuário.')
+            return redirect('company:user_list', company_slug=company_slug)
         
         # Verificar se o usuário pertence à empresa
         if user_obj.company != company:
-            return JsonResponse({
-                'success': False,
-                'message': 'Usuário não pertence a esta empresa.'
-            }, status=403)
+            messages.error(request, 'Usuário não pertence a esta empresa.')
+            return redirect('company:user_list', company_slug=company_slug)
         
-        username = user_obj.username
+        username = user_obj.get_full_name() or user_obj.username
         user_obj.delete()
         
-        return JsonResponse({
-            'success': True,
-            'message': f'Usuário {username} removido com sucesso!'
-        })
+        messages.success(request, f'Usuário "{username}" removido com sucesso!')
+        return redirect('company:user_list', company_slug=company_slug)
         
     except CustomUser.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'message': 'Usuário não encontrado.'
-        }, status=404)
+        messages.error(request, 'Usuário não encontrado.')
+        return redirect('company:user_list', company_slug=company_slug)
     except Exception as e:
         logger.error(f"Erro ao deletar usuário: {str(e)}", exc_info=True)
-        return JsonResponse({
-            'success': False,
-            'message': f'Erro ao remover usuário: {str(e)}'
-        }, status=500)
+        messages.error(request, f'Erro ao remover usuário: {str(e)}')
+        return redirect('company:user_list', company_slug=company_slug)
 
 
 @login_required

@@ -131,7 +131,7 @@
 
   // Remover usuário
   document.querySelectorAll('.js-delete-user').forEach(btn => {
-    btn.addEventListener('click', async () => {
+    btn.addEventListener('click', () => {
       const id = btn.getAttribute('data-user-id');
       const userName = btn.getAttribute('data-user-name');
       
@@ -139,27 +139,21 @@
       const confirmed = confirm(`Tem certeza que deseja REMOVER o usuário "${userName}"?\n\nEsta ação não pode ser desfeita!`);
       if (!confirmed) return;
       
-      try {
-        const base = `{% url 'company:user_delete' company.slug 0 %}`;
-        const url = base.replace('/0/', `/${id}/`);
-        const resp = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'X-CSRFToken': csrftoken,
-          },
-          credentials: 'same-origin',
-        });
-        const data = await resp.json();
-        if (data.success) {
-          alert(data.message || 'Usuário removido com sucesso!');
-          location.reload();
-        } else {
-          alert(data.message || 'Erro ao remover usuário');
-        }
-      } catch (e) {
-        alert('Erro ao remover usuário. Tente novamente.');
-        console.error('Erro:', e);
-      }
+      // Criar formulário e submeter via POST
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = `{% url 'company:user_delete' company.slug 0 %}`.replace('/0/', `/${id}/`);
+      
+      // Adicionar CSRF token
+      const csrfInput = document.createElement('input');
+      csrfInput.type = 'hidden';
+      csrfInput.name = 'csrfmiddlewaretoken';
+      csrfInput.value = csrftoken;
+      form.appendChild(csrfInput);
+      
+      // Adicionar ao body e submeter
+      document.body.appendChild(form);
+      form.submit();
     });
   });
 })();

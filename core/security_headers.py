@@ -11,16 +11,22 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
     
     def process_response(self, request, response):
         # Headers específicos para Service Worker
-        # Verificar tanto /sw.js quanto /static/js/sw.js
-        if (request.path.endswith('/sw.js') or 
-            request.path.endswith('/service-worker.js') or
-            '/sw.js' in request.path):
+        # Verificar tanto /sw.js quanto /static/js/sw.js ou staticfiles/js/sw.js
+        sw_paths = ['/sw.js', '/service-worker.js', 'static/js/sw.js', 'staticfiles/js/sw.js']
+        is_service_worker = any(
+            request.path.endswith(path) or path in request.path or 
+            request.path.startswith('/static/') and 'sw.js' in request.path
+            for path in sw_paths
+        )
+        
+        if is_service_worker:
             response['Content-Type'] = 'application/javascript; charset=utf-8'
             response['Service-Worker-Allowed'] = '/'
             # Service Workers não devem ser cacheados
             response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
             response['Pragma'] = 'no-cache'
             response['Expires'] = '0'
+            logger.debug(f"Service Worker headers aplicados para: {request.path}")
         
         # Headers específicos para manifest.json
         if request.path.endswith('/manifest.json'):
