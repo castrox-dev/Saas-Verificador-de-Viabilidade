@@ -100,7 +100,12 @@ class SecureCompanyMiddleware(MiddlewareMixin):
                         )
                         # Logout forçado por segurança
                         logout(request)
-                        return HttpResponseForbidden("Acesso negado")
+                        # Usar PermissionDenied para acionar a view personalizada de erro 403
+                        from django.core.exceptions import PermissionDenied
+                        raise PermissionDenied(
+                            f"Acesso negado: Você pertence à empresa '{request.user.company.name if request.user.company else 'Nenhuma'}', "
+                            f"mas tentou acessar dados da empresa '{company.name}'."
+                        )
                 
                 request.company = company
                 request.company_slug = company.slug
