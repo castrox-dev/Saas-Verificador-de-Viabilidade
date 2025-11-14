@@ -2,6 +2,7 @@
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     // Registrar service worker no escopo raiz para ter acesso a todo o site
+    // O header Service-Worker-Allowed: / deve estar configurado no servidor
     navigator.serviceWorker.register('/static/js/sw.js', { scope: '/' })
       .then((registration) => {
         console.log('Service Worker registrado com sucesso:', registration.scope);
