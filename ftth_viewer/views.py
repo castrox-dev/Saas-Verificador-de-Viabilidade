@@ -12,6 +12,7 @@ from django.views.decorators.cache import cache_page
 from django.conf import settings
 from django.core.cache import cache
 from django.utils import timezone
+from django.db.models import Q
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -182,13 +183,42 @@ def api_coordenadas(request, company_slug=None):
                         return JsonResponse({'erro': 'Acesso negado ao arquivo'}, status=403)
             elif arquivo_nome:
                 # Buscar por nome do arquivo - SEMPRE filtrar por empresa
+                # Tentar busca exata primeiro
                 mapa = CTOMapFile.objects.filter(
                     company=target_company,
                     file__icontains=arquivo_nome
                 ).first()
                 
+                # Se não encontrou, tentar busca mais flexível (sem extensão, case-insensitive)
                 if not mapa:
-                    return JsonResponse({'erro': 'Arquivo não encontrado na empresa especificada'}, status=404)
+                    # Remover extensão e espaços para busca mais flexível
+                    arquivo_sem_ext = os.path.splitext(arquivo_nome)[0].strip()
+                    mapa = CTOMapFile.objects.filter(
+                        company=target_company,
+                        file__isnull=False
+                    ).filter(
+                        Q(file__icontains=arquivo_sem_ext) | 
+                        Q(file__icontains=arquivo_nome)
+                    ).first()
+                
+                if not mapa:
+                    # Verificar se há outros arquivos disponíveis para a empresa
+                    outros_arquivos = CTOMapFile.objects.filter(
+                        company=target_company,
+                        file__isnull=False
+                    ).values_list('file', flat=True)[:5]
+                    
+                    outros_nomes = [os.path.basename(str(f)) for f in outros_arquivos if f]
+                    
+                    erro_msg = f'Arquivo "{arquivo_nome}" não encontrado na empresa especificada'
+                    if outros_nomes:
+                        erro_msg += f'. Arquivos disponíveis: {", ".join(outros_nomes[:3])}'
+                    
+                    return JsonResponse({
+                        'erro': erro_msg,
+                        'detalhes': f'O arquivo "{arquivo_nome}" não foi encontrado no banco de dados da empresa.',
+                        'solucao': 'Verifique o nome do arquivo ou faça upload novamente.'
+                    }, status=404)
                 
                 if mapa and mapa.file:
                     caminho = mapa.file.path if hasattr(mapa.file, 'path') else None
@@ -240,6 +270,10 @@ def api_coordenadas(request, company_slug=None):
                     solucao.append('Possíveis causas:')
                     solucao.append('- O arquivo foi enviado antes da configuração do volume')
                     solucao.append('- O container foi reiniciado antes do deploy com volume')
+                    solucao.append('')
+                    solucao.append('ℹ️ NOTA: A verificação de viabilidade pode funcionar se houver outros mapas disponíveis,')
+                    solucao.append('mas este arquivo específico precisa ser reenviado para ser exibido no mapa.')
+                    solucao.append('')
                     solucao.append('✅ Faça upload do arquivo novamente através da interface web.')
             else:
                 solucao.append('Faça upload do arquivo novamente através da interface web.')
