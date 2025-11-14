@@ -94,6 +94,21 @@ body {
   overflow: hidden;
 }
 
+/* MOBILE: SOBRESCREVER overflow hidden - DEVE VIR DEPOIS DAS REGRAS BASE */
+@media (max-width: 768px) {
+  html,
+  html body,
+  body {
+    overflow: auto !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    height: auto !important;
+    max-height: none !important;
+    display: block !important;
+    flex-direction: unset !important;
+  }
+}
+
 /* MOBILE: Permitir scroll desde o início - regra com alta especificidade */
 @media (max-width: 768px) {
   html,
@@ -473,9 +488,9 @@ body {
     left: auto !important;
     right: auto !important;
     margin-top: 3rem !important;
-    margin-bottom: calc(2rem + env(safe-area-inset-bottom, 0px) + 60px) !important;
+    margin-bottom: 0 !important;
     padding: 2rem 1rem !important;
-    padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px) + 60px) !important;
     z-index: 1 !important;
     background: transparent !important;
     min-height: auto !important;
@@ -485,21 +500,27 @@ body {
   
   /* Garantir que o body tenha espaço para o footer + barra do navegador */
   body {
-    padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px) + 60px) !important;
+    padding-bottom: 0 !important;
     min-height: 100vh !important;
-    min-height: calc(100vh - env(safe-area-inset-bottom, 0px) - 60px) !important;
+    height: auto !important;
+    max-height: none !important;
   }
   
   /* Garantir que o html tenha altura suficiente */
   html {
     min-height: 100vh !important;
-    min-height: calc(100vh - env(safe-area-inset-bottom, 0px) - 60px) !important;
+    height: auto !important;
+    max-height: none !important;
   }
   
   /* Garantir que o side-by-side-layout não bloqueie */
   .side-by-side-layout {
     margin-bottom: 0 !important;
     padding-bottom: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    min-height: auto !important;
   }
   
   /* Garantir que o login-card tenha espaço no final */
@@ -775,9 +796,9 @@ body {
     left: auto !important;
     right: auto !important;
     padding: 2rem 1rem !important;
-    padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px) + 60px) !important;
     margin-top: 3rem !important;
-    margin-bottom: calc(2rem + env(safe-area-inset-bottom, 0px) + 60px) !important;
+    margin-bottom: 0 !important;
     min-height: auto !important;
     max-height: none !important;
     overflow: visible !important;
@@ -785,11 +806,14 @@ body {
   }
   
   body {
-    padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px) + 60px) !important;
+    padding-bottom: 0 !important;
+    height: auto !important;
+    max-height: none !important;
   }
   
   html {
-    min-height: calc(100vh - env(safe-area-inset-bottom, 0px) - 60px) !important;
+    height: auto !important;
+    max-height: none !important;
   }
   
   .login-footer__container {
