@@ -6,24 +6,44 @@
 class DarkModeManager {
     constructor() {
         this.themeKey = 'rm-theme';
-        this.defaultTheme = 'light';
         this.currentTheme = this.getStoredTheme();
         
         this.init();
     }
     
     init() {
-        this.applyTheme(this.currentTheme);
+        // Verificar se o tema já foi aplicado no <head>
+        const html = document.documentElement;
+        const currentDataTheme = html.getAttribute('data-theme');
+        if (currentDataTheme && currentDataTheme !== this.currentTheme) {
+            // Sincronizar com o tema já aplicado
+            this.currentTheme = currentDataTheme;
+            this.setStoredTheme(currentDataTheme);
+        } else {
+            this.applyTheme(this.currentTheme);
+        }
         this.createThemeToggle();
         this.setupSystemThemeListener();
     }
     
     getStoredTheme() {
         try {
-            return localStorage.getItem(this.themeKey) || this.defaultTheme;
+            const savedTheme = localStorage.getItem(this.themeKey);
+            if (savedTheme) {
+                return savedTheme;
+            }
+            // Se não houver tema salvo, detectar preferência do sistema
+            return this.getSystemTheme();
         } catch (e) {
-            return this.defaultTheme;
+            return this.getSystemTheme();
         }
+    }
+    
+    getSystemTheme() {
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            return 'dark';
+        }
+        return 'light';
     }
     
     setStoredTheme(theme) {
@@ -241,8 +261,18 @@ class DarkModeManager {
             
             const handleSystemThemeChange = (e) => {
                 // Só aplica se o usuário não tiver escolhido um tema manualmente
-                if (!localStorage.getItem(this.themeKey)) {
-                    this.applyTheme(e.matches ? 'dark' : 'light');
+                // Verifica se o tema atual é diferente do tema do sistema
+                const savedTheme = localStorage.getItem(this.themeKey);
+                const systemTheme = e.matches ? 'dark' : 'light';
+                
+                // Se não houver preferência salva OU se o tema salvo for 'auto' (futuro)
+                // então seguir o tema do sistema
+                if (!savedTheme || savedTheme === 'auto') {
+                    this.applyTheme(systemTheme);
+                    // Se estava vazio, salvar a preferência do sistema
+                    if (!savedTheme) {
+                        this.setStoredTheme(systemTheme);
+                    }
                 }
             };
             
