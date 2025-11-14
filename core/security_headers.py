@@ -26,7 +26,9 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
             response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
             response['Pragma'] = 'no-cache'
             response['Expires'] = '0'
-            logger.debug(f"Service Worker headers aplicados para: {request.path}")
+            # Log apenas em desenvolvimento
+            if settings.DEBUG:
+                logger.debug(f"Service Worker headers aplicados para: {request.path}")
         
         # Headers específicos para manifest.json
         if request.path.endswith('/manifest.json'):
@@ -92,8 +94,8 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
             response['Pragma'] = 'no-cache'
             response['Expires'] = '0'
         
-        # Log de headers de segurança
-        if hasattr(request, 'user') and request.user.is_authenticated:
+        # Log de headers de segurança apenas em desenvolvimento
+        if settings.DEBUG and hasattr(request, 'user') and request.user.is_authenticated:
             logger.info(
                 f"Headers de segurança aplicados para {request.user.username}",
                 extra={

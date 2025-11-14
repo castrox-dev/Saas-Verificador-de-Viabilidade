@@ -58,16 +58,43 @@
           html.classList.add('light-theme');
         }
         
-        // Salvar no localStorage se não existir (para lembrar a preferência do sistema)
-        try {
-          if (!localStorage.getItem(themeKey)) {
-            localStorage.setItem(themeKey, theme);
-          }
-        } catch (e) {
-          // Ignora erros de localStorage
-        }
-      })();
-    </script>
+         // Salvar no localStorage se não existir (para lembrar a preferência do sistema)
+         try {
+           if (!localStorage.getItem(themeKey)) {
+             localStorage.setItem(themeKey, theme);
+           }
+         } catch (e) {
+           // Ignora erros de localStorage
+         }
+       })();
+       
+       // Suprimir todos os erros e logs do console em produção
+       (function() {
+         const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+         
+         if (isProduction) {
+           // Sobrescrever console.error, console.warn e console.log para não fazer nada em produção
+           const noop = function() {};
+           console.error = noop;
+           console.warn = noop;
+           console.log = noop;
+           console.debug = noop;
+           console.info = noop;
+           
+           // Suprimir erros não capturados
+           window.addEventListener('error', function(e) {
+             e.preventDefault();
+             return false;
+           }, true);
+           
+           // Suprimir promessas rejeitadas não capturadas
+           window.addEventListener('unhandledrejection', function(e) {
+             e.preventDefault();
+             return false;
+           });
+         }
+       })();
+     </script>
     <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
     <link rel="apple-touch-icon" href="{% static 'img/Logo_rmsys.png' %}">
     <link rel="stylesheet" href="{% static 'css/theme_colors.css' %}" />

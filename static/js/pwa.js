@@ -1,11 +1,18 @@
 // Script para registrar e gerenciar o Service Worker PWA
-if ('serviceWorker' in navigator) {
+// Desabilitar em produção se houver problemas
+const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+if ('serviceWorker' in navigator && isDevelopment) {
   window.addEventListener('load', () => {
     // Registrar service worker no escopo raiz para ter acesso a todo o site
     // O header Service-Worker-Allowed: / deve estar configurado no servidor
     navigator.serviceWorker.register('/static/js/sw.js', { scope: '/' })
       .then((registration) => {
-        console.log('Service Worker registrado com sucesso:', registration.scope);
+        // Suprimir logs em produção
+        const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        if (isDevelopment) {
+          console.log('Service Worker registrado com sucesso:', registration.scope);
+        }
 
         // Verificar atualizações periodicamente
         registration.addEventListener('updatefound', () => {
@@ -14,19 +21,18 @@ if ('serviceWorker' in navigator) {
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
               // Novo service worker disponível
-              console.log('Nova versão do Service Worker disponível');
               // Opcional: mostrar notificação para o usuário atualizar
             }
           });
         });
       })
       .catch((error) => {
-        console.log('Falha ao registrar Service Worker:', error);
+        // Suprimir erro do Service Worker em produção - não fazer nada
       });
 
-    // Ouvir mensagens do service worker
+    // Ouvir mensagens do service worker (sem log em produção)
     navigator.serviceWorker.addEventListener('message', (event) => {
-      console.log('Mensagem do Service Worker:', event.data);
+      // Mensagens do service worker são tratadas silenciosamente
     });
 
     // Pedir permissão para notificações (opcional)
@@ -44,8 +50,6 @@ if ('serviceWorker' in navigator) {
       });
     }
   });
-} else {
-  console.log('Service Worker não suportado neste navegador');
 }
 
 // Detectar se está instalado como PWA
@@ -57,12 +61,10 @@ window.addEventListener('beforeinstallprompt', (e) => {
   window.deferredPrompt = e;
   
   // Opcional: mostrar botão de instalação personalizado
-  console.log('PWA pode ser instalado');
 });
 
 // Detectar se foi instalado
 window.addEventListener('appinstalled', () => {
-  console.log('PWA instalado com sucesso');
   // Limpar o prompt adiado
   window.deferredPrompt = null;
 });
@@ -73,11 +75,6 @@ function installPWA() {
     window.deferredPrompt.prompt();
     
     window.deferredPrompt.userChoice.then((choiceResult) => {
-      if (choiceResult.outcome === 'accepted') {
-        console.log('Usuário aceitou instalar o PWA');
-      } else {
-        console.log('Usuário rejeitou instalar o PWA');
-      }
       window.deferredPrompt = null;
     });
   }

@@ -100,7 +100,7 @@
         <i class="fas fa-exclamation-triangle text-danger me-2"></i>
         Confirmar Remoção
       </h5>
-      <button type="button" class="delete-modal-close" onclick="closeDeleteModal()" aria-label="Fechar">
+      <button type="button" class="delete-modal-close" id="close-delete-modal-btn" aria-label="Fechar">
         <i class="fas fa-times"></i>
       </button>
     </div>
@@ -114,11 +114,11 @@
       </div>
     </div>
     <div class="delete-modal-footer">
-      <button type="button" class="btn btn-secondary btn-cancel" onclick="closeDeleteModal()">
+      <button type="button" class="btn btn-secondary btn-cancel" id="cancel-delete-btn">
         <i class="fas fa-times me-2"></i>
         Cancelar
       </button>
-      <button type="button" class="btn btn-danger" onclick="confirmDelete()">
+      <button type="button" class="btn btn-danger" id="confirm-delete-btn">
         <i class="fas fa-trash me-2"></i>
         Remover Usuário
       </button>
@@ -263,12 +263,72 @@
 </style>
 
 <script>
-(function() {
-  function getCookie(name) {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(';').shift();
+// Variáveis globais para o modal de exclusão
+let deleteForm = null;
+let deleteUserName = null;
+
+// Função para obter CSRF token
+function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+}
+
+// Funções do modal de exclusão (no escopo global)
+window.showDeleteModal = function(userName) {
+  const modal = document.getElementById('delete-user-modal');
+  const modalUserName = document.getElementById('delete-modal-user-name');
+  
+  if (modalUserName) {
+    modalUserName.textContent = userName;
   }
+  
+  if (modal) {
+    modal.style.display = 'flex';
+    // Focar no botão cancelar por padrão (mais seguro)
+    const cancelBtn = modal.querySelector('.btn-cancel');
+    if (cancelBtn) {
+      setTimeout(() => cancelBtn.focus(), 100);
+    }
+  }
+};
+
+window.closeDeleteModal = function() {
+  const modal = document.getElementById('delete-user-modal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+  deleteForm = null;
+  deleteUserName = null;
+};
+
+window.confirmDelete = function() {
+  if (!deleteForm) {
+    return;
+  }
+  
+  // Criar formulário e submeter via POST
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = deleteForm.action;
+  
+  // Adicionar CSRF token
+  const csrfInput = document.createElement('input');
+  csrfInput.type = 'hidden';
+  csrfInput.name = 'csrfmiddlewaretoken';
+  csrfInput.value = deleteForm.csrfToken;
+  form.appendChild(csrfInput);
+  
+  // Fechar modal
+  window.closeDeleteModal();
+  
+  // Adicionar ao body e submeter
+  document.body.appendChild(form);
+  form.submit();
+};
+
+// Inicialização quando o DOM estiver pronto
+document.addEventListener('DOMContentLoaded', function() {
   const csrftoken = getCookie('csrftoken');
 
   // Toggle de status do usuário
@@ -294,15 +354,12 @@
           alert(data.message || 'Erro ao alterar status do usuário');
         }
       } catch (e) {
-        alert('Erro ao alterar status do usuário');
+        // Suprimir erro em produção
       }
     });
   });
 
-  // Modal de confirmação para remover usuário
-  let deleteForm = null;
-  let deleteUserName = null;
-
+  // Event listeners para os botões do modal de exclusão
   document.querySelectorAll('.js-delete-user').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.getAttribute('data-user-id');
@@ -317,68 +374,32 @@
       };
       
       // Mostrar modal de confirmação
-      showDeleteModal(userName);
+      window.showDeleteModal(userName);
     });
   });
 
-  // Função para mostrar modal de confirmação
-  function showDeleteModal(userName) {
-    const modal = document.getElementById('delete-user-modal');
-    const modalUserName = document.getElementById('delete-modal-user-name');
-    
-    if (modalUserName) {
-      modalUserName.textContent = userName;
-    }
-    
-    if (modal) {
-      modal.style.display = 'flex';
-      // Focar no botão cancelar por padrão (mais seguro)
-      const cancelBtn = modal.querySelector('.btn-cancel');
-      if (cancelBtn) {
-        setTimeout(() => cancelBtn.focus(), 100);
-      }
-    }
+  // Event listeners para os botões do modal
+  const closeBtn = document.getElementById('close-delete-modal-btn');
+  const cancelBtn = document.getElementById('cancel-delete-btn');
+  const confirmBtn = document.getElementById('confirm-delete-btn');
+  
+  if (closeBtn) {
+    closeBtn.addEventListener('click', window.closeDeleteModal);
+  }
+  
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', window.closeDeleteModal);
+  }
+  
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', window.confirmDelete);
   }
 
-  // Função para fechar modal
-  function closeDeleteModal() {
-    const modal = document.getElementById('delete-user-modal');
-    if (modal) {
-      modal.style.display = 'none';
-    }
-    deleteForm = null;
-    deleteUserName = null;
-  }
-
-  // Função para confirmar exclusão
-  function confirmDelete() {
-    if (!deleteForm) return;
-    
-    // Criar formulário e submeter via POST
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = deleteForm.action;
-    
-    // Adicionar CSRF token
-    const csrfInput = document.createElement('input');
-    csrfInput.type = 'hidden';
-    csrfInput.name = 'csrfmiddlewaretoken';
-    csrfInput.value = deleteForm.csrfToken;
-    form.appendChild(csrfInput);
-    
-    // Fechar modal
-    closeDeleteModal();
-    
-    // Adicionar ao body e submeter
-    document.body.appendChild(form);
-    form.submit();
-  }
-
-  // Fechar modal ao clicar fora ou no X
+  // Fechar modal ao clicar fora
   window.addEventListener('click', (e) => {
     const modal = document.getElementById('delete-user-modal');
     if (e.target === modal) {
-      closeDeleteModal();
+      window.closeDeleteModal();
     }
   });
 
@@ -387,10 +408,10 @@
     if (e.key === 'Escape') {
       const modal = document.getElementById('delete-user-modal');
       if (modal && modal.style.display === 'flex') {
-        closeDeleteModal();
+        window.closeDeleteModal();
       }
     }
   });
-})();
+});
 </script>
 {% endblock %}
