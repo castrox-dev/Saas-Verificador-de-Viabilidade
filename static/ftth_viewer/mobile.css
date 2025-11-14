@@ -390,7 +390,8 @@ body.no-scroll {
 
 /* ===== MAPA RESPONSIVO ===== */
 #map {
-    touch-action: pan-x pan-y;
+    /* Configurações de toque otimizadas */
+    touch-action: pan-x pan-y pinch-zoom;
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     -khtml-user-select: none;
@@ -398,7 +399,117 @@ body.no-scroll {
     -ms-user-select: none;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
-    overscroll-behavior: contain;
+    /* Prevenir scroll da página quando arrastando o mapa */
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+    /* Melhorias de performance para mobile */
+    will-change: transform;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    /* Melhorar responsividade */
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+
+/* Melhorar área de toque do mapa no mobile */
+@media (max-width: 768px) {
+    #map {
+        /* Garantir que o mapa ocupe toda a área disponível */
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        height: 100%;
+        /* Melhorar responsividade do toque */
+        touch-action: pan-x pan-y pinch-zoom;
+        -webkit-touch-callout: none;
+        /* Prevenir zoom acidental com double-tap */
+        -ms-touch-action: pan-x pan-y pinch-zoom;
+        /* Melhorar performance de renderização */
+        will-change: transform;
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+        /* Prevenir scroll da página */
+        overscroll-behavior: none;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Melhorar camadas do Leaflet no mobile */
+    .leaflet-container {
+        touch-action: pan-x pan-y pinch-zoom;
+        -webkit-tap-highlight-color: transparent;
+        background: #f4f4f4;
+    }
+    
+    /* Melhorar performance de arraste */
+    .leaflet-pane {
+        will-change: transform;
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+    }
+    
+    /* Melhorar tiles do mapa */
+    .leaflet-tile-container {
+        will-change: transform;
+    }
+    
+    /* Melhorar feedback visual durante arraste */
+    .leaflet-container.leaflet-touch-drag {
+        cursor: grabbing !important;
+        cursor: -webkit-grabbing !important;
+    }
+    
+    .leaflet-container.leaflet-touch-drag .leaflet-marker-icon,
+    .leaflet-container.leaflet-touch-drag .leaflet-marker-shadow {
+        cursor: grabbing !important;
+        cursor: -webkit-grabbing !important;
+    }
+    
+    /* Melhorar cursor durante arraste */
+    .leaflet-container.leaflet-dragging {
+        cursor: grabbing !important;
+        cursor: -webkit-grabbing !important;
+    }
+    
+    /* Prevenir seleção de texto durante arraste */
+    .leaflet-container.leaflet-dragging,
+    .leaflet-container.leaflet-dragging .leaflet-marker-icon,
+    .leaflet-container.leaflet-dragging .leaflet-marker-shadow {
+        user-select: none !important;
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+    }
+    
+    /* Melhorar performance de marcadores durante arraste */
+    .leaflet-marker-icon,
+    .leaflet-marker-shadow {
+        will-change: transform;
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+    }
+    
+    /* Melhorar performance de popups */
+    .leaflet-popup {
+        will-change: transform;
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+    }
+    
+    /* Melhorar área de toque dos controles */
+    .leaflet-control {
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+    }
+    
+    /* Prevenir zoom acidental com double-tap em elementos interativos */
+    .leaflet-popup-content-wrapper,
+    .leaflet-popup-tip,
+    .leaflet-control {
+        touch-action: manipulation;
+    }
 }
 
 /* Melhorar interações com popups no mapa */

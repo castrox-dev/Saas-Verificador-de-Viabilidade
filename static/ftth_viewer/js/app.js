@@ -641,12 +641,46 @@ const brazilBounds = L.latLngBounds(
     L.latLng(5.5, -34.0)     // nordeste aproximado
 );
 
-const map = L.map('map', {
+// Detectar se é dispositivo mobile
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                 (window.innerWidth <= 768) ||
+                 ('ontouchstart' in window);
+
+// Configurações otimizadas para mobile
+const mapOptions = {
     zoomControl: false,
     preferCanvas: true,
     maxBounds: brazilBounds,
-    maxBoundsViscosity: 1.0
-});
+    maxBoundsViscosity: 1.0,
+    // Melhorias para mobile
+    dragging: true,
+    touchZoom: true,
+    doubleClickZoom: true,
+    scrollWheelZoom: !isMobile, // Desabilitar zoom com scroll no mobile (usa pinch)
+    boxZoom: false, // Desabilitar box zoom no mobile
+    keyboard: false, // Desabilitar teclado no mobile
+    // Configurações de performance para mobile
+    fadeAnimation: !isMobile, // Desabilitar fade no mobile para melhor performance
+    zoomAnimation: true,
+    zoomAnimationThreshold: 4,
+    // Melhorias de toque
+    tap: true,
+    tapTolerance: 15, // Tolerância maior para toque no mobile
+    // Configurações de arraste melhoradas para mobile
+    inertia: true, // Habilitar inércia para arraste mais suave
+    inertiaDeceleration: 3000, // Desaceleração mais suave
+    inertiaMaxSpeed: 1500, // Velocidade máxima de inércia
+    easeLinearity: 0.25, // Suavidade do movimento
+    worldCopyJump: false,
+    // Melhorias de renderização (Leaflet usa preferCanvas para isso)
+    // Configurações de zoom
+    minZoom: 5,
+    maxZoom: 19,
+    zoomSnap: 0.25, // Zoom mais suave
+    zoomDelta: isMobile ? 1 : 1.5
+};
+
+const map = L.map('map', mapOptions);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
