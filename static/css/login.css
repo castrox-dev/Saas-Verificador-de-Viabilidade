@@ -462,46 +462,68 @@ body {
   width: 100%;
 }
 
-/* MOBILE: Footer relativo para permitir scroll */
+/* MOBILE: Footer relativo para permitir scroll - CORREÇÃO COMPLETA */
 @media (max-width: 768px) {
+  /* FORÇAR footer relativo com máxima especificidade */
+  body .login-footer,
+  html body .login-footer,
   .login-footer {
     position: relative !important;
     bottom: auto !important;
-    margin-top: 2rem !important;
-    padding: 1.5rem 1rem !important;
+    left: auto !important;
+    right: auto !important;
+    margin-top: 3rem !important;
+    margin-bottom: 2rem !important;
+    padding: 2rem 1rem !important;
     z-index: 1 !important;
     background: transparent !important;
     min-height: auto !important;
     width: 100% !important;
+    box-sizing: border-box !important;
   }
   
   /* Garantir que o body tenha espaço para o footer */
   body {
+    padding-bottom: 2rem !important;
+  }
+  
+  /* Garantir que o side-by-side-layout não bloqueie */
+  .side-by-side-layout {
+    margin-bottom: 0 !important;
     padding-bottom: 0 !important;
   }
   
   /* Garantir que o login-card tenha espaço no final */
   .login-card {
-    margin-bottom: 0 !important;
-    padding-bottom: 1.5rem !important;
+    margin-bottom: 2rem !important;
+    padding-bottom: 2rem !important;
   }
   
   /* Garantir que o formulário tenha espaço */
   .form {
-    margin-bottom: 0 !important;
+    margin-bottom: 1.5rem !important;
   }
   
-  /* Ajustar links do footer no mobile */
+  /* Ajustar links do footer no mobile - FORÇAR COLUNA */
   .login-footer__container {
     flex-direction: column !important;
-    gap: 0.75rem !important;
+    gap: 1rem !important;
     padding: 0 !important;
+    width: 100% !important;
   }
   
   .login-footer__links {
     flex-direction: column !important;
-    gap: 0.5rem !important;
+    flex-wrap: nowrap !important;
+    gap: 0.75rem !important;
     text-align: center !important;
+    width: 100% !important;
+  }
+  
+  .login-footer__links a {
+    display: block !important;
+    width: 100% !important;
+    padding: 0.5rem 0 !important;
   }
   
   .login-footer__links span {
@@ -509,7 +531,13 @@ body {
   }
   
   .login-footer__copyright {
-    margin-bottom: 0.5rem !important;
+    margin-bottom: 0.75rem !important;
+    text-align: center !important;
+  }
+  
+  .login-footer__meta {
+    margin-top: 0.75rem !important;
+    text-align: center !important;
   }
 }
 
@@ -734,11 +762,16 @@ body {
   
   .login-footer {
     position: relative !important;
-    padding: 10px 10px;
-    margin-top: auto;
-    min-height: auto;
-    max-height: none;
+    bottom: auto !important;
+    left: auto !important;
+    right: auto !important;
+    padding: 2rem 1rem !important;
+    margin-top: 3rem !important;
+    margin-bottom: 2rem !important;
+    min-height: auto !important;
+    max-height: none !important;
     overflow: visible !important;
+    z-index: 1 !important;
   }
   
   .login-footer__container {
