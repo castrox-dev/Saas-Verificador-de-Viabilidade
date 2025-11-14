@@ -1421,22 +1421,75 @@ async function verificarViabilidade(lat, lon, endereco = '') {
         });
         clearTimeout(timeoutId);
         
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        let data;
+        try {
+            data = await response.json();
+        } catch (e) {
+            // Se não conseguir parsear JSON, criar objeto de erro
+            data = { erro: `Erro HTTP ${response.status}: ${response.statusText}` };
         }
         
-        const data = await response.json();
+        // Se a resposta não foi OK, tratar como erro
+        if (!response.ok) {
+            // Se já temos um objeto de erro do JSON, usar ele
+            if (!data.erro) {
+                data.erro = `Erro HTTP ${response.status}: ${response.statusText}`;
+            }
+            // Continuar para o tratamento de erro abaixo
+        }
 
         if (data.erro) {
             console.error('Erro na verificação:', data.erro);
-            showNotification(`Erro na verificação: ${data.erro}`, 'error');
+            
+            // Mensagem mais clara quando não há mapas carregados
+            let errorMessage = data.erro;
+            let errorDetails = '';
+            
+            if (data.erro.includes('Nenhum CTO encontrado') || data.erro.includes('Nenhum mapa')) {
+                errorMessage = 'Nenhum mapa CTO carregado';
+                errorDetails = 'É necessário fazer upload de mapas CTO antes de verificar viabilidade.';
+            } else {
+                errorDetails = data.erro;
+            }
+            
+            showNotification(errorMessage, 'error');
+            
             if (window.searchMarker && typeof window.searchMarker.setPopupContent === 'function') {
                 window.searchMarker.setPopupContent(`
                     <div class="viability-popup">
-                        <p style="color: #e74c3c;">Erro: ${data.erro}</p>
+                        <h4 style="color: #e74c3c; margin-bottom: 10px;">⚠️ ${errorMessage}</h4>
+                        ${errorDetails ? `<p style="color: #666; font-size: 0.9em; margin-bottom: 10px;">${errorDetails}</p>` : ''}
+                        ${errorMessage.includes('mapa') ? `
+                            <p style="color: #666; font-size: 0.85em; margin-top: 10px;">
+                                <strong>Como resolver:</strong><br>
+                                1. Acesse a página de upload de mapas<br>
+                                2. Faça upload de arquivos CTO (KML, KMZ, CSV, XLS, XLSX)<br>
+                                3. Aguarde o processamento dos arquivos<br>
+                                4. Tente verificar novamente
+                            </p>
+                        ` : ''}
+                        <button class="cancel-verify-btn" style="margin-top: 10px; width: 100%;">Fechar</button>
                     </div>
                 `);
+                
+                // Adicionar listener ao botão fechar
+                setTimeout(() => {
+                    const closeBtn = window.searchMarker.getPopup().getContent().querySelector('.cancel-verify-btn');
+                    if (closeBtn) {
+                        closeBtn.addEventListener('click', () => {
+                            if (window.searchMarker) {
+                                window.searchMarker.closePopup();
+                                if (map.hasLayer(window.searchMarker)) {
+                                    map.removeLayer(window.searchMarker);
+                                }
+                                window.searchMarker = null;
+                            }
+                        });
+                    }
+                }, 100);
             }
+            
+            hideViabilityLoading();
             return;
         }
 
