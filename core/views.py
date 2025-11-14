@@ -1354,6 +1354,57 @@ def company_user_edit(request, company_slug, user_id):
 @login_required
 @company_access_required_json(require_admin=True)
 @require_http_methods(["POST"])
+def company_user_delete(request, company_slug, user_id):
+    """Deleta um usuário da empresa"""
+    try:
+        company = get_object_or_404(Company, slug=company_slug)
+        user_obj = get_object_or_404(CustomUser, id=user_id, company=company)
+        
+        # Não permitir deletar superusuários ou RM admins
+        if user_obj.is_superuser or user_obj.is_rm_admin:
+            return JsonResponse({
+                'success': False,
+                'message': 'Não é possível deletar este tipo de usuário.'
+            }, status=403)
+        
+        # Não permitir deletar o próprio usuário
+        if user_obj.id == request.user.id:
+            return JsonResponse({
+                'success': False,
+                'message': 'Não é possível deletar seu próprio usuário.'
+            }, status=400)
+        
+        # Verificar se o usuário pertence à empresa
+        if user_obj.company != company:
+            return JsonResponse({
+                'success': False,
+                'message': 'Usuário não pertence a esta empresa.'
+            }, status=403)
+        
+        username = user_obj.username
+        user_obj.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Usuário {username} removido com sucesso!'
+        })
+        
+    except CustomUser.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'Usuário não encontrado.'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Erro ao deletar usuário: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'message': f'Erro ao remover usuário: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@company_access_required_json(require_admin=True)
+@require_http_methods(["POST"])
 def company_user_toggle(request, company_slug, user_id):
     try:
         target = get_object_or_404(CustomUser, id=user_id)

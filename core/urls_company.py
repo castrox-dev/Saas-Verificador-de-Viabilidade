@@ -28,6 +28,7 @@ urlpatterns = [
     path('painel/usuarios/criar/', views.company_user_create, name='user_create'),
     path('painel/usuarios/<int:user_id>/editar/', views.company_user_edit, name='user_edit'),
     path('painel/usuarios/<int:user_id>/toggle/', views.company_user_toggle, name='user_toggle'),
+    path('painel/usuarios/<int:user_id>/delete/', views.company_user_delete, name='user_delete'),
     
     # Gestão de mapas da empresa
     path('painel/mapas/', views.company_map_list, name='map_list'),

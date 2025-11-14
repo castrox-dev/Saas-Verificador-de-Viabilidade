@@ -66,6 +66,13 @@
                                   title="{% if u.is_active %}Desativar{% else %}Ativar{% endif %}">
                             <i class="fas fa-{% if u.is_active %}pause{% else %}play{% endif %}"></i>
                           </button>
+                          <button type="button"
+                                  class="btn btn-sm btn-outline-danger js-delete-user"
+                                  data-user-id="{{ u.id }}"
+                                  data-user-name="{{ u.get_full_name|default:u.username }}"
+                                  title="Remover usuário">
+                            <i class="fas fa-trash"></i>
+                          </button>
                         {% endif %}
                       </div>
                     </td>
@@ -94,6 +101,7 @@
   }
   const csrftoken = getCookie('csrftoken');
 
+  // Toggle de status do usuário
   document.querySelectorAll('.js-toggle-user').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = btn.getAttribute('data-user-id');
@@ -117,6 +125,40 @@
         }
       } catch (e) {
         alert('Erro ao alterar status do usuário');
+      }
+    });
+  });
+
+  // Remover usuário
+  document.querySelectorAll('.js-delete-user').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-user-id');
+      const userName = btn.getAttribute('data-user-name');
+      
+      // Confirmação antes de deletar
+      const confirmed = confirm(`Tem certeza que deseja REMOVER o usuário "${userName}"?\n\nEsta ação não pode ser desfeita!`);
+      if (!confirmed) return;
+      
+      try {
+        const base = `{% url 'company:user_delete' company.slug 0 %}`;
+        const url = base.replace('/0/', `/${id}/`);
+        const resp = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': csrftoken,
+          },
+          credentials: 'same-origin',
+        });
+        const data = await resp.json();
+        if (data.success) {
+          alert(data.message || 'Usuário removido com sucesso!');
+          location.reload();
+        } else {
+          alert(data.message || 'Erro ao remover usuário');
+        }
+      } catch (e) {
+        alert('Erro ao remover usuário. Tente novamente.');
+        console.error('Erro:', e);
       }
     });
   });
