@@ -96,32 +96,78 @@ def company_access_required(require_admin=False, allow_user_role=True):
         @wraps(view_func)
         def _wrapped(request, *args, **kwargs):
             user = request.user
+            
+            # Log para debug
+            logger.debug(
+                f"company_access_required: Verificando acesso para {user.username if user.is_authenticated else 'anonymous'} "
+                f"(slug: {kwargs.get('company_slug')}, require_admin: {require_admin})"
+            )
+            
             # Acesso amplo para RM/superuser
             if user.is_authenticated and (getattr(user, 'is_rm_admin', False) or getattr(user, 'is_superuser', False)):
+                logger.debug(f"company_access_required: Acesso permitido para RM/superuser {user.username}")
                 return view_func(request, *args, **kwargs)
+            
             # Buscar empresa pelo slug
             company_slug = kwargs.get('company_slug')
-            if not user.is_authenticated or not company_slug:
-                raise PermissionDenied
+            if not user.is_authenticated:
+                logger.warning(f"company_access_required: Usuário não autenticado para slug {company_slug}")
+                raise PermissionDenied("Você precisa estar autenticado para acessar esta página.")
+            
+            if not company_slug:
+                logger.warning(f"company_access_required: Slug de empresa não fornecido")
+                raise PermissionDenied("Slug de empresa não fornecido.")
+            
             # Import lazy para evitar ciclos
             from .models import Company
             try:
                 company = Company.objects.get(slug=company_slug)
             except Company.DoesNotExist:
-                raise PermissionDenied
+                logger.error(f"company_access_required: Empresa com slug '{company_slug}' não encontrada")
+                raise PermissionDenied(f"Empresa '{company_slug}' não encontrada.")
+            
             # Verificação de pertencimento
-            if not user.company or user.company != company:
-                return HttpResponseForbidden()
+            if not user.company:
+                logger.warning(
+                    f"company_access_required: Usuário {user.username} não tem empresa associada "
+                    f"(tentando acessar {company_slug})"
+                )
+                raise PermissionDenied("Você não tem autorização para acessar esta página. Usuário sem empresa associada.")
+            
+            if user.company != company:
+                logger.warning(
+                    f"company_access_required: Usuário {user.username} pertence à empresa {user.company.slug} "
+                    f"mas tentou acessar {company_slug}"
+                )
+                raise PermissionDenied(
+                    f"Você não tem autorização para acessar esta página. Você pertence à empresa '{user.company.name}', "
+                    f"mas está tentando acessar dados da empresa '{company.name}'."
+                )
             
             # COMPANY_USER só pode acessar verificador e upload
             if user.role == 'COMPANY_USER' and not allow_user_role:
+                logger.info(
+                    f"company_access_required: COMPANY_USER {user.username} tentou acessar página restrita, "
+                    f"redirecionando para verificador"
+                )
                 # Redirecionar para verificador se tentar acessar outras páginas
                 from django.shortcuts import redirect
                 return redirect('company:ftth_viewer:index', company_slug=company_slug)
             
             # Se requer admin, validar
-            if require_admin and not getattr(user, 'is_company_admin', False):
-                return HttpResponseForbidden()
+            if require_admin:
+                is_company_admin = getattr(user, 'is_company_admin', False)
+                if not is_company_admin:
+                    logger.warning(
+                        f"company_access_required: Usuário {user.username} (role: {user.role}) "
+                        f"tentou acessar página que requer COMPANY_ADMIN"
+                    )
+                    raise PermissionDenied(
+                        "Você não tem autorização para acessar esta página. "
+                        "Apenas administradores da empresa podem acessar esta funcionalidade."
+                    )
+            
+            logger.debug(f"company_access_required: Acesso permitido para {user.username} a {company_slug}")
             return view_func(request, *args, **kwargs)
         return _wrapped
     return decorator
