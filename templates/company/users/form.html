@@ -15,7 +15,7 @@
             </h4>
             <span class="text-muted small">Empresa: {{ company.name }}</span>
           </div>
-          <a href="{% url 'company:user_list' company.slug %}" class="btn btn-light btn-sm">
+          <a href="{% url 'company:user_list' company.slug %}" class="btn btn-back btn-sm">
             <i class="fas fa-arrow-left me-2"></i>
             Voltar
           </a>
@@ -104,12 +104,11 @@
 
             {% if form.is_active %}
             <div class="form-group mb-3">
-              <div class="form-check form-switch form-check-lg">
-                {{ form.is_active }}
-                <label for="{{ form.is_active.id_for_label }}" class="form-check-label ms-2" style="font-weight: 500; cursor: pointer;">
-                  <i class="fas fa-toggle-on text-success me-2" id="active-icon" style="display: none;"></i>
-                  <i class="fas fa-toggle-off text-secondary me-2" id="inactive-icon"></i>
-                  {{ form.is_active.label }}
+              <div class="custom-switch-container">
+                <label for="{{ form.is_active.id_for_label }}" class="custom-switch-label">
+                  {{ form.is_active }}
+                  <span class="custom-switch-slider"></span>
+                  <span class="custom-switch-text">{{ form.is_active.label }}</span>
                 </label>
               </div>
               {% if form.is_active.errors %}
@@ -162,38 +161,117 @@
 
 {% block extra_scripts %}
 <style>
-  /* Estilos para o checkbox de usuário ativo */
-  .form-check-input:checked {
-    background-color: #28a745;
-    border-color: #28a745;
+  /* Botão Voltar com estilo cinza neutro */
+  .btn-back {
+    background-color: #6c757d !important;
+    border-color: #6c757d !important;
+    color: #ffffff !important;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.375rem;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    transition: all 0.2s ease;
   }
-  
-  .form-check-input:focus {
-    border-color: #28a745;
-    box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.25);
+
+  .btn-back:hover {
+    background-color: #5a6268 !important;
+    border-color: #545b62 !important;
+    color: #ffffff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   }
-  
-  .form-check-switch .form-check-input {
-    width: 3rem;
-    height: 1.5rem;
-    cursor: pointer;
+
+  .btn-back:active {
+    background-color: #545b62 !important;
+    border-color: #4e555b !important;
+    transform: translateY(0);
   }
-  
-  .form-check-switch .form-check-label {
+
+  .btn-back i {
+    color: #ffffff !important;
+  }
+
+  /* Switch toggle customizado para usuário ativo */
+  .custom-switch-container {
+    margin: 0.5rem 0;
+  }
+
+  .custom-switch-label {
+    display: flex;
+    align-items: center;
     cursor: pointer;
     user-select: none;
+    gap: 0.75rem;
   }
-  
-  .form-check-switch .form-check-label i {
+
+  .custom-switch-input,
+  .custom-switch-label input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .custom-switch-slider {
+    position: relative;
+    display: inline-block;
+    width: 3.5rem;
+    height: 1.75rem;
+    background-color: #ccc;
+    border-radius: 2rem;
     transition: all 0.3s ease;
+    flex-shrink: 0;
+  }
+
+  .custom-switch-slider::before {
+    content: '';
+    position: absolute;
+    width: 1.4rem;
+    height: 1.4rem;
+    left: 0.175rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: white;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .custom-switch-input:checked + .custom-switch-slider,
+  .custom-switch-label input[type="checkbox"]:checked + .custom-switch-slider {
+    background-color: #28a745;
+  }
+
+  .custom-switch-input:checked + .custom-switch-slider::before,
+  .custom-switch-label input[type="checkbox"]:checked + .custom-switch-slider::before {
+    transform: translateX(1.75rem) translateY(-50%);
+  }
+
+  .custom-switch-input:focus + .custom-switch-slider,
+  .custom-switch-label input[type="checkbox"]:focus + .custom-switch-slider {
+    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.25);
+  }
+
+  .custom-switch-text {
+    font-weight: 500;
+    color: var(--rm-text-primary, #333);
+    font-size: 1rem;
+  }
+
+  .custom-switch-input:checked ~ .custom-switch-text,
+  .custom-switch-label input[type="checkbox"]:checked ~ .custom-switch-text {
+    color: #28a745;
+  }
+
+  /* Hover effect */
+  .custom-switch-label:hover .custom-switch-slider {
+    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.15);
   }
 </style>
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     const phoneInput = document.getElementById('id_phone');
-    const isActiveCheckbox = document.getElementById('id_is_active');
-    const activeIcon = document.getElementById('active-icon');
-    const inactiveIcon = document.getElementById('inactive-icon');
 
     // Máscara de telefone
     if (phoneInput) {
@@ -228,25 +306,6 @@
       phoneInput.addEventListener('input', enforcePhoneMask);
       phoneInput.addEventListener('blur', enforcePhoneMask);
       enforcePhoneMask();
-    }
-
-    // Atualizar ícones do checkbox de usuário ativo
-    if (isActiveCheckbox && activeIcon && inactiveIcon) {
-      const updateIcons = () => {
-        if (isActiveCheckbox.checked) {
-          activeIcon.style.display = 'inline-block';
-          inactiveIcon.style.display = 'none';
-        } else {
-          activeIcon.style.display = 'none';
-          inactiveIcon.style.display = 'inline-block';
-        }
-      };
-
-      // Verificar estado inicial
-      updateIcons();
-
-      // Atualizar ao mudar
-      isActiveCheckbox.addEventListener('change', updateIcons);
     }
   });
 </script>
