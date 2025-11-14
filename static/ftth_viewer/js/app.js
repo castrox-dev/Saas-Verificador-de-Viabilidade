@@ -1328,7 +1328,7 @@ async function processSearchResultWithConfirmation(lat, lng, addressText) {
 }
 
 // Função para marcar localização e mostrar popup de confirmação
-async function markLocationWithConfirmation(lat, lng, addressText) {
+async function markLocationWithConfirmation(lat, lng, addressText, fromClickMode = false) {
     map.setView([lat, lng], 16);
     
     // Remover marcador anterior se existir
@@ -1357,18 +1357,45 @@ async function markLocationWithConfirmation(lat, lng, addressText) {
         
         if (confirmBtn && !confirmBtn.hasAttribute('data-connected')) {
             confirmBtn.setAttribute('data-connected', 'true');
-            confirmBtn.addEventListener('click', (e) => {
+            confirmBtn.addEventListener('click', async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 console.log('Botão Sim clicado');
                 
+                // Se veio do modo marcação, marcar para voltar ao modo navegação após verificação
+                if (fromClickMode && isClickMode) {
+                    // Armazenar flag globalmente para que a função verificarViabilidade possa usá-la
+                    window.shouldReturnToNavigationMode = true;
+                }
+                
                 if (window.searchMarker && typeof window.searchMarker.setPopupContent === 'function') {
                     window.searchMarker.setPopupContent('<div class="loading-popup">Verificando viabilidade...</div>');
                 }
-                verificarViabilidade(lat, lng, addressText).catch(error => {
+                
+                try {
+                    await verificarViabilidade(lat, lng, addressText);
+                    // Após verificação concluída com sucesso, voltar ao modo navegação se necessário
+                    if (window.shouldReturnToNavigationMode && isClickMode) {
+                        setTimeout(() => {
+                            if (isClickMode) {
+                                toggleCursorMode();
+                            }
+                            window.shouldReturnToNavigationMode = false;
+                        }, 300); // Aguardar um pouco para garantir que o popup foi processado
+                    }
+                } catch (error) {
                     console.error('Erro na verificação de viabilidade:', error);
                     showNotification('Erro ao verificar viabilidade', 'error');
-                });
+                    // Mesmo em caso de erro, voltar para modo navegação se veio do modo marcação
+                    if (window.shouldReturnToNavigationMode && isClickMode) {
+                        setTimeout(() => {
+                            if (isClickMode) {
+                                toggleCursorMode();
+                            }
+                            window.shouldReturnToNavigationMode = false;
+                        }, 300);
+                    }
+                }
             });
         }
         
@@ -1397,6 +1424,15 @@ async function markLocationWithConfirmation(lat, lng, addressText) {
                         map.removeLayer(window.searchMarker);
                     }
                     window.searchMarker = null;
+                    
+                    // Se veio do modo marcação, voltar para modo navegação APÓS fechar o popup
+                    if (fromClickMode && isClickMode) {
+                        setTimeout(() => {
+                            if (isClickMode) {
+                                toggleCursorMode();
+                            }
+                        }, 200); // Aguardar o popup fechar completamente
+                    }
                 };
                 
                 closeAndRemove();
@@ -3462,14 +3498,8 @@ async function onMapClick(e) {
     }
     
     // Usar o mesmo método de marcação com confirmação que funciona em todas as pesquisas
-    await markLocationWithConfirmation(lat, lng, addressText);
-    
-    // Voltar para modo navegação após marcar
-    setTimeout(() => {
-        if (isClickMode) {
-            toggleCursorMode();
-        }
-    }, 100);
+    // NÃO alternar o modo aqui - será alternado após o usuário clicar em Sim/Não no popup
+    await markLocationWithConfirmation(lat, lng, addressText, true); // Passar flag indicando que veio do modo marcação
 }
 
 // Disponibilizar ação global para fechar a verificação e resetar o mapa
