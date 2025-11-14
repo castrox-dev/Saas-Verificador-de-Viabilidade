@@ -15,7 +15,7 @@
             </h4>
             <span class="text-muted small">Empresa: {{ company.name }}</span>
           </div>
-          <a href="{% url 'company:user_list' company.slug %}" class="btn btn-outline-secondary btn-sm">
+          <a href="{% url 'company:user_list' company.slug %}" class="btn btn-light btn-sm">
             <i class="fas fa-arrow-left me-2"></i>
             Voltar
           </a>
@@ -104,9 +104,11 @@
 
             {% if form.is_active %}
             <div class="form-group mb-3">
-              <div class="form-check custom-checkbox">
+              <div class="form-check form-switch form-check-lg">
                 {{ form.is_active }}
-                <label for="{{ form.is_active.id_for_label }}" class="form-check-label">
+                <label for="{{ form.is_active.id_for_label }}" class="form-check-label ms-2" style="font-weight: 500; cursor: pointer;">
+                  <i class="fas fa-toggle-on text-success me-2" id="active-icon" style="display: none;"></i>
+                  <i class="fas fa-toggle-off text-secondary me-2" id="inactive-icon"></i>
                   {{ form.is_active.label }}
                 </label>
               </div>
@@ -159,10 +161,41 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<style>
+  /* Estilos para o checkbox de usuário ativo */
+  .form-check-input:checked {
+    background-color: #28a745;
+    border-color: #28a745;
+  }
+  
+  .form-check-input:focus {
+    border-color: #28a745;
+    box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.25);
+  }
+  
+  .form-check-switch .form-check-input {
+    width: 3rem;
+    height: 1.5rem;
+    cursor: pointer;
+  }
+  
+  .form-check-switch .form-check-label {
+    cursor: pointer;
+    user-select: none;
+  }
+  
+  .form-check-switch .form-check-label i {
+    transition: all 0.3s ease;
+  }
+</style>
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     const phoneInput = document.getElementById('id_phone');
+    const isActiveCheckbox = document.getElementById('id_is_active');
+    const activeIcon = document.getElementById('active-icon');
+    const inactiveIcon = document.getElementById('inactive-icon');
 
+    // Máscara de telefone
     if (phoneInput) {
       const formatPhone = (raw) => {
         const digits = (raw || '').replace(/\D/g, '').slice(0, 11);
@@ -195,6 +228,25 @@
       phoneInput.addEventListener('input', enforcePhoneMask);
       phoneInput.addEventListener('blur', enforcePhoneMask);
       enforcePhoneMask();
+    }
+
+    // Atualizar ícones do checkbox de usuário ativo
+    if (isActiveCheckbox && activeIcon && inactiveIcon) {
+      const updateIcons = () => {
+        if (isActiveCheckbox.checked) {
+          activeIcon.style.display = 'inline-block';
+          inactiveIcon.style.display = 'none';
+        } else {
+          activeIcon.style.display = 'none';
+          inactiveIcon.style.display = 'inline-block';
+        }
+      };
+
+      // Verificar estado inicial
+      updateIcons();
+
+      // Atualizar ao mudar
+      isActiveCheckbox.addEventListener('change', updateIcons);
     }
   });
 </script>
