@@ -273,6 +273,15 @@ body {
   box-sizing: border-box;
 }
 
+/* MOBILE: Permitir scroll no card */
+@media (max-width: 768px) {
+  .login-card {
+    overflow: visible !important;
+    max-height: none !important;
+    margin-bottom: 1rem !important;
+  }
+}
+
 .logo-container {
   display: flex;
   align-items: center;
@@ -458,7 +467,49 @@ body {
   .login-footer {
     position: relative !important;
     bottom: auto !important;
-    margin-top: auto;
+    margin-top: 2rem !important;
+    padding: 1.5rem 1rem !important;
+    z-index: 1 !important;
+    background: transparent !important;
+    min-height: auto !important;
+    width: 100% !important;
+  }
+  
+  /* Garantir que o body tenha espaço para o footer */
+  body {
+    padding-bottom: 0 !important;
+  }
+  
+  /* Garantir que o login-card tenha espaço no final */
+  .login-card {
+    margin-bottom: 0 !important;
+    padding-bottom: 1.5rem !important;
+  }
+  
+  /* Garantir que o formulário tenha espaço */
+  .form {
+    margin-bottom: 0 !important;
+  }
+  
+  /* Ajustar links do footer no mobile */
+  .login-footer__container {
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+    padding: 0 !important;
+  }
+  
+  .login-footer__links {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+    text-align: center !important;
+  }
+  
+  .login-footer__links span {
+    display: none !important;
+  }
+  
+  .login-footer__copyright {
+    margin-bottom: 0.5rem !important;
   }
 }
 
