@@ -3,7 +3,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <meta name="theme-color" content="#1D4ED8">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -15,6 +15,37 @@
     <link rel="manifest" href="{% static 'manifest.json' %}">
     <link rel="stylesheet" href="{% static 'css/login.css' %}">
     <link rel="stylesheet" href="{% static 'css/mobile-scroll-fix.css' %}">
+    <!-- Fix específico para iOS - deve ser o último CSS -->
+    <style>
+      /* Fix específico para iPhone/iOS - máxima prioridade */
+      @media (max-width: 768px) {
+        html,
+        body {
+          overflow-y: auto !important;
+          overflow-x: hidden !important;
+          -webkit-overflow-scrolling: touch !important;
+          position: relative !important;
+          height: auto !important;
+          min-height: 100vh !important;
+          max-height: none !important;
+        }
+        
+        .side-by-side-layout,
+        .info-side,
+        .login-side,
+        .login-card,
+        .form {
+          overflow: visible !important;
+          max-height: none !important;
+          height: auto !important;
+        }
+        
+        body {
+          touch-action: pan-y !important;
+          overscroll-behavior-y: contain !important;
+        }
+      }
+    </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body data-theme="light">

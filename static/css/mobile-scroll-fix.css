@@ -89,6 +89,30 @@
     max-height: none !important;
     height: auto !important;
   }
+  
+  /* Fix específico para iOS Safari */
+  @supports (-webkit-touch-callout: none) {
+    html,
+    body {
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      -webkit-overflow-scrolling: touch !important;
+      position: relative !important;
+      height: auto !important;
+      min-height: 100vh !important;
+      max-height: none !important;
+    }
+    
+    .side-by-side-layout,
+    .info-side,
+    .login-side,
+    .login-card,
+    .form {
+      overflow: visible !important;
+      max-height: none !important;
+      height: auto !important;
+    }
+  }
 }
 
 /* Regras adicionais para mobile pequeno */

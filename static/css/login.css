@@ -124,6 +124,16 @@ body {
   flex-shrink: 0;
 }
 
+/* MOBILE: Permitir scroll no layout */
+@media (max-width: 768px) {
+  .side-by-side-layout {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    min-height: auto !important;
+  }
+}
+
 .side-by-side-layout::before {
   content: '';
   position: absolute;
@@ -443,6 +453,15 @@ body {
   width: 100%;
 }
 
+/* MOBILE: Footer relativo para permitir scroll */
+@media (max-width: 768px) {
+  .login-footer {
+    position: relative !important;
+    bottom: auto !important;
+    margin-top: auto;
+  }
+}
+
 .login-footer a,
 .login-footer a:link,
 .login-footer a:visited {
@@ -668,6 +687,7 @@ body {
     margin-top: auto;
     min-height: auto;
     max-height: none;
+    overflow: visible !important;
   }
   
   .login-footer__container {
