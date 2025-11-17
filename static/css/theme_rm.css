@@ -14,6 +14,9 @@
 .btn.primary,.btn-primary{background:var(--primary, var(--rm-blue-600));color:#fff;border-color:var(--primary, var(--rm-blue-600))}
 .btn.primary:hover,.btn-primary:hover{background:var(--primary-hover, var(--rm-blue-700));border-color:var(--primary-hover, var(--rm-blue-700))}
 
+.btn-secondary{background:var(--rm-slate-50);color:var(--rm-blue-600);border:1px solid var(--rm-blue-600);box-shadow:0 2px 4px rgba(29,78,216,0.1)}
+.btn-secondary:hover{background:var(--rm-blue-600);border-color:var(--rm-blue-600);color:#fff;transform:translateY(-1px);box-shadow:0 4px 8px rgba(29,78,216,0.2)}
+
 .btn-outline,.btn-outline-primary{background:transparent;color:var(--primary, var(--rm-blue-600));border-color:var(--primary, var(--rm-blue-600))}
 .btn-outline:hover,.btn-outline-primary:hover{background:rgba(29,78,216,0.08);color:var(--primary-hover, var(--rm-blue-700));border-color:var(--primary-hover, var(--rm-blue-700))}
 

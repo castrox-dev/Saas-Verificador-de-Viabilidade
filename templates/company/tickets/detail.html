@@ -206,6 +206,30 @@
     chatMessages.scrollTop = chatMessages.scrollHeight;
   }
 
+  // Limpar campo de mensagem após envio do formulário
+  const messageForm = document.getElementById('messageForm');
+  const messageField = document.querySelector('#messageForm textarea[name="message"], #messageForm input[name="message"]');
+  
+  if (messageForm && messageField) {
+    messageForm.addEventListener('submit', function(e) {
+      // Limpar o campo imediatamente após o submit
+      setTimeout(function() {
+        if (messageField) {
+          messageField.value = '';
+        }
+      }, 100);
+    });
+    
+    // Limpar campo ao carregar a página (caso tenha restado algum valor)
+    window.addEventListener('load', function() {
+      // Verificar se há parâmetro de sucesso na URL para limpar o campo
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.has('sent') || !messageField.value.trim()) {
+        messageField.value = '';
+      }
+    });
+  }
+
   // Atualizar mensagens a cada 5 segundos (opcional)
   let lastMessageId = {% if messages %}{% for msg in messages %}{% if forloop.last %}{{ msg.id|default:0 }}{% endif %}{% empty %}0{% endfor %}{% else %}0{% endif %};
   
