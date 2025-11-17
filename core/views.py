@@ -142,6 +142,11 @@ def rm_login_view(request):
                     logger.error(f"ERRO: Usuário não autenticado após login() - {user.username}")
                 if not (request.user.is_rm_admin or request.user.is_superuser):
                     logger.error(f"ERRO: Usuário não tem permissão RM após login - {request.user.username} (role: {request.user.role})")
+                
+                # Verificar se usuário precisa mudar senha (middleware fará o redirecionamento)
+                if hasattr(user, 'must_change_password') and user.must_change_password:
+                    return redirect('dashboard')
+                
                 # Redirecionar para o dashboard administrativo RM
                 next_url = request.GET.get('next') or request.POST.get('next')
                 if next_url:
@@ -150,10 +155,10 @@ def rm_login_view(request):
                         return redirect(next_url)
                     except Exception as e:
                         logger.error(f"Erro ao redirecionar para next_url {next_url}: {e}")
-                        return redirect('rm:admin_dashboard')
+                        return redirect('dashboard')
                 else:
-                    logger.info(f"Redirecionando para rm:admin_dashboard")
-                    return redirect('rm:admin_dashboard')
+                    logger.info(f"Redirecionando para dashboard")
+                    return redirect('dashboard')
             else:
                 # Usuário autenticado mas não é admin RM - pode tentar login da empresa
                 logger.warning(f"Tentativa de login RM sem permissão: {user.username} (role: {user.role}, is_rm_admin: {user.is_rm_admin}, is_superuser: {user.is_superuser})")
@@ -457,6 +462,11 @@ def company_login_view(request, company_slug):
             login(request, user)
             # Log apenas sucesso sem informações sensíveis
             logger.info(f"Successful login for company: {company_slug}")
+            
+            # Verificar se usuário precisa mudar senha (middleware fará o redirecionamento)
+            if hasattr(user, 'must_change_password') and user.must_change_password:
+                return redirect('dashboard')
+            
             # Redirecionar conforme o papel do usuário
             if user.role == 'COMPANY_ADMIN':
                 return redirect('company:dashboard', company_slug=company_slug)
@@ -1216,11 +1226,76 @@ def rm_reports_export_csv(request):
 
 # Redireciona para o dashboard correto conforme o papel do usuário
 
+@login_required
+def change_password_required(request):
+    """
+    View para mudança obrigatória de senha no primeiro acesso
+    """
+    user = request.user
+    
+    # Verificar se usuário realmente precisa mudar a senha
+    if not hasattr(user, 'must_change_password') or not user.must_change_password:
+        # Não precisa mudar senha, redirecionar para dashboard
+        return redirect('dashboard')
+    
+    if request.method == 'POST':
+        current_password = request.POST.get('current_password', '').strip()
+        new_password = request.POST.get('new_password', '').strip()
+        confirm_password = request.POST.get('confirm_password', '').strip()
+        
+        # Validar campos
+        if not current_password or not new_password or not confirm_password:
+            messages.error(request, 'Todos os campos são obrigatórios.')
+            return render(request, 'core/change_password_required.html')
+        
+        # Verificar se a senha atual está correta
+        if not user.check_password(current_password):
+            messages.error(request, 'Senha atual incorreta.')
+            return render(request, 'core/change_password_required.html')
+        
+        # Verificar se as novas senhas coincidem
+        if new_password != confirm_password:
+            messages.error(request, 'As senhas não coincidem.')
+            return render(request, 'core/change_password_required.html')
+        
+        # Verificar se a nova senha é diferente da atual
+        if user.check_password(new_password):
+            messages.error(request, 'A nova senha deve ser diferente da senha atual.')
+            return render(request, 'core/change_password_required.html')
+        
+        # Validar tamanho mínimo (8 caracteres)
+        if len(new_password) < 8:
+            messages.error(request, 'A senha deve ter no mínimo 8 caracteres.')
+            return render(request, 'core/change_password_required.html')
+        
+        # Atualizar senha
+        user.set_password(new_password)
+        user.must_change_password = False
+        user.save()
+        
+        # Atualizar sessão para não precisar logar novamente
+        from django.contrib.auth import update_session_auth_hash
+        update_session_auth_hash(request, user)
+        
+        messages.success(request, 'Senha alterada com sucesso!')
+        logger.info(f"Usuário {user.username} alterou senha obrigatória com sucesso")
+        
+        # Redirecionar para dashboard
+        return redirect('dashboard')
+    
+    return render(request, 'core/change_password_required.html')
+
+
 def dashboard_redirect(request):
     if not request.user.is_authenticated:
         return redirect('rm:login')
 
     user = request.user
+    
+    # Verificar se usuário precisa mudar senha
+    if hasattr(user, 'must_change_password') and user.must_change_password:
+        return redirect('change_password_required')
+    
     if user.is_rm_admin or user.is_superuser:
         return redirect('rm:admin_dashboard')
 

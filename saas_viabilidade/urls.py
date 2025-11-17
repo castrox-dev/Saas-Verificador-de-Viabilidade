@@ -17,6 +17,9 @@ urlpatterns = [
     # Rota genérica de dashboard que redireciona conforme papel do usuário
     path("dashboard/", dashboard_redirect, name="dashboard"),
     
+    # Mudança obrigatória de senha no primeiro acesso
+    path("change-password-required/", core_views.change_password_required, name="change_password_required"),
+    
     # Favicon - redireciona para o arquivo estático
     path("favicon.ico", RedirectView.as_view(url=settings.STATIC_URL + "favicon.ico", permanent=True), name="favicon"),
     

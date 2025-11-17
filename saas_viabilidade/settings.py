@@ -83,6 +83,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "core.middleware_password_change.PasswordChangeMiddleware",  # Verificar mudança obrigatória de senha
     "core.middleware_security.SecureCompanyMiddleware",
     "core.security_headers.SecurityHeadersMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",

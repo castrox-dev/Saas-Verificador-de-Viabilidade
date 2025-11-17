@@ -321,16 +321,25 @@ class CustomUserForm(UserCreationForm):
         # Gerar senha aleatória simples de 8 dígitos se não fornecida
         password1 = self.cleaned_data.get('password1', '').strip()
         
+        # Se é um novo usuário (não tem pk) ou senha foi gerada, marcar para mudança obrigatória
+        is_new_user = not user.pk
+        
         if not password1:
             # Gerar senha aleatória simples de 8 dígitos
             generated_password = generate_random_password(length=8, simple=True)
             user.set_password(generated_password)
             # Armazenar senha gerada para retornar ao usuário
             self._generated_password = generated_password
+            # Marcar para mudança obrigatória de senha
+            if is_new_user:
+                user.must_change_password = True
         else:
             # Senha fornecida pelo usuário (gerada pelo botão)
             user.set_password(password1)
             self._generated_password = password1
+            # Se é novo usuário com senha gerada, marcar para mudança obrigatória
+            if is_new_user:
+                user.must_change_password = True
         
         # Salvar o usuário
         # O save() do modelo ajusta os dados automaticamente e não chama clean()
