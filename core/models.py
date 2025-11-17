@@ -385,67 +385,41 @@ class Ticket(models.Model):
     def save(self, *args, **kwargs):
         from django.utils import timezone
         import time
+        import logging
         
-        # Gerar número do ticket se não existir
+        logger = logging.getLogger(__name__)
+        
+        # Gerar número do ticket se não existir - usar abordagem mais simples
         if not self.ticket_number:
             prefix = "TKT"
             timestamp = timezone.now().strftime("%Y%m%d")
             
-            # Tentar contar tickets do dia de forma segura
-            count = 0
-            try:
-                today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
-                today_end = timezone.now().replace(hour=23, minute=59, second=59, microsecond=999999)
-                
-                # Se já tem ID, excluir da contagem para evitar duplicação
-                if self.pk:
-                    count = Ticket.objects.filter(
-                        created_at__gte=today_start,
-                        created_at__lte=today_end
-                    ).exclude(pk=self.pk).count()
-                else:
-                    # Para novos tickets, contar apenas os já salvos hoje
-                    count = Ticket.objects.filter(
-                        created_at__gte=today_start,
-                        created_at__lte=today_end
-                    ).count()
-            except Exception as e:
-                # Se houver erro ao contar, usar apenas timestamp
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.warning(f"Erro ao contar tickets: {str(e)}")
-                count = 0
+            # Usar timestamp com microsegundos para garantir unicidade
+            # Isso evita queries complexas que podem falhar
+            unique_suffix = str(int(time.time() * 1000000))[-6:]  # Últimos 6 dígitos do microsegundo
+            self.ticket_number = f"{prefix}-{timestamp}-{unique_suffix}"
             
-            # Tentar gerar número único
-            max_attempts = 10
+            # Verificar se já existe (improvável, mas seguro)
+            max_attempts = 5
             attempt = 0
-            generated = False
-            
             while attempt < max_attempts:
                 try:
-                    ticket_number = f"{prefix}-{timestamp}-{str(count + 1 + attempt).zfill(4)}"
-                    # Verificar se já existe
                     if self.pk:
-                        exists = Ticket.objects.filter(ticket_number=ticket_number).exclude(pk=self.pk).exists()
+                        exists = Ticket.objects.filter(ticket_number=self.ticket_number).exclude(pk=self.pk).exists()
                     else:
-                        exists = Ticket.objects.filter(ticket_number=ticket_number).exists()
+                        exists = Ticket.objects.filter(ticket_number=self.ticket_number).exists()
                     
                     if not exists:
-                        self.ticket_number = ticket_number
-                        generated = True
                         break
+                    else:
+                        # Se existe, adicionar um dígito extra
+                        unique_suffix = str(int(time.time() * 1000000))[-6:] + str(attempt)
+                        self.ticket_number = f"{prefix}-{timestamp}-{unique_suffix}"
                 except Exception as e:
-                    import logging
-                    logger = logging.getLogger(__name__)
                     logger.warning(f"Erro ao verificar ticket_number: {str(e)}")
                     break
                 
                 attempt += 1
-            
-            # Fallback: usar timestamp com microsegundos se não conseguiu gerar
-            if not generated:
-                unique_suffix = str(int(time.time() * 1000000))[-4:]
-                self.ticket_number = f"{prefix}-{timestamp}-{unique_suffix}"
         
         # Atualizar timestamps baseado no status
         if self.status == 'resolvido' and not self.resolved_at:
@@ -458,9 +432,7 @@ class Ticket(models.Model):
             super().save(*args, **kwargs)
         except Exception as e:
             # Log do erro antes de relançar
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.exception(f"Erro ao salvar ticket: {str(e)}")
+            logger.exception(f"Erro ao salvar ticket (id={self.pk}, ticket_number={self.ticket_number}): {str(e)}")
             raise
     
     def get_status_color(self):
