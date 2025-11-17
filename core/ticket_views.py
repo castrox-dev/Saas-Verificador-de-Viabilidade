@@ -30,37 +30,59 @@ def company_ticket_create(request, company_slug):
             form = TicketForm(request.POST, user=request.user, company=company)
             if form.is_valid():
                 try:
+                    # Criar ticket
                     ticket = form.save(commit=False)
                     ticket.company = company
                     ticket.created_by = request.user
+                    
+                    # Garantir que status está definido
+                    if not ticket.status:
+                        ticket.status = 'aberto'
+                    
+                    # Garantir que priority está definido
+                    if not ticket.priority:
+                        ticket.priority = 'normal'
+                    
+                    logger.debug(f"Salvando ticket: title={ticket.title}, company={company.id}, created_by={request.user.id}")
                     ticket.save()
+                    logger.debug(f"Ticket salvo com ID: {ticket.id}, número: {ticket.ticket_number}")
                     
                     # Criar primeira mensagem com a descrição
                     try:
-                        TicketMessage.objects.create(
-                            ticket=ticket,
-                            message=ticket.description,
-                            sent_by=request.user
-                        )
+                        if ticket.description:
+                            TicketMessage.objects.create(
+                                ticket=ticket,
+                                message=ticket.description,
+                                sent_by=request.user
+                            )
+                            logger.debug(f"Primeira mensagem criada para ticket {ticket.id}")
                     except Exception as e:
-                        logger.error(f"Erro ao criar primeira mensagem do ticket: {str(e)}")
+                        logger.exception(f"Erro ao criar primeira mensagem do ticket: {str(e)}")
                         # Não deixar o ticket sem mensagem - usar descrição como fallback
                         messages.warning(request, 'Ticket criado, mas houve um problema ao salvar a primeira mensagem.')
                     
                     # Enviar email
                     try:
                         send_ticket_created_email(ticket, request)
+                        logger.debug(f"Email enviado para ticket {ticket.id}")
                     except Exception as e:
-                        logger.error(f"Erro ao enviar email de ticket criado: {str(e)}")
+                        logger.exception(f"Erro ao enviar email de ticket criado: {str(e)}")
                         # Não bloquear criação do ticket por erro de email
                     
                     messages.success(request, f'Ticket {ticket.ticket_number} criado com sucesso! Você receberá um email com os detalhes.')
                     return redirect('company:ticket_detail', company_slug=company_slug, ticket_id=ticket.id)
                 except Exception as e:
                     logger.exception(f"Erro ao salvar ticket: {str(e)}")
-                    messages.error(request, f'Erro ao criar ticket: {str(e)}')
+                    # Mensagem de erro mais amigável
+                    error_msg = str(e)
+                    if 'ticket_number' in error_msg.lower() or 'unique' in error_msg.lower():
+                        error_msg = 'Erro ao gerar número do ticket. Tente novamente.'
+                    elif 'required' in error_msg.lower() or 'null' in error_msg.lower():
+                        error_msg = 'Campos obrigatórios não preenchidos. Verifique o formulário.'
+                    
+                    messages.error(request, f'Erro ao criar ticket: {error_msg}')
                     # Adicionar erro ao form para exibir na página
-                    form.add_error(None, f'Erro ao salvar: {str(e)}')
+                    form.add_error(None, error_msg)
             else:
                 # Log de erros de validação
                 logger.debug(f"Erros de validação no formulário: {form.errors}")
