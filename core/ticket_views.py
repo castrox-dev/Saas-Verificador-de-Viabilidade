@@ -169,71 +169,83 @@ def company_ticket_list(request, company_slug):
 @company_access_required(require_admin=False, allow_user_role=True)
 def company_ticket_detail(request, company_slug, ticket_id):
     """Visualizar ticket e chat (empresa)"""
-    company = get_object_or_404(Company, slug=company_slug)
-    ticket = get_object_or_404(Ticket, id=ticket_id, company=company)
-    
-    # Verificar permissão (admin pode ver todos, usuário apenas os seus)
-    if not request.user.is_company_admin and ticket.created_by != request.user:
-        messages.error(request, 'Você não tem permissão para acessar este ticket.')
-        return redirect('company:ticket_list', company_slug=company_slug)
-    
-    # Marcar mensagens como lidas
-    if ticket.created_by == request.user:
-        # Marcar mensagens do RM como lidas
-        TicketMessage.objects.filter(
-            ticket=ticket,
-            sent_by__role='RM',
-            read=False
-        ).update(read=True, read_at=timezone.now())
-    
-    messages_list = TicketMessage.objects.filter(ticket=ticket).order_by('created_at')
-    
-    if request.method == 'POST':
-        # Verificar se é para fechar o ticket
-        if 'close_ticket' in request.POST:
-            # Apenas o criador do ticket ou admin da empresa pode fechar
-            if ticket.created_by == request.user or request.user.is_company_admin:
-                if ticket.status != 'fechado':
-                    ticket.status = 'fechado'
-                    ticket.save()
-                    messages.success(request, f'Ticket {ticket.ticket_number} fechado com sucesso!')
-                else:
-                    messages.info(request, 'Este ticket já está fechado.')
-                return redirect('company:ticket_detail', company_slug=company_slug, ticket_id=ticket.id)
-            else:
-                messages.error(request, 'Você não tem permissão para fechar este ticket.')
-                return redirect('company:ticket_detail', company_slug=company_slug, ticket_id=ticket.id)
+    try:
+        company = get_object_or_404(Company, slug=company_slug)
+        ticket = get_object_or_404(Ticket, id=ticket_id, company=company)
         
-        # Adicionar mensagem
-        form = TicketMessageForm(request.POST, user=request.user, ticket=ticket)
-        if form.is_valid():
-            # Não permitir adicionar mensagens em tickets fechados
-            if ticket.status == 'fechado':
-                messages.error(request, 'Não é possível adicionar mensagens em tickets fechados.')
+        # Verificar permissão (admin pode ver todos, usuário apenas os seus)
+        if not request.user.is_company_admin and ticket.created_by != request.user:
+            messages.error(request, 'Você não tem permissão para acessar este ticket.')
+            return redirect('company:ticket_list', company_slug=company_slug)
+        
+        # Marcar mensagens como lidas
+        try:
+            if ticket.created_by == request.user:
+                # Marcar mensagens do RM como lidas
+                TicketMessage.objects.filter(
+                    ticket=ticket,
+                    sent_by__role='RM',
+                    read=False
+                ).update(read=True, read_at=timezone.now())
+        except Exception as e:
+            logger.warning(f"Erro ao marcar mensagens como lidas: {str(e)}")
+        
+        try:
+            messages_list = TicketMessage.objects.filter(ticket=ticket).select_related('sent_by').order_by('created_at')
+        except Exception as e:
+            logger.error(f"Erro ao buscar mensagens do ticket: {str(e)}")
+            messages_list = []
+        
+        if request.method == 'POST':
+            # Verificar se é para fechar o ticket
+            if 'close_ticket' in request.POST:
+                # Apenas o criador do ticket ou admin da empresa pode fechar
+                if ticket.created_by == request.user or request.user.is_company_admin:
+                    if ticket.status != 'fechado':
+                        ticket.status = 'fechado'
+                        ticket.save()
+                        messages.success(request, f'Ticket {ticket.ticket_number} fechado com sucesso!')
+                    else:
+                        messages.info(request, 'Este ticket já está fechado.')
+                    return redirect('company:ticket_detail', company_slug=company_slug, ticket_id=ticket.id)
+                else:
+                    messages.error(request, 'Você não tem permissão para fechar este ticket.')
+                    return redirect('company:ticket_detail', company_slug=company_slug, ticket_id=ticket.id)
+            
+            # Adicionar mensagem
+            form = TicketMessageForm(request.POST, user=request.user, ticket=ticket)
+            if form.is_valid():
+                # Não permitir adicionar mensagens em tickets fechados
+                if ticket.status == 'fechado':
+                    messages.error(request, 'Não é possível adicionar mensagens em tickets fechados.')
+                    return redirect('company:ticket_detail', company_slug=company_slug, ticket_id=ticket.id)
+                
+                message = form.save(commit=False)
+                message.ticket = ticket
+                message.sent_by = request.user
+                message.save()
+                
+                # Enviar email
+                try:
+                    send_ticket_message_email(ticket, message, request)
+                except Exception as e:
+                    logger.error(f"Erro ao enviar email de nova mensagem: {str(e)}")
+                
+                messages.success(request, 'Mensagem enviada com sucesso!')
                 return redirect('company:ticket_detail', company_slug=company_slug, ticket_id=ticket.id)
-            
-            message = form.save(commit=False)
-            message.ticket = ticket
-            message.sent_by = request.user
-            message.save()
-            
-            # Enviar email
-            try:
-                send_ticket_message_email(ticket, message, request)
-            except Exception as e:
-                logger.error(f"Erro ao enviar email de nova mensagem: {str(e)}")
-            
-            messages.success(request, 'Mensagem enviada com sucesso!')
-            return redirect('company:ticket_detail', company_slug=company_slug, ticket_id=ticket.id)
-    else:
-        form = TicketMessageForm(user=request.user, ticket=ticket)
-    
-    return render(request, 'company/tickets/detail.html', {
-        'ticket': ticket,
-        'messages': messages_list,
-        'form': form,
-        'company': company
-    })
+        else:
+            form = TicketMessageForm(user=request.user, ticket=ticket)
+        
+        return render(request, 'company/tickets/detail.html', {
+            'ticket': ticket,
+            'messages': messages_list,
+            'form': form,
+            'company': company
+        })
+    except Exception as e:
+        logger.exception(f"Erro inesperado em company_ticket_detail: {str(e)}")
+        messages.error(request, f'Erro ao carregar ticket: {str(e)}')
+        return redirect('company:ticket_list', company_slug=company_slug)
 
 
 @login_required
@@ -351,72 +363,119 @@ def rm_ticket_detail(request, ticket_id):
 
 
 @login_required
-@company_access_required_json
+@company_access_required_json(require_admin=False)
 def get_new_messages(request, company_slug, ticket_id):
     """API para buscar novas mensagens (AJAX)"""
-    company = get_object_or_404(Company, slug=company_slug)
-    ticket = get_object_or_404(Ticket, id=ticket_id, company=company)
-    
-    # Verificar permissão
-    if not request.user.is_company_admin and ticket.created_by != request.user:
-        return JsonResponse({'error': 'Sem permissão'}, status=403)
-    
-    # Buscar mensagens não lidas
-    last_message_id = request.GET.get('last_message_id', 0)
     try:
-        last_message_id = int(last_message_id)
-    except (ValueError, TypeError):
-        last_message_id = 0
-    
-    new_messages = ticket.messages.filter(id__gt=last_message_id).order_by('created_at')
-    
-    # Marcar como lidas se for o criador do ticket
-    if ticket.created_by == request.user:
-        new_messages.filter(sent_by__role='RM', read=False).update(read=True, read_at=timezone.now())
-    
-    messages_data = [{
-        'id': msg.id,
-        'message': msg.message,
-        'sent_by': msg.sent_by.get_full_name() or msg.sent_by.username,
-        'sent_by_role': msg.sent_by.role,
-        'created_at': msg.created_at.strftime('%d/%m/%Y %H:%M'),
-        'is_sent_by_me': msg.sent_by == request.user
-    } for msg in new_messages]
-    
-    return JsonResponse({
-        'messages': messages_data,
-        'has_new': len(messages_data) > 0
-    })
+        company = get_object_or_404(Company, slug=company_slug)
+        ticket = get_object_or_404(Ticket, id=ticket_id, company=company)
+        
+        # Verificar permissão
+        if not request.user.is_company_admin and ticket.created_by != request.user:
+            return JsonResponse({'error': 'Sem permissão'}, status=403)
+        
+        # Buscar mensagens não lidas
+        last_message_id = request.GET.get('last_message_id', 0)
+        try:
+            last_message_id = int(last_message_id)
+        except (ValueError, TypeError):
+            last_message_id = 0
+        
+        try:
+            new_messages = TicketMessage.objects.filter(
+                ticket=ticket,
+                id__gt=last_message_id
+            ).select_related('sent_by').order_by('created_at')
+            
+            # Marcar como lidas se for o criador do ticket
+            if ticket.created_by == request.user:
+                new_messages.filter(sent_by__role='RM', read=False).update(read=True, read_at=timezone.now())
+        except Exception as e:
+            logger.exception(f"Erro ao buscar mensagens: {str(e)}")
+            return JsonResponse({'error': 'Erro ao buscar mensagens', 'messages': [], 'has_new': False}, status=500)
+        
+        messages_data = []
+        for msg in new_messages:
+            try:
+                sent_by_name = '-'
+                sent_by_role = 'unknown'
+                if msg.sent_by:
+                    sent_by_name = msg.sent_by.get_full_name() or msg.sent_by.username or '-'
+                    sent_by_role = getattr(msg.sent_by, 'role', 'unknown')
+                
+                messages_data.append({
+                    'id': msg.id,
+                    'message': msg.message or '',
+                    'sent_by': sent_by_name,
+                    'sent_by_role': sent_by_role,
+                    'created_at': msg.created_at.strftime('%d/%m/%Y %H:%M') if msg.created_at else '',
+                    'is_sent_by_me': msg.sent_by == request.user if msg.sent_by else False
+                })
+            except Exception as e:
+                logger.warning(f"Erro ao processar mensagem {msg.id}: {str(e)}")
+                continue
+        
+        return JsonResponse({
+            'messages': messages_data,
+            'has_new': len(messages_data) > 0
+        })
+    except Exception as e:
+        logger.exception(f"Erro inesperado em get_new_messages: {str(e)}")
+        return JsonResponse({'error': 'Erro interno do servidor', 'messages': [], 'has_new': False}, status=500)
 
 
 @login_required
 @rm_admin_required
 def rm_get_new_messages(request, ticket_id):
     """API para buscar novas mensagens (RM)"""
-    ticket = get_object_or_404(Ticket, id=ticket_id)
-    
-    last_message_id = request.GET.get('last_message_id', 0)
     try:
-        last_message_id = int(last_message_id)
-    except (ValueError, TypeError):
-        last_message_id = 0
-    
-    new_messages = ticket.messages.filter(id__gt=last_message_id).order_by('created_at')
-    
-    # Marcar mensagens do cliente como lidas
-    new_messages.filter(sent_by=ticket.created_by, read=False).update(read=True, read_at=timezone.now())
-    
-    messages_data = [{
-        'id': msg.id,
-        'message': msg.message,
-        'sent_by': msg.sent_by.get_full_name() or msg.sent_by.username,
-        'sent_by_role': msg.sent_by.role,
-        'created_at': msg.created_at.strftime('%d/%m/%Y %H:%M'),
-        'is_sent_by_me': msg.sent_by == request.user
-    } for msg in new_messages]
-    
-    return JsonResponse({
-        'messages': messages_data,
-        'has_new': len(messages_data) > 0
-    })
+        ticket = get_object_or_404(Ticket, id=ticket_id)
+        
+        last_message_id = request.GET.get('last_message_id', 0)
+        try:
+            last_message_id = int(last_message_id)
+        except (ValueError, TypeError):
+            last_message_id = 0
+        
+        try:
+            new_messages = TicketMessage.objects.filter(
+                ticket=ticket,
+                id__gt=last_message_id
+            ).select_related('sent_by').order_by('created_at')
+            
+            # Marcar mensagens do cliente como lidas
+            if ticket.created_by:
+                new_messages.filter(sent_by=ticket.created_by, read=False).update(read=True, read_at=timezone.now())
+        except Exception as e:
+            logger.exception(f"Erro ao buscar mensagens: {str(e)}")
+            return JsonResponse({'error': 'Erro ao buscar mensagens', 'messages': [], 'has_new': False}, status=500)
+        
+        messages_data = []
+        for msg in new_messages:
+            try:
+                sent_by_name = '-'
+                sent_by_role = 'unknown'
+                if msg.sent_by:
+                    sent_by_name = msg.sent_by.get_full_name() or msg.sent_by.username or '-'
+                    sent_by_role = getattr(msg.sent_by, 'role', 'unknown')
+                
+                messages_data.append({
+                    'id': msg.id,
+                    'message': msg.message or '',
+                    'sent_by': sent_by_name,
+                    'sent_by_role': sent_by_role,
+                    'created_at': msg.created_at.strftime('%d/%m/%Y %H:%M') if msg.created_at else '',
+                    'is_sent_by_me': msg.sent_by == request.user if msg.sent_by else False
+                })
+            except Exception as e:
+                logger.warning(f"Erro ao processar mensagem {msg.id}: {str(e)}")
+                continue
+        
+        return JsonResponse({
+            'messages': messages_data,
+            'has_new': len(messages_data) > 0
+        })
+    except Exception as e:
+        logger.exception(f"Erro inesperado em rm_get_new_messages: {str(e)}")
+        return JsonResponse({'error': 'Erro interno do servidor', 'messages': [], 'has_new': False}, status=500)
 
