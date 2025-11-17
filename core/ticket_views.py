@@ -189,8 +189,29 @@ def company_ticket_detail(request, company_slug, ticket_id):
     messages_list = TicketMessage.objects.filter(ticket=ticket).order_by('created_at')
     
     if request.method == 'POST':
+        # Verificar se é para fechar o ticket
+        if 'close_ticket' in request.POST:
+            # Apenas o criador do ticket ou admin da empresa pode fechar
+            if ticket.created_by == request.user or request.user.is_company_admin:
+                if ticket.status != 'fechado':
+                    ticket.status = 'fechado'
+                    ticket.save()
+                    messages.success(request, f'Ticket {ticket.ticket_number} fechado com sucesso!')
+                else:
+                    messages.info(request, 'Este ticket já está fechado.')
+                return redirect('company:ticket_detail', company_slug=company_slug, ticket_id=ticket.id)
+            else:
+                messages.error(request, 'Você não tem permissão para fechar este ticket.')
+                return redirect('company:ticket_detail', company_slug=company_slug, ticket_id=ticket.id)
+        
+        # Adicionar mensagem
         form = TicketMessageForm(request.POST, user=request.user, ticket=ticket)
         if form.is_valid():
+            # Não permitir adicionar mensagens em tickets fechados
+            if ticket.status == 'fechado':
+                messages.error(request, 'Não é possível adicionar mensagens em tickets fechados.')
+                return redirect('company:ticket_detail', company_slug=company_slug, ticket_id=ticket.id)
+            
             message = form.save(commit=False)
             message.ticket = ticket
             message.sent_by = request.user
@@ -275,6 +296,16 @@ def rm_ticket_detail(request, ticket_id):
     messages_list = TicketMessage.objects.filter(ticket=ticket).order_by('created_at')
     
     if request.method == 'POST':
+        # Verificar se é para fechar o ticket
+        if 'close_ticket' in request.POST:
+            if ticket.status != 'fechado':
+                ticket.status = 'fechado'
+                ticket.save()
+                messages.success(request, f'Ticket {ticket.ticket_number} fechado com sucesso!')
+            else:
+                messages.info(request, 'Este ticket já está fechado.')
+            return redirect('rm:ticket_detail', ticket_id=ticket.id)
+        
         # Verificar se é para atualizar status ou adicionar mensagem
         if 'update_status' in request.POST:
             ticket.status = request.POST.get('status')
@@ -287,6 +318,11 @@ def rm_ticket_detail(request, ticket_id):
             # Adicionar mensagem
             form = TicketMessageForm(request.POST, user=request.user, ticket=ticket)
             if form.is_valid():
+                # Não permitir adicionar mensagens em tickets fechados
+                if ticket.status == 'fechado':
+                    messages.error(request, 'Não é possível adicionar mensagens em tickets fechados.')
+                    return redirect('rm:ticket_detail', ticket_id=ticket.id)
+                
                 message = form.save(commit=False)
                 message.ticket = ticket
                 message.sent_by = request.user
