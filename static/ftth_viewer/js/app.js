@@ -1706,11 +1706,35 @@ async function verificarViabilidade(lat, lon, endereco = '') {
         // Remover notificação desnecessária
         showViabilityLoading(); // Mostrar loading screen
         
+        // Coletar IDs dos mapas ativos para incluir no cache
+        const activeMapIds = [];
+        activeMapLayers.forEach((entry, key) => {
+            const mapId = entry?.meta?.mapId;
+            if (mapId) {
+                activeMapIds.push(mapId);
+            }
+        });
+        
+        // Criar hash dos mapas ativos (ordem importa, então ordenar)
+        const mapIdsHash = activeMapIds.length > 0 
+            ? activeMapIds.sort().join(',')
+            : '';
+        
+        // Construir URL com parâmetros
+        const params = new URLSearchParams({
+            lat: lat.toString(),
+            lon: lon.toString()
+        });
+        
+        if (mapIdsHash) {
+            params.append('map_ids', mapIdsHash);
+        }
+        
         // Timeout para a verificação de viabilidade
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 segundos
         
-        const response = await fetch(`${API_BASE}/verificar-viabilidade?lat=${lat}&lon=${lon}`, {
+        const response = await fetch(`${API_BASE}/verificar-viabilidade?${params.toString()}`, {
             signal: controller.signal
         });
         clearTimeout(timeoutId);

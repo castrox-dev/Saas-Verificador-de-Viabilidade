@@ -611,9 +611,26 @@ def api_verificar_viabilidade(request, company_slug=None):
         if not company:
             return JsonResponse({"erro": "Empresa não especificada"}, status=400)
         
-        # Verificar cache de viabilidade - SEMPRE incluir empresa no cache
+        # Obter IDs dos mapas ativos (se fornecidos)
+        map_ids_param = request.GET.get('map_ids', '').strip()
+        map_ids_list = []
+        mapas_hash = ''
+        
+        if map_ids_param:
+            # Parsear lista de IDs dos mapas (separados por vírgula)
+            map_ids_list = [mid.strip() for mid in map_ids_param.split(',') if mid.strip()]
+            # Ordenar para garantir consistência (hash sempre igual para mesmos mapas)
+            map_ids_list.sort()
+            mapas_hash = ','.join(map_ids_list)
+        
+        # Verificar cache de viabilidade - incluir empresa E mapas ativos no cache
         try:
-            cache_obj = ViabilidadeCache.objects.get(lat=lat, lon=lon, company=company)
+            cache_obj = ViabilidadeCache.objects.get(
+                lat=lat, 
+                lon=lon, 
+                company=company,
+                mapas_hash=mapas_hash
+            )
             return JsonResponse(cache_obj.resultado)
         except ViabilidadeCache.DoesNotExist:
             pass
@@ -622,8 +639,13 @@ def api_verificar_viabilidade(request, company_slug=None):
         
         # Buscar CTOs APENAS da empresa especificada
         ctos = get_all_ctos(company=company)
+        
+        # Se map_ids foram fornecidos, filtrar CTOs apenas dos mapas ativos
+        if map_ids_list:
+            ctos = [cto for cto in ctos if cto.get('map_id') in map_ids_list]
+        
         if not ctos:
-            return JsonResponse({"erro": "Nenhum CTO encontrado"}, status=404)
+            return JsonResponse({"erro": "Nenhum CTO encontrado" + (" nos mapas selecionados" if map_ids_list else "")}, status=404)
         
         # Fase 1: Filtrar por distância euclidiana
         ctos_com_distancia = []
@@ -704,11 +726,12 @@ def api_verificar_viabilidade(request, company_slug=None):
             }
         }
         
-        # Salvar no cache - SEMPRE incluir empresa para separar caches
+        # Salvar no cache - incluir empresa E mapas ativos para separar caches
         ViabilidadeCache.objects.update_or_create(
             lat=lat,
             lon=lon,
             company=company,  # Incluir empresa no cache
+            mapas_hash=mapas_hash,  # Incluir hash dos mapas ativos no cache
             defaults={'resultado': resultado}
         )
         
