@@ -293,32 +293,43 @@
           enforcePhoneMask();
         }
 
-        // Gerador de senha de 8 caracteres (letras e números)
+        // Gerador de senha (letras e números para novos usuários, apenas números para antigos)
         const generatePasswordBtn = document.getElementById('generatePasswordBtn');
         const passwordInput = document.getElementById('id_password1');
         
         if (generatePasswordBtn && passwordInput) {
           generatePasswordBtn.addEventListener('click', function() {
-            // Gerar senha aleatória de 8 caracteres com letras (maiúsculas e minúsculas) e números
-            const lowercase = 'abcdefghijklmnopqrstuvwxyz';
-            const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-            const digits = '0123456789';
-            const allChars = lowercase + uppercase + digits;
+            // Verificar se é novo usuário ou edição
+            const isNewUser = passwordInput.getAttribute('data-is-new-user') === 'true';
+            let password = '';
             
-            // Garantir pelo menos uma letra minúscula, uma maiúscula e um número
-            let password = [
-              lowercase[Math.floor(Math.random() * lowercase.length)],
-              uppercase[Math.floor(Math.random() * uppercase.length)],
-              digits[Math.floor(Math.random() * digits.length)]
-            ];
-            
-            // Preencher o resto com caracteres aleatórios
-            for (let i = 0; i < 5; i++) {
-              password.push(allChars[Math.floor(Math.random() * allChars.length)]);
+            if (isNewUser) {
+              // Novo usuário: senha alfanumérica (letras e números)
+              const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+              const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+              const digits = '0123456789';
+              const allChars = lowercase + uppercase + digits;
+              
+              // Garantir pelo menos uma letra minúscula, uma maiúscula e um número
+              password = [
+                lowercase[Math.floor(Math.random() * lowercase.length)],
+                uppercase[Math.floor(Math.random() * uppercase.length)],
+                digits[Math.floor(Math.random() * digits.length)]
+              ];
+              
+              // Preencher o resto com caracteres aleatórios
+              for (let i = 0; i < 5; i++) {
+                password.push(allChars[Math.floor(Math.random() * allChars.length)]);
+              }
+              
+              // Embaralhar a senha
+              password = password.sort(() => Math.random() - 0.5).join('');
+            } else {
+              // Usuário antigo ou superusuário: senha apenas números (padrão antigo)
+              for (let i = 0; i < 8; i++) {
+                password += Math.floor(Math.random() * 10).toString();
+              }
             }
-            
-            // Embaralhar a senha
-            password = password.sort(() => Math.random() - 0.5).join('');
             
             // Preencher o campo de senha
             passwordInput.value = password;

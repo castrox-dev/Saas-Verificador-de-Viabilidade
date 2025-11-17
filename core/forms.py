@@ -197,12 +197,28 @@ class CustomUserForm(UserCreationForm):
         if 'password1' in self.fields:
             self.fields['password1'].required = False
             self.fields['password1'].label = 'Senha'
-            self.fields['password1'].help_text = 'Clique no botão "Gerar Senha" para criar uma senha aleatória de 8 caracteres (letras e números), ou deixe em branco para gerar automaticamente ao salvar.'
+            
+            # Verificar se é novo usuário ou edição
+            # Se não tem instance ou instance não tem pk, é novo usuário
+            if hasattr(self, 'instance') and self.instance and hasattr(self.instance, 'pk'):
+                is_new_user = not self.instance.pk
+            else:
+                is_new_user = True
+            
+            # Se é novo usuário, usar senha alfanumérica (letras e números)
+            # Se é edição, usar senha apenas números (padrão antigo)
+            if is_new_user:
+                help_text = 'Clique no botão "Gerar Senha" para criar uma senha aleatória de 8 caracteres (letras e números), ou deixe em branco para gerar automaticamente ao salvar.'
+            else:
+                help_text = 'Clique no botão "Gerar Senha" para criar uma senha aleatória de 8 dígitos, ou deixe em branco para gerar automaticamente ao salvar.'
+            
+            self.fields['password1'].help_text = help_text
             self.fields['password1'].widget = forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Clique em "Gerar Senha" ou deixe em branco',
                 'readonly': True,
-                'id': 'id_password1'
+                'id': 'id_password1',
+                'data-is-new-user': 'true' if is_new_user else 'false'
             })
         
         # Adicionar labels em português para todos os campos
@@ -318,19 +334,28 @@ class CustomUserForm(UserCreationForm):
             user.company = None
             user.company_id = None
         
-        # Gerar senha aleatória simples de 8 dígitos se não fornecida
+        # Gerar senha aleatória se não fornecida
         password1 = self.cleaned_data.get('password1', '').strip()
         
-        # Se é um novo usuário (não tem pk) ou senha foi gerada, marcar para mudança obrigatória
+        # Verificar se é um novo usuário (não tem pk)
         is_new_user = not user.pk
         
+        # Verificar se é superusuário ou usuário antigo (edição)
+        is_old_user_or_superuser = user.pk and (user.is_superuser or not is_new_user)
+        
         if not password1:
-            # Gerar senha aleatória simples de 8 dígitos
-            generated_password = generate_random_password(length=8, simple=True)
+            # Decidir tipo de senha baseado no tipo de usuário
+            if is_new_user:
+                # Novo usuário: senha alfanumérica (letras e números)
+                generated_password = generate_random_password(length=8, simple=True, alphanumeric=True)
+            else:
+                # Usuário antigo ou superusuário: senha apenas números (padrão antigo)
+                generated_password = generate_random_password(length=8, simple=True, alphanumeric=False)
+            
             user.set_password(generated_password)
             # Armazenar senha gerada para retornar ao usuário
             self._generated_password = generated_password
-            # Marcar para mudança obrigatória de senha
+            # Marcar para mudança obrigatória de senha apenas para novos usuários
             if is_new_user:
                 user.must_change_password = True
         else:
