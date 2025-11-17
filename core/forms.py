@@ -189,14 +189,21 @@ class CustomUserForm(UserCreationForm):
         self.current_user = kwargs.pop('current_user', None)
         super().__init__(*args, **kwargs)
         
-        # Tornar campos de senha opcionais (senha será gerada automaticamente se não fornecida)
+        # Remover campo de confirmação de senha
+        if 'password2' in self.fields:
+            del self.fields['password2']
+        
+        # Configurar campo de senha com gerador automático
         if 'password1' in self.fields:
             self.fields['password1'].required = False
-            self.fields['password1'].label = 'Senha (deixe em branco para gerar automaticamente)'
-            self.fields['password1'].help_text = 'Se deixar em branco, uma senha aleatória será gerada e enviada por email.'
-        if 'password2' in self.fields:
-            self.fields['password2'].required = False
-            self.fields['password2'].label = 'Confirmar Senha'
+            self.fields['password1'].label = 'Senha'
+            self.fields['password1'].help_text = 'Clique no botão "Gerar Senha" para criar uma senha aleatória de 8 dígitos, ou deixe em branco para gerar automaticamente ao salvar.'
+            self.fields['password1'].widget = forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Clique em "Gerar Senha" ou deixe em branco',
+                'readonly': True,
+                'id': 'id_password1'
+            })
         
         # Adicionar labels em português para todos os campos
         self.fields['username'].label = 'Usuário'
@@ -260,29 +267,7 @@ class CustomUserForm(UserCreationForm):
             self.cleaned_data['phone'] = formatted
         return self.cleaned_data.get('phone', '')
     
-    def clean_password2(self):
-        password1 = self.cleaned_data.get("password1")
-        password2 = self.cleaned_data.get("password2")
-        
-        # Se ambos os campos estiverem vazios, OK (senha será gerada automaticamente)
-        if not password1 and not password2:
-            return password2
-        
-        # Se apenas um estiver preenchido, retornar erro
-        if password1 and not password2:
-            raise ValidationError("Você deve confirmar a senha.")
-        if password2 and not password1:
-            raise ValidationError("Você deve informar a senha.")
-        
-        # Se ambos estiverem preenchidos, validar normalmente
-        if password1 != password2:
-            raise ValidationError("As senhas não coincidem.")
-        
-        # Validar força da senha se fornecida
-        if password1:
-            validate_password(password1)
-        
-        return password2
+    # Removido clean_password2 - não há mais campo de confirmação
     
     def clean(self):
         cleaned_data = super().clean()
@@ -333,19 +318,19 @@ class CustomUserForm(UserCreationForm):
             user.company = None
             user.company_id = None
         
-        # Gerar senha aleatória se não fornecida
-        password1 = self.cleaned_data.get('password1')
+        # Gerar senha aleatória simples de 8 dígitos se não fornecida
+        password1 = self.cleaned_data.get('password1', '').strip()
         
         if not password1:
-            # Gerar senha aleatória
-            generated_password = generate_random_password()
+            # Gerar senha aleatória simples de 8 dígitos
+            generated_password = generate_random_password(length=8, simple=True)
             user.set_password(generated_password)
             # Armazenar senha gerada para retornar ao usuário
             self._generated_password = generated_password
         else:
-            # Senha fornecida pelo usuário
+            # Senha fornecida pelo usuário (gerada pelo botão)
             user.set_password(password1)
-            self._generated_password = None
+            self._generated_password = password1
         
         # Salvar o usuário
         # O save() do modelo ajusta os dados automaticamente e não chama clean()

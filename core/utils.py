@@ -10,16 +10,21 @@ from django.template.loader import render_to_string
 from django.contrib.sites.shortcuts import get_current_site
 
 
-def generate_random_password(length=12):
+def generate_random_password(length=12, simple=False):
     """
-    Gera uma senha aleatória segura
+    Gera uma senha aleatória
     
     Args:
         length (int): Tamanho da senha (padrão: 12)
+        simple (bool): Se True, gera senha simples de apenas dígitos
     
     Returns:
         str: Senha aleatória
     """
+    if simple:
+        # Senha simples de apenas dígitos
+        return ''.join(secrets.choice(string.digits) for _ in range(length))
+    
     # Caracteres permitidos: letras minúsculas, maiúsculas, números e símbolos
     alphabet = string.ascii_letters + string.digits + "!@#$%&*"
     
