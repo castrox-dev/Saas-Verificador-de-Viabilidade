@@ -21,6 +21,7 @@ from datetime import timedelta
 
 from .forms import CTOMapFileForm, CompanyForm, CustomUserForm, CustomUserChangeForm
 from .models import CTOMapFile, Company, CustomUser
+from .utils import send_user_credentials_email
 from .permissions import (
     is_rm_admin, is_company_admin, can_manage_users,
     rm_admin_required, user_management_required, company_access_required, company_access_required_json
@@ -287,8 +288,19 @@ def rm_user_create(request):
                 with transaction.atomic():
                     logger.debug(f"Salvando usuário...")
                     user = form.save()
+                    
+                    # Enviar email com credenciais se senha foi gerada automaticamente
+                    generated_password = getattr(form, '_generated_password', None)
+                    if generated_password:
+                        email_sent = send_user_credentials_email(user, generated_password, request)
+                        if email_sent:
+                            messages.success(request, f'Usuário {user.username} criado com sucesso! As credenciais foram enviadas por email.')
+                        else:
+                            messages.warning(request, f'Usuário {user.username} criado com sucesso! Mas houve um erro ao enviar o email com as credenciais. Senha gerada: {generated_password}')
+                    else:
+                        messages.success(request, f'Usuário {user.username} criado com sucesso!')
+                    
                     logger.info(f"Usuário criado com sucesso: {user.username} (role: {user.role}, company: {user.company.name if user.company else 'N/A'})")
-                    messages.success(request, f'Usuário {user.username} criado com sucesso!')
                     return redirect('rm:user_list')
             except ValidationError as e:
                 # Erros de validação são tratados no formulário
@@ -1288,8 +1300,19 @@ def company_user_create(request, company_slug):
                     else:
                         # Salvar o usuário
                         user.save()
+                        
+                        # Enviar email com credenciais se senha foi gerada automaticamente
+                        generated_password = getattr(form, '_generated_password', None)
+                        if generated_password:
+                            email_sent = send_user_credentials_email(user, generated_password, request)
+                            if email_sent:
+                                messages.success(request, f'Usuário {user.username} criado com sucesso! As credenciais foram enviadas por email.')
+                            else:
+                                messages.warning(request, f'Usuário {user.username} criado com sucesso! Mas houve um erro ao enviar o email com as credenciais. Senha gerada: {generated_password}')
+                        else:
+                            messages.success(request, f'Usuário {user.username} criado com sucesso!')
+                        
                         logger.info(f"Usuário criado com sucesso: {user.username} (role: {user.role}, company: {user.company.name if user.company else 'N/A'})")
-                        messages.success(request, f'Usuário {user.username} criado com sucesso!')
                         return redirect('company:user_list', company_slug=company_slug)
             except ValidationError as e:
                 # Erros de validação são tratados no formulário

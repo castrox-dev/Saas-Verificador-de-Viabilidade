@@ -1,10 +1,12 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from django.core.exceptions import ValidationError
+from django.contrib.auth.password_validation import validate_password
 import os
 from .models import CTOMapFile, Company, CustomUser
 from .security_validators import SecureFileValidator
 from .rate_limiting import upload_rate_limit
+from .utils import generate_random_password
 
 class CTOMapFileForm(forms.ModelForm):
     class Meta:
@@ -187,10 +189,13 @@ class CustomUserForm(UserCreationForm):
         self.current_user = kwargs.pop('current_user', None)
         super().__init__(*args, **kwargs)
         
-        # Definir labels em português para campos de senha (herdados de UserCreationForm)
+        # Tornar campos de senha opcionais (senha será gerada automaticamente se não fornecida)
         if 'password1' in self.fields:
-            self.fields['password1'].label = 'Senha'
+            self.fields['password1'].required = False
+            self.fields['password1'].label = 'Senha (deixe em branco para gerar automaticamente)'
+            self.fields['password1'].help_text = 'Se deixar em branco, uma senha aleatória será gerada e enviada por email.'
         if 'password2' in self.fields:
+            self.fields['password2'].required = False
             self.fields['password2'].label = 'Confirmar Senha'
         
         # Adicionar labels em português para todos os campos
@@ -255,10 +260,40 @@ class CustomUserForm(UserCreationForm):
             self.cleaned_data['phone'] = formatted
         return self.cleaned_data.get('phone', '')
     
+    def clean_password2(self):
+        password1 = self.cleaned_data.get("password1")
+        password2 = self.cleaned_data.get("password2")
+        
+        # Se ambos os campos estiverem vazios, OK (senha será gerada automaticamente)
+        if not password1 and not password2:
+            return password2
+        
+        # Se apenas um estiver preenchido, retornar erro
+        if password1 and not password2:
+            raise ValidationError("Você deve confirmar a senha.")
+        if password2 and not password1:
+            raise ValidationError("Você deve informar a senha.")
+        
+        # Se ambos estiverem preenchidos, validar normalmente
+        if password1 != password2:
+            raise ValidationError("As senhas não coincidem.")
+        
+        # Validar força da senha se fornecida
+        if password1:
+            validate_password(password1)
+        
+        return password2
+    
     def clean(self):
         cleaned_data = super().clean()
         role = cleaned_data.get('role')
         company = cleaned_data.get('company')
+        
+        # Se senha não foi fornecida, gerar automaticamente
+        password1 = cleaned_data.get('password1')
+        if not password1:
+            # Senha será gerada no save()
+            pass
         
         # Superuser pode criar qualquer combinação sem bloqueios de formulário
         if self.current_user and getattr(self.current_user, 'is_superuser', False):
@@ -297,6 +332,20 @@ class CustomUserForm(UserCreationForm):
         if user.role == 'RM':
             user.company = None
             user.company_id = None
+        
+        # Gerar senha aleatória se não fornecida
+        password1 = self.cleaned_data.get('password1')
+        
+        if not password1:
+            # Gerar senha aleatória
+            generated_password = generate_random_password()
+            user.set_password(generated_password)
+            # Armazenar senha gerada para retornar ao usuário
+            self._generated_password = generated_password
+        else:
+            # Senha fornecida pelo usuário
+            user.set_password(password1)
+            self._generated_password = None
         
         # Salvar o usuário
         # O save() do modelo ajusta os dados automaticamente e não chama clean()
