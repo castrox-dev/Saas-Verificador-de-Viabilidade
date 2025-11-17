@@ -24,7 +24,7 @@ from .utils import (
     ler_kml, ler_kmz, ler_csv, ler_excel, filtrar_coordenadas_brasil,
     calcular_distancia, calcular_rota_ruas_single, classificar_viabilidade,
     get_all_ctos, get_arquivo_caminho, get_cached_geocoding, set_cached_geocoding,
-    remover_cto_do_mapa
+    remover_cto_do_mapa, normalize_address, generate_search_variations
 )
 from .models import ViabilidadeCache
 from core.models import CTOMapFile, Company
@@ -441,40 +441,129 @@ def api_geocode(request, company_slug=None):
     if not endereco:
         return JsonResponse({'erro': 'Endereço ou coordenadas não especificados'}, status=400)
     
-    # Verificar cache primeiro
+    # Verificar cache primeiro (com busca normalizada)
     cached_result = get_cached_geocoding(endereco)
     if cached_result:
         return JsonResponse(cached_result)
     
+    # Gerar variações da busca para tentar diferentes formatos
+    search_variations = generate_search_variations(endereco)
+    last_error = None
+    
+    for variation in search_variations:
+        try:
+            url = "https://nominatim.openstreetmap.org/search"
+            params = {
+                'q': variation,
+                'format': 'json',
+                'limit': 3,  # Buscar até 3 resultados para escolher o melhor
+                'countrycodes': 'br',
+                'addressdetails': 1,  # Incluir detalhes do endereço
+                'extratags': 1  # Incluir tags extras
+            }
+            headers = {
+                'User-Agent': 'FTTH-Viewer-Django/1.0 (https://verificador.up.railway.app)',
+                'Accept-Language': 'pt-BR,pt;q=0.9'
+            }
+            
+            response = requests.get(url, params=params, headers=headers, timeout=10)
+            response.raise_for_status()
+            
+            data = response.json()
+            if data and len(data) > 0:
+                # Escolher o melhor resultado (priorizar resultados com score mais alto)
+                # Se tiver múltiplos, escolher o primeiro (já vem ordenado por relevância)
+                resultado = data[0]
+                
+                # Verificar se o resultado está no Brasil (pelas coordenadas ou pelo addressdetails)
+                lat = float(resultado['lat'])
+                lng = float(resultado['lon'])
+                
+                # Verificação básica de coordenadas brasileiras
+                if -34 <= lat <= 5 and -74 <= lng <= -32:
+                    geocoding_result = {
+                        'lat': lat,
+                        'lng': lng,
+                        'endereco_completo': resultado.get('display_name', variation)
+                    }
+                    # Armazenar no cache (usar o endereço original, não a variação)
+                    set_cached_geocoding(endereco, geocoding_result)
+                    return JsonResponse(geocoding_result)
+                else:
+                    # Resultado não está no Brasil, continuar tentando outras variações
+                    last_error = 'Endereço encontrado fora do Brasil'
+                    continue
+            else:
+                # Sem resultados para esta variação, tentar próxima
+                last_error = 'Endereço não encontrado'
+                continue
+                
+        except requests.exceptions.Timeout:
+            last_error = 'Timeout na busca de endereço'
+            continue
+        except requests.exceptions.RequestException as e:
+            last_error = f'Erro na requisição: {str(e)}'
+            # Para erros de rede, não continuar tentando
+            break
+        except (KeyError, ValueError, IndexError) as e:
+            last_error = f'Erro ao processar resposta: {str(e)}'
+            continue
+        except Exception as e:
+            last_error = f'Erro inesperado: {str(e)}'
+            logger.error(f'Erro inesperado na geocodificação: {e}', exc_info=True)
+            continue
+    
+    # Se nenhuma variação funcionou, retornar erro
+    return JsonResponse({'erro': 'Endereço não encontrado'}, status=404)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_geocode_suggestions(request, company_slug=None):
+    """Retorna sugestões de endereços enquanto o usuário digita (autocomplete)"""
+    query = request.GET.get('q', '').strip()
+    if not query or len(query) < 3:
+        return JsonResponse({'suggestions': []})
+    
     try:
         url = "https://nominatim.openstreetmap.org/search"
         params = {
-            'q': endereco,
+            'q': f"{query}, Brasil",
             'format': 'json',
-            'limit': 1,
-            'countrycodes': 'br'
+            'limit': 5,  # Limitar a 5 sugestões
+            'countrycodes': 'br',
+            'addressdetails': 1
         }
-        headers = {'User-Agent': 'FTTH-Viewer-Django/1.0'}
+        headers = {
+            'User-Agent': 'FTTH-Viewer-Django/1.0 (https://verificador.up.railway.app)',
+            'Accept-Language': 'pt-BR,pt;q=0.9'
+        }
         
-        response = requests.get(url, params=params, headers=headers, timeout=10)
+        response = requests.get(url, params=params, headers=headers, timeout=5)
         response.raise_for_status()
         
         data = response.json()
+        suggestions = []
+        
         if data:
-            resultado = data[0]
-            geocoding_result = {
-                'lat': float(resultado['lat']),
-                'lng': float(resultado['lon']),
-                'endereco_completo': resultado['display_name']
-            }
-            # Armazenar no cache
-            set_cached_geocoding(endereco, geocoding_result)
-            return JsonResponse(geocoding_result)
-        else:
-            return JsonResponse({'erro': 'Endereço não encontrado'}, status=404)
-            
+            for item in data[:5]:  # Limitar a 5 sugestões
+                lat = float(item['lat'])
+                lng = float(item['lon'])
+                
+                # Verificar se está no Brasil
+                if -34 <= lat <= 5 and -74 <= lng <= -32:
+                    suggestions.append({
+                        'display_name': item.get('display_name', ''),
+                        'lat': lat,
+                        'lng': lng,
+                        'address': item.get('address', {})
+                    })
+        
+        return JsonResponse({'suggestions': suggestions})
+        
     except Exception as e:
-        return JsonResponse({'erro': f'Erro na geocodificação: {str(e)}'}, status=500)
+        logger.warning(f'Erro ao buscar sugestões de endereço: {e}')
+        return JsonResponse({'suggestions': []})
 
 
 @login_required

@@ -1241,12 +1241,17 @@ function initializeMainSearch() {
         }
     });
 
-    // Debounce para pesquisa - evitar muitas requisições
+    // Debounce para pesquisa e autocomplete - evitar muitas requisições
     let searchTimeout = null;
+    let suggestionTimeout = null;
+    
     searchInput.addEventListener('input', (e) => {
         // Limpar timeout anterior
         if (searchTimeout) {
             clearTimeout(searchTimeout);
+        }
+        if (suggestionTimeout) {
+            clearTimeout(suggestionTimeout);
         }
         
         const query = e.target.value.trim();
@@ -1258,6 +1263,15 @@ function initializeMainSearch() {
         } else {
             if (clearSearchBtn) {
                 clearSearchBtn.style.display = 'block';
+            }
+            
+            // Mostrar sugestões enquanto digita (após 3 caracteres)
+            if (query.length >= 3) {
+                suggestionTimeout = setTimeout(() => {
+                    fetchAddressSuggestions(query);
+                }, 300); // Aguardar 300ms após parar de digitar
+            } else {
+                hideSearchResults();
             }
         }
     });
@@ -1591,13 +1605,86 @@ function clearSearch() {
 function hideSearchResults() {
     if (searchResults) {
         searchResults.style.display = 'none';
+        searchResults.innerHTML = '';
     }
 }
 
 function showSearchLoading() {
     if (searchResults) {
-        searchResults.innerHTML = '<div class="search-result-item">Pesquisando...</div>';
+        searchResults.innerHTML = '<div class="search-result-item"><i class="fas fa-spinner fa-spin"></i> Pesquisando...</div>';
         searchResults.style.display = 'block';
+    }
+}
+
+// Função para buscar sugestões de endereços enquanto o usuário digita
+async function fetchAddressSuggestions(query) {
+    if (!query || query.length < 3) {
+        hideSearchResults();
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/geocode/suggestions?q=${encodeURIComponent(query)}`);
+        
+        if (!response.ok) {
+            return; // Silenciosamente falha se não conseguir buscar sugestões
+        }
+        
+        const data = await response.json();
+        const suggestions = data.suggestions || [];
+        
+        if (suggestions.length > 0 && searchResults) {
+            // Limpar resultados anteriores
+            searchResults.innerHTML = '';
+            
+            // Criar itens de sugestão
+            suggestions.forEach((suggestion, index) => {
+                const item = document.createElement('div');
+                item.className = 'search-result-item';
+                item.style.cursor = 'pointer';
+                item.style.padding = '10px';
+                item.style.borderBottom = '1px solid rgba(255,255,255,0.1)';
+                item.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-map-marker-alt" style="color: var(--rm-primary, #3b82f6);"></i>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 500; color: var(--rm-text-primary, #fff);">
+                                ${suggestion.display_name}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Adicionar evento de clique
+                item.addEventListener('click', () => {
+                    searchInput.value = suggestion.display_name;
+                    hideSearchResults();
+                    // Executar a busca com o endereço selecionado
+                    performSearch().catch(error => {
+                        console.error('Erro na pesquisa:', error);
+                        showNotification('Erro ao realizar pesquisa', 'error');
+                    });
+                });
+                
+                // Adicionar hover effect
+                item.addEventListener('mouseenter', () => {
+                    item.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
+                });
+                item.addEventListener('mouseleave', () => {
+                    item.style.backgroundColor = 'transparent';
+                });
+                
+                searchResults.appendChild(item);
+            });
+            
+            searchResults.style.display = 'block';
+        } else {
+            hideSearchResults();
+        }
+    } catch (error) {
+        // Silenciosamente falha se houver erro (não queremos mostrar erro para sugestões)
+        console.debug('Erro ao buscar sugestões:', error);
+        hideSearchResults();
     }
 }
 
