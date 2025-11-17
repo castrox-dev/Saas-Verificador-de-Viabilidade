@@ -47,4 +47,9 @@ urlpatterns = [
     # Relatórios RM
     path('relatorios/', views.rm_reports, name='reports'),
     path('relatorios/exportar/csv/', views.rm_reports_export_csv, name='reports_export_csv'),
+    
+    # Sistema de tickets (RM)
+    path('tickets/', views.rm_ticket_list, name='ticket_list'),
+    path('tickets/<int:ticket_id>/', views.rm_ticket_detail, name='ticket_detail'),
+    path('tickets/<int:ticket_id>/mensagens/', views.rm_get_new_messages, name='get_new_messages'),
 ]

@@ -1,0 +1,293 @@
+"""
+Views para o sistema de tickets
+"""
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.http import JsonResponse
+from django.db import transaction
+from django.core.paginator import Paginator
+from django.utils import timezone
+from django.views.decorators.http import require_http_methods
+import logging
+
+from .forms import TicketForm, TicketMessageForm
+from .models import Ticket, TicketMessage, Company, CustomUser
+from .utils import send_ticket_created_email, send_ticket_message_email
+from .permissions import rm_admin_required, company_access_required, company_access_required_json
+
+logger = logging.getLogger(__name__)
+
+
+@login_required
+@company_access_required(require_admin=False, allow_user_role=True)
+def company_ticket_create(request, company_slug):
+    """Criar novo ticket (empresa)"""
+    company = get_object_or_404(Company, slug=company_slug)
+    
+    if request.method == 'POST':
+        form = TicketForm(request.POST, user=request.user, company=company)
+        if form.is_valid():
+            ticket = form.save(commit=False)
+            ticket.company = company
+            ticket.created_by = request.user
+            ticket.save()
+            
+            # Criar primeira mensagem com a descrição
+            TicketMessage.objects.create(
+                ticket=ticket,
+                message=ticket.description,
+                sent_by=request.user
+            )
+            
+            # Enviar email
+            try:
+                send_ticket_created_email(ticket, request)
+            except Exception as e:
+                logger.error(f"Erro ao enviar email de ticket criado: {str(e)}")
+            
+            messages.success(request, f'Ticket {ticket.ticket_number} criado com sucesso! Você receberá um email com os detalhes.')
+            return redirect('company:ticket_detail', company_slug=company_slug, ticket_id=ticket.id)
+    else:
+        form = TicketForm(user=request.user, company=company)
+    
+    return render(request, 'company/tickets/create.html', {
+        'form': form,
+        'company': company
+    })
+
+
+@login_required
+@company_access_required(require_admin=False, allow_user_role=True)
+def company_ticket_list(request, company_slug):
+    """Listar tickets da empresa"""
+    company = get_object_or_404(Company, slug=company_slug)
+    
+    # Filtrar tickets da empresa e do usuário (se não for admin)
+    if request.user.is_company_admin:
+        tickets = Ticket.objects.filter(company=company)
+    else:
+        tickets = Ticket.objects.filter(company=company, created_by=request.user)
+    
+    # Filtros
+    status_filter = request.GET.get('status', '')
+    if status_filter:
+        tickets = tickets.filter(status=status_filter)
+    
+    # Ordenação
+    tickets = tickets.order_by('-created_at')
+    
+    # Paginação
+    paginator = Paginator(tickets, 20)
+    page = request.GET.get('page', 1)
+    tickets_page = paginator.get_page(page)
+    
+    return render(request, 'company/tickets/list.html', {
+        'tickets': tickets_page,
+        'company': company,
+        'status_filter': status_filter
+    })
+
+
+@login_required
+@company_access_required(require_admin=False, allow_user_role=True)
+def company_ticket_detail(request, company_slug, ticket_id):
+    """Visualizar ticket e chat (empresa)"""
+    company = get_object_or_404(Company, slug=company_slug)
+    ticket = get_object_or_404(Ticket, id=ticket_id, company=company)
+    
+    # Verificar permissão (admin pode ver todos, usuário apenas os seus)
+    if not request.user.is_company_admin and ticket.created_by != request.user:
+        messages.error(request, 'Você não tem permissão para acessar este ticket.')
+        return redirect('company:ticket_list', company_slug=company_slug)
+    
+    # Marcar mensagens como lidas
+    if ticket.created_by == request.user:
+        # Marcar mensagens do RM como lidas
+        ticket.messages.filter(sent_by__role='RM', read=False).update(read=True, read_at=timezone.now())
+    
+    messages_list = ticket.messages.all().order_by('created_at')
+    
+    if request.method == 'POST':
+        form = TicketMessageForm(request.POST, user=request.user, ticket=ticket)
+        if form.is_valid():
+            message = form.save(commit=False)
+            message.ticket = ticket
+            message.sent_by = request.user
+            message.save()
+            
+            # Enviar email
+            try:
+                send_ticket_message_email(ticket, message, request)
+            except Exception as e:
+                logger.error(f"Erro ao enviar email de nova mensagem: {str(e)}")
+            
+            messages.success(request, 'Mensagem enviada com sucesso!')
+            return redirect('company:ticket_detail', company_slug=company_slug, ticket_id=ticket.id)
+    else:
+        form = TicketMessageForm(user=request.user, ticket=ticket)
+    
+    return render(request, 'company/tickets/detail.html', {
+        'ticket': ticket,
+        'messages': messages_list,
+        'form': form,
+        'company': company
+    })
+
+
+@login_required
+@rm_admin_required
+def rm_ticket_list(request):
+    """Listar todos os tickets (RM)"""
+    tickets = Ticket.objects.all().order_by('-created_at')
+    
+    # Filtros
+    status_filter = request.GET.get('status', '')
+    company_filter = request.GET.get('company', '')
+    assigned_to_me = request.GET.get('assigned_to_me', '')
+    
+    if status_filter:
+        tickets = tickets.filter(status=status_filter)
+    
+    if company_filter:
+        tickets = tickets.filter(company_id=company_filter)
+    
+    if assigned_to_me == 'true':
+        tickets = tickets.filter(assigned_to=request.user)
+    
+    # Paginação
+    paginator = Paginator(tickets, 20)
+    page = request.GET.get('page', 1)
+    tickets_page = paginator.get_page(page)
+    
+    companies = Company.objects.filter(is_active=True).order_by('name')
+    
+    return render(request, 'rm/tickets/list.html', {
+        'tickets': tickets_page,
+        'status_filter': status_filter,
+        'company_filter': company_filter,
+        'companies': companies
+    })
+
+
+@login_required
+@rm_admin_required
+def rm_ticket_detail(request, ticket_id):
+    """Visualizar ticket e chat (RM)"""
+    ticket = get_object_or_404(Ticket, id=ticket_id)
+    
+    # Marcar mensagens do cliente como lidas
+    ticket.messages.filter(sent_by=ticket.created_by, read=False).update(read=True, read_at=timezone.now())
+    
+    messages_list = ticket.messages.all().order_by('created_at')
+    
+    if request.method == 'POST':
+        # Verificar se é para atualizar status ou adicionar mensagem
+        if 'update_status' in request.POST:
+            ticket.status = request.POST.get('status')
+            if 'assigned_to' in request.POST and request.POST.get('assigned_to'):
+                ticket.assigned_to_id = request.POST.get('assigned_to')
+            ticket.save()
+            messages.success(request, 'Status do ticket atualizado!')
+            return redirect('rm:ticket_detail', ticket_id=ticket.id)
+        else:
+            # Adicionar mensagem
+            form = TicketMessageForm(request.POST, user=request.user, ticket=ticket)
+            if form.is_valid():
+                message = form.save(commit=False)
+                message.ticket = ticket
+                message.sent_by = request.user
+                message.save()
+                
+                # Enviar email
+                try:
+                    send_ticket_message_email(ticket, message, request)
+                except Exception as e:
+                    logger.error(f"Erro ao enviar email de nova mensagem: {str(e)}")
+                
+                messages.success(request, 'Mensagem enviada com sucesso!')
+                return redirect('rm:ticket_detail', ticket_id=ticket.id)
+    else:
+        form = TicketMessageForm(user=request.user, ticket=ticket)
+    
+    # Lista de RM admins para atribuição
+    rm_admins = CustomUser.objects.filter(role='RM', is_active=True)
+    
+    return render(request, 'rm/tickets/detail.html', {
+        'ticket': ticket,
+        'messages': messages_list,
+        'form': form,
+        'rm_admins': rm_admins
+    })
+
+
+@login_required
+@company_access_required_json
+def get_new_messages(request, company_slug, ticket_id):
+    """API para buscar novas mensagens (AJAX)"""
+    company = get_object_or_404(Company, slug=company_slug)
+    ticket = get_object_or_404(Ticket, id=ticket_id, company=company)
+    
+    # Verificar permissão
+    if not request.user.is_company_admin and ticket.created_by != request.user:
+        return JsonResponse({'error': 'Sem permissão'}, status=403)
+    
+    # Buscar mensagens não lidas
+    last_message_id = request.GET.get('last_message_id', 0)
+    try:
+        last_message_id = int(last_message_id)
+    except (ValueError, TypeError):
+        last_message_id = 0
+    
+    new_messages = ticket.messages.filter(id__gt=last_message_id).order_by('created_at')
+    
+    # Marcar como lidas se for o criador do ticket
+    if ticket.created_by == request.user:
+        new_messages.filter(sent_by__role='RM', read=False).update(read=True, read_at=timezone.now())
+    
+    messages_data = [{
+        'id': msg.id,
+        'message': msg.message,
+        'sent_by': msg.sent_by.get_full_name() or msg.sent_by.username,
+        'sent_by_role': msg.sent_by.role,
+        'created_at': msg.created_at.strftime('%d/%m/%Y %H:%M'),
+        'is_sent_by_me': msg.sent_by == request.user
+    } for msg in new_messages]
+    
+    return JsonResponse({
+        'messages': messages_data,
+        'has_new': len(messages_data) > 0
+    })
+
+
+@login_required
+@rm_admin_required
+def rm_get_new_messages(request, ticket_id):
+    """API para buscar novas mensagens (RM)"""
+    ticket = get_object_or_404(Ticket, id=ticket_id)
+    
+    last_message_id = request.GET.get('last_message_id', 0)
+    try:
+        last_message_id = int(last_message_id)
+    except (ValueError, TypeError):
+        last_message_id = 0
+    
+    new_messages = ticket.messages.filter(id__gt=last_message_id).order_by('created_at')
+    
+    # Marcar mensagens do cliente como lidas
+    new_messages.filter(sent_by=ticket.created_by, read=False).update(read=True, read_at=timezone.now())
+    
+    messages_data = [{
+        'id': msg.id,
+        'message': msg.message,
+        'sent_by': msg.sent_by.get_full_name() or msg.sent_by.username,
+        'sent_by_role': msg.sent_by.role,
+        'created_at': msg.created_at.strftime('%d/%m/%Y %H:%M'),
+        'is_sent_by_me': msg.sent_by == request.user
+    } for msg in new_messages]
+    
+    return JsonResponse({
+        'messages': messages_data,
+        'has_new': len(messages_data) > 0
+    })
+

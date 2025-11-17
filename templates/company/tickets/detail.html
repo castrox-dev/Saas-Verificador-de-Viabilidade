@@ -1,0 +1,217 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Ticket {{ ticket.ticket_number }} - {{ company.name }}{% endblock %}
+
+{% block content %}
+<style>
+  .chat-container {
+    display: flex;
+    flex-direction: column;
+    height: 600px;
+    border: 1px solid var(--rm-border-primary, #dee2e6);
+    border-radius: 8px;
+    background: var(--rm-card-bg, #ffffff);
+  }
+  .chat-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--rm-border-primary, #dee2e6);
+    background: var(--rm-bg-secondary, #f8f9fa);
+    border-radius: 8px 8px 0 0;
+  }
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    background: var(--rm-bg-primary, #ffffff);
+  }
+  .message {
+    margin-bottom: 20px;
+    display: flex;
+    align-items: flex-start;
+  }
+  .message.sent-by-me {
+    flex-direction: row-reverse;
+  }
+  .message-bubble {
+    max-width: 70%;
+    padding: 12px 16px;
+    border-radius: 18px;
+    word-wrap: break-word;
+  }
+  .message.sent-by-me .message-bubble {
+    background: var(--rm-primary, #1D4ED8);
+    color: white;
+  }
+  .message:not(.sent-by-me) .message-bubble {
+    background: var(--rm-bg-secondary, #e9ecef);
+    color: var(--rm-text-primary, #212529);
+  }
+  .message-meta {
+    font-size: 0.75rem;
+    color: var(--rm-text-secondary, #6c757d);
+    margin-top: 5px;
+    padding: 0 10px;
+  }
+  .chat-input {
+    padding: 15px 20px;
+    border-top: 1px solid var(--rm-border-primary, #dee2e6);
+    background: var(--rm-bg-secondary, #f8f9fa);
+    border-radius: 0 0 8px 8px;
+  }
+  .ticket-info-card {
+    background: var(--rm-card-bg, #ffffff);
+    border: 1px solid var(--rm-border-primary, #dee2e6);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+</style>
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+          <i class="fas fa-ticket-alt me-2"></i>
+          Ticket {{ ticket.ticket_number }}
+        </h2>
+        <a href="{% url 'company:ticket_list' company.slug %}" class="btn btn-secondary">
+          <i class="fas fa-arrow-left me-2"></i> Voltar
+        </a>
+      </div>
+
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      <!-- Informações do Ticket -->
+      <div class="ticket-info-card">
+        <div class="row">
+          <div class="col-md-8">
+            <h4>{{ ticket.title }}</h4>
+            <p class="text-muted mb-0">{{ ticket.description|truncatewords:30 }}</p>
+          </div>
+          <div class="col-md-4 text-end">
+            <div class="mb-2">
+              <strong>Status:</strong>
+              <span class="badge ms-2" style="background-color: {{ ticket.get_status_color }}; color: white;">
+                {{ ticket.get_status_display }}
+              </span>
+            </div>
+            <div class="mb-2">
+              <strong>Prioridade:</strong>
+              <span class="badge ms-2" style="background-color: {{ ticket.get_priority_color }}; color: white;">
+                {{ ticket.get_priority_display }}
+              </span>
+            </div>
+            <div>
+              <small class="text-muted">Criado em: {{ ticket.created_at|date:"d/m/Y H:i" }}</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat -->
+      <div class="card">
+        <div class="card-body p-0">
+          <div class="chat-container">
+            <div class="chat-header">
+              <h5 class="mb-0">
+                <i class="fas fa-comments me-2"></i>
+                Conversa sobre o Ticket
+              </h5>
+              {% if ticket.assigned_to %}
+                <small class="text-muted">Atendido por: {{ ticket.assigned_to.get_full_name|default:ticket.assigned_to.username }}</small>
+              {% else %}
+                <small class="text-muted">Aguardando atribuição</small>
+              {% endif %}
+            </div>
+
+            <div class="chat-messages" id="chatMessages">
+              {% for msg in messages %}
+                <div class="message {% if msg.sent_by == request.user %}sent-by-me{% endif %}" data-message-id="{{ msg.id }}">
+                  <div>
+                    <div class="message-bubble">
+                      {{ msg.message|linebreaks }}
+                    </div>
+                    <div class="message-meta">
+                      <strong>{{ msg.sent_by.get_full_name|default:msg.sent_by.username }}</strong>
+                      - {{ msg.created_at|date:"d/m/Y H:i" }}
+                    </div>
+                  </div>
+                </div>
+              {% empty %}
+                <div class="text-center text-muted py-5">
+                  <i class="fas fa-comments fa-3x mb-3"></i>
+                  <p>Nenhuma mensagem ainda. Seja o primeiro a enviar!</p>
+                </div>
+              {% endfor %}
+            </div>
+
+            <div class="chat-input">
+              <form method="post" id="messageForm">
+                {% csrf_token %}
+                <div class="input-group">
+                  {{ form.message }}
+                  <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-paper-plane me-2"></i> Enviar
+                  </button>
+                </div>
+                {% if form.message.errors %}
+                  <div class="text-danger small mt-2">{{ form.message.errors }}</div>
+                {% endif %}
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Auto-scroll para a última mensagem
+  const chatMessages = document.getElementById('chatMessages');
+  if (chatMessages) {
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  // Atualizar mensagens a cada 5 segundos (opcional)
+  let lastMessageId = {% if messages %}{{ messages.last.id|default:0 }}{% else %}0{% endif %};
+  
+  setInterval(function() {
+    fetch('{% url "company:get_new_messages" company.slug ticket.id %}?last_message_id=' + lastMessageId)
+      .then(response => response.json())
+      .then(data => {
+        if (data.has_new && data.messages.length > 0) {
+          data.messages.forEach(msg => {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message ' + (msg.is_sent_by_me ? 'sent-by-me' : '');
+            messageDiv.dataset.messageId = msg.id;
+            messageDiv.innerHTML = `
+              <div>
+                <div class="message-bubble">${msg.message.replace(/\n/g, '<br>')}</div>
+                <div class="message-meta">
+                  <strong>${msg.sent_by}</strong> - ${msg.created_at}
+                </div>
+              </div>
+            `;
+            chatMessages.appendChild(messageDiv);
+            lastMessageId = Math.max(lastMessageId, msg.id);
+          });
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+      })
+      .catch(error => {
+        // Silenciosamente falhar em produção
+      });
+  }, 5000);
+</script>
+{% endblock %}
+

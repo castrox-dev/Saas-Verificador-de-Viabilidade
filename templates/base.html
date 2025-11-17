@@ -287,6 +287,9 @@
           <a class="nav-link {% if 'map' in request.resolver_match.url_name and 'rm' in request.resolver_match.namespace %}active{% endif %}" href="{% url 'rm:map_list' %}">
             <i class="fas fa-map me-2"></i>Mapas
           </a>
+          <a class="nav-link {% if 'ticket' in request.resolver_match.url_name and 'rm' in request.resolver_match.namespace %}active{% endif %}" href="{% url 'rm:ticket_list' %}">
+            <i class="fas fa-ticket-alt me-2"></i>Tickets
+          </a>
           <a class="nav-link" href="/admin/">
             <i class="fas fa-cog me-2"></i>Admin Django
           </a>
@@ -315,6 +318,9 @@
             <i class="fas fa-chart-bar me-2"></i>Relatórios
           </a>
           {% endif %}
+          <a class="nav-link {% if 'ticket' in request.resolver_match.url_name and 'company' in request.resolver_match.namespace %}active{% endif %}" href="{% url 'company:ticket_list' company_slug=user.company.slug %}">
+            <i class="fas fa-ticket-alt me-2"></i>Tickets
+          </a>
         {% endif %}
       </nav>
     </div>

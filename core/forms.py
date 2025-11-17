@@ -3,7 +3,7 @@ from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from django.core.exceptions import ValidationError
 from django.contrib.auth.password_validation import validate_password
 import os
-from .models import CTOMapFile, Company, CustomUser
+from .models import CTOMapFile, Company, CustomUser, Ticket, TicketMessage
 from .security_validators import SecureFileValidator
 from .rate_limiting import upload_rate_limit
 from .utils import generate_random_password
@@ -507,3 +507,86 @@ class CustomUserChangeForm(forms.ModelForm):
         if commit:
             user.save()
         return user
+
+
+class TicketForm(forms.ModelForm):
+    """Formulário para criar tickets"""
+    
+    class Meta:
+        model = Ticket
+        fields = ['title', 'description', 'priority']
+        widgets = {
+            'title': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Título do ticket'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 5,
+                'placeholder': 'Descreva seu problema ou solicitação...'
+            }),
+            'priority': forms.Select(attrs={
+                'class': 'form-control'
+            })
+        }
+        labels = {
+            'title': 'Título',
+            'description': 'Descrição',
+            'priority': 'Prioridade'
+        }
+    
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        self.company = kwargs.pop('company', None)
+        super().__init__(*args, **kwargs)
+        
+        # Limitar prioridades disponíveis para clientes
+        if self.user and not self.user.is_rm_admin:
+            # Clientes podem escolher apenas baixa, normal ou alta
+            self.fields['priority'].choices = [
+                ('baixa', 'Baixa'),
+                ('normal', 'Normal'),
+                ('alta', 'Alta'),
+            ]
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        title = cleaned_data.get('title')
+        description = cleaned_data.get('description')
+        
+        if title and len(title.strip()) < 5:
+            raise ValidationError('O título deve ter pelo menos 5 caracteres.')
+        
+        if description and len(description.strip()) < 10:
+            raise ValidationError('A descrição deve ter pelo menos 10 caracteres.')
+        
+        return cleaned_data
+
+
+class TicketMessageForm(forms.ModelForm):
+    """Formulário para adicionar mensagens ao ticket (chat)"""
+    
+    class Meta:
+        model = TicketMessage
+        fields = ['message']
+        widgets = {
+            'message': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': 'Digite sua mensagem...'
+            })
+        }
+        labels = {
+            'message': 'Mensagem'
+        }
+    
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        self.ticket = kwargs.pop('ticket', None)
+        super().__init__(*args, **kwargs)
+    
+    def clean_message(self):
+        message = self.cleaned_data.get('message')
+        if message and len(message.strip()) < 1:
+            raise ValidationError('A mensagem não pode estar vazia.')
+        return message

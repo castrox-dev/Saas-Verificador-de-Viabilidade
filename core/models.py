@@ -307,6 +307,192 @@ class CTOMapFile(models.Model):
     def __str__(self):
         return f"{self.description or os.path.basename(self.file.name)} - {self.company.name}"
 
+
+class Ticket(models.Model):
+    """Modelo para tickets de suporte"""
+    
+    STATUS_CHOICES = [
+        ('aberto', 'Aberto'),
+        ('em_andamento', 'Em Andamento'),
+        ('aguardando_cliente', 'Aguardando Cliente'),
+        ('resolvido', 'Resolvido'),
+        ('fechado', 'Fechado'),
+    ]
+    
+    PRIORITY_CHOICES = [
+        ('baixa', 'Baixa'),
+        ('normal', 'Normal'),
+        ('alta', 'Alta'),
+        ('urgente', 'Urgente'),
+    ]
+    
+    title = models.CharField(max_length=255, verbose_name="Título")
+    description = models.TextField(verbose_name="Descrição")
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='aberto',
+        verbose_name="Status"
+    )
+    priority = models.CharField(
+        max_length=20,
+        choices=PRIORITY_CHOICES,
+        default='normal',
+        verbose_name="Prioridade"
+    )
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        related_name='tickets',
+        verbose_name="Empresa"
+    )
+    created_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='created_tickets',
+        verbose_name="Criado por"
+    )
+    assigned_to = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_tickets',
+        verbose_name="Atendido por"
+    )
+    ticket_number = models.CharField(
+        max_length=20,
+        unique=True,
+        verbose_name="Número do Ticket",
+        help_text="Gerado automaticamente"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
+    resolved_at = models.DateTimeField(null=True, blank=True, verbose_name="Resolvido em")
+    closed_at = models.DateTimeField(null=True, blank=True, verbose_name="Fechado em")
+    
+    class Meta:
+        verbose_name = "Ticket"
+        verbose_name_plural = "Tickets"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['company', 'status']),
+            models.Index(fields=['created_by', 'created_at']),
+            models.Index(fields=['assigned_to', 'status']),
+            models.Index(fields=['ticket_number']),
+        ]
+    
+    def save(self, *args, **kwargs):
+        # Gerar número do ticket se não existir
+        if not self.ticket_number:
+            from django.utils import timezone
+            import datetime
+            prefix = "TKT"
+            timestamp = timezone.now().strftime("%Y%m%d")
+            # Contar tickets do dia para gerar número sequencial
+            today = timezone.now().date()
+            count = Ticket.objects.filter(
+                created_at__date=today
+            ).count()
+            self.ticket_number = f"{prefix}-{timestamp}-{str(count + 1).zfill(4)}"
+        
+        # Atualizar timestamps baseado no status
+        if self.status == 'resolvido' and not self.resolved_at:
+            from django.utils import timezone
+            self.resolved_at = timezone.now()
+        
+        if self.status == 'fechado' and not self.closed_at:
+            from django.utils import timezone
+            self.closed_at = timezone.now()
+        
+        super().save(*args, **kwargs)
+    
+    def get_status_color(self):
+        """Retorna a cor do status"""
+        colors = {
+            'aberto': '#007bff',  # Azul
+            'em_andamento': '#ffc107',  # Amarelo
+            'aguardando_cliente': '#fd7e14',  # Laranja
+            'resolvido': '#28a745',  # Verde
+            'fechado': '#6c757d',  # Cinza
+        }
+        return colors.get(self.status, '#6c757d')
+    
+    def get_priority_color(self):
+        """Retorna a cor da prioridade"""
+        colors = {
+            'baixa': '#6c757d',  # Cinza
+            'normal': '#007bff',  # Azul
+            'alta': '#ffc107',  # Amarelo
+            'urgente': '#dc3545',  # Vermelho
+        }
+        return colors.get(self.priority, '#6c757d')
+    
+    def get_last_message(self):
+        """Retorna a última mensagem do ticket"""
+        return self.messages.order_by('-created_at').first()
+    
+    def get_unread_count(self, user):
+        """Retorna quantidade de mensagens não lidas para o usuário"""
+        if user == self.created_by:
+            # Para o criador, contar mensagens enviadas por RM/atendentes
+            return self.messages.filter(
+                sent_by__role='RM',
+                read=False
+            ).count()
+        elif user.is_rm_admin:
+            # Para RM, contar mensagens enviadas pelo cliente
+            return self.messages.filter(
+                sent_by=self.created_by,
+                read=False
+            ).count()
+        return 0
+    
+    def __str__(self):
+        return f"{self.ticket_number} - {self.title}"
+
+
+class TicketMessage(models.Model):
+    """Modelo para mensagens do ticket (chat)"""
+    
+    ticket = models.ForeignKey(
+        Ticket,
+        on_delete=models.CASCADE,
+        related_name='messages',
+        verbose_name="Ticket"
+    )
+    message = models.TextField(verbose_name="Mensagem")
+    sent_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='ticket_messages',
+        verbose_name="Enviado por"
+    )
+    read = models.BooleanField(default=False, verbose_name="Lido")
+    read_at = models.DateTimeField(null=True, blank=True, verbose_name="Lido em")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+    
+    class Meta:
+        verbose_name = "Mensagem do Ticket"
+        verbose_name_plural = "Mensagens dos Tickets"
+        ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['ticket', 'created_at']),
+            models.Index(fields=['sent_by', 'created_at']),
+            models.Index(fields=['read']),
+        ]
+    
+    def mark_as_read(self, user):
+        """Marca a mensagem como lida"""
+        if not self.read and self.sent_by != user:
+            from django.utils import timezone
+            self.read = True
+            self.read_at = timezone.now()
+            self.save()
+    
+    def __str__(self):
+        return f"Mensagem {self.id} - Ticket {self.ticket.ticket_number}"
+
 # -----------------------------------------------------------------------------
 # Controle opcional de sessão única por usuário
 # -----------------------------------------------------------------------------
