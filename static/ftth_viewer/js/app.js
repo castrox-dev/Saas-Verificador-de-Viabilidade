@@ -56,9 +56,33 @@
                 'ResizeObserver loop limit exceeded'
             ];
             
+            // Filtrar erros 404 esperados (arquivos não encontrados no Railway)
+            const expected404Patterns = [
+                '404',
+                'not found',
+                'não encontrado',
+                '/api/coordenadas',
+                '/api/geocode'
+            ];
+            
             // Se o erro contém alguma das strings irrelevantes, não mostrar
             if (irrelevantErrors.some(pattern => errorString.includes(pattern))) {
                 return;
+            }
+            
+            // Se for um 404 esperado relacionado a mapas, logar como warning em vez de error
+            if (expected404Patterns.some(pattern => errorString.includes(pattern)) && 
+                !errorString.includes('RAILWAY VOLUME NÃO CONFIGURADO') &&
+                !errorString.includes('SOLUÇÃO CRÍTICA')) {
+                // Converter para warning - arquivos não encontrados são esperados no Railway
+                console.warn('⚠️ [404 Esperado]', ...Array.from(arguments).map(a => {
+                    if (a instanceof Error) return a.message || 'Recurso não encontrado';
+                    if (typeof a === 'string') {
+                        return a.replace(/(api[_-]?key|token|secret|senha)=([^&\s]+)/ig, '$1=***');
+                    }
+                    return a;
+                }));
+                return; // Não mostrar como erro crítico
             }
             
             const sanitized = Array.from(arguments).map(a => {
@@ -1316,8 +1340,18 @@ async function searchUnified(query) {
             hideSearchResults();
         }
     } catch (error) {
-        console.error('Erro na busca:', error);
-        showNotification('Erro ao buscar localização: ' + (error.message || 'Erro desconhecido'), 'error');
+        // Tratar erros 404 como warnings (podem ser mapas não encontrados, não erro crítico)
+        const isNotFound = error.message && (error.message.includes('404') || 
+                                             error.message.includes('not found') || 
+                                             error.message.includes('não encontrado'));
+        
+        if (isNotFound) {
+            console.warn('⚠️ Erro na busca (404):', error.message || 'Recurso não encontrado');
+            // Não mostrar notificação de erro para 404s - apenas logar como warning
+        } else {
+            console.error('Erro na busca:', error);
+            showNotification('Erro ao buscar localização: ' + (error.message || 'Erro desconhecido'), 'error');
+        }
         hideSearchResults();
     }
 }
