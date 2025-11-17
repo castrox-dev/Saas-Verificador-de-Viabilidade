@@ -6,7 +6,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.http import JsonResponse
 from django.db import transaction
-from django.core.paginator import Paginator
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 import logging
@@ -80,7 +80,16 @@ def company_ticket_list(request, company_slug):
     # Paginação
     paginator = Paginator(tickets, 20)
     page = request.GET.get('page', 1)
-    tickets_page = paginator.get_page(page)
+    try:
+        page = int(page)
+        if page < 1:
+            page = 1
+    except (ValueError, TypeError):
+        page = 1
+    try:
+        tickets_page = paginator.get_page(page)
+    except (EmptyPage, PageNotAnInteger):
+        tickets_page = paginator.get_page(1)
     
     return render(request, 'company/tickets/list.html', {
         'tickets': tickets_page,
@@ -104,9 +113,13 @@ def company_ticket_detail(request, company_slug, ticket_id):
     # Marcar mensagens como lidas
     if ticket.created_by == request.user:
         # Marcar mensagens do RM como lidas
-        ticket.messages.filter(sent_by__role='RM', read=False).update(read=True, read_at=timezone.now())
+        TicketMessage.objects.filter(
+            ticket=ticket,
+            sent_by__role='RM',
+            read=False
+        ).update(read=True, read_at=timezone.now())
     
-    messages_list = ticket.messages.all().order_by('created_at')
+    messages_list = TicketMessage.objects.filter(ticket=ticket).order_by('created_at')
     
     if request.method == 'POST':
         form = TicketMessageForm(request.POST, user=request.user, ticket=ticket)
@@ -158,7 +171,16 @@ def rm_ticket_list(request):
     # Paginação
     paginator = Paginator(tickets, 20)
     page = request.GET.get('page', 1)
-    tickets_page = paginator.get_page(page)
+    try:
+        page = int(page)
+        if page < 1:
+            page = 1
+    except (ValueError, TypeError):
+        page = 1
+    try:
+        tickets_page = paginator.get_page(page)
+    except (EmptyPage, PageNotAnInteger):
+        tickets_page = paginator.get_page(1)
     
     companies = Company.objects.filter(is_active=True).order_by('name')
     
@@ -177,9 +199,13 @@ def rm_ticket_detail(request, ticket_id):
     ticket = get_object_or_404(Ticket, id=ticket_id)
     
     # Marcar mensagens do cliente como lidas
-    ticket.messages.filter(sent_by=ticket.created_by, read=False).update(read=True, read_at=timezone.now())
+    TicketMessage.objects.filter(
+        ticket=ticket,
+        sent_by=ticket.created_by,
+        read=False
+    ).update(read=True, read_at=timezone.now())
     
-    messages_list = ticket.messages.all().order_by('created_at')
+    messages_list = TicketMessage.objects.filter(ticket=ticket).order_by('created_at')
     
     if request.method == 'POST':
         # Verificar se é para atualizar status ou adicionar mensagem

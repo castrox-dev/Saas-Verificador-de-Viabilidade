@@ -183,7 +183,7 @@
   }
 
   // Atualizar mensagens a cada 5 segundos (opcional)
-  let lastMessageId = {% if messages %}{{ messages.last.id|default:0 }}{% else %}0{% endif %};
+  let lastMessageId = {% if messages %}{% for msg in messages %}{% if forloop.last %}{{ msg.id|default:0 }}{% endif %}{% empty %}0{% endfor %}{% else %}0{% endif %};
   
   setInterval(function() {
     fetch('{% url "company:get_new_messages" company.slug ticket.id %}?last_message_id=' + lastMessageId)

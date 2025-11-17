@@ -114,9 +114,11 @@
                 <div class="mb-3">
                   <label for="status" class="form-label"><strong>Status:</strong></label>
                   <select name="status" id="status" class="form-select" required>
-                    {% for value, label in ticket.STATUS_CHOICES %}
-                      <option value="{{ value }}" {% if ticket.status == value %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
+                    <option value="aberto" {% if ticket.status == 'aberto' %}selected{% endif %}>Aberto</option>
+                    <option value="em_andamento" {% if ticket.status == 'em_andamento' %}selected{% endif %}>Em Andamento</option>
+                    <option value="aguardando_cliente" {% if ticket.status == 'aguardando_cliente' %}selected{% endif %}>Aguardando Cliente</option>
+                    <option value="resolvido" {% if ticket.status == 'resolvido' %}selected{% endif %}>Resolvido</option>
+                    <option value="fechado" {% if ticket.status == 'fechado' %}selected{% endif %}>Fechado</option>
                   </select>
                 </div>
 
@@ -216,7 +218,7 @@
   }
 
   // Atualizar mensagens a cada 5 segundos
-  let lastMessageId = {% if messages %}{{ messages.last.id|default:0 }}{% else %}0{% endif %};
+  let lastMessageId = {% if messages %}{% for msg in messages %}{% if forloop.last %}{{ msg.id|default:0 }}{% endif %}{% empty %}0{% endfor %}{% else %}0{% endif %};
   
   setInterval(function() {
     fetch('{% url "rm:get_new_messages" ticket.id %}?last_message_id=' + lastMessageId)
