@@ -211,20 +211,15 @@
   const messageField = document.querySelector('#messageForm textarea[name="message"], #messageForm input[name="message"]');
   
   if (messageForm && messageField) {
+    // Limpar campo imediatamente quando o formulário é submetido
     messageForm.addEventListener('submit', function(e) {
-      // Limpar o campo imediatamente após o submit
-      setTimeout(function() {
-        if (messageField) {
-          messageField.value = '';
-        }
-      }, 100);
+      // Limpar o campo antes do envio
+      messageField.value = '';
     });
     
-    // Limpar campo ao carregar a página (caso tenha restado algum valor)
-    window.addEventListener('load', function() {
-      // Verificar se há parâmetro de sucesso na URL para limpar o campo
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.has('sent') || !messageField.value.trim()) {
+    // Limpar campo ao carregar a página (garantir que está vazio)
+    window.addEventListener('DOMContentLoaded', function() {
+      if (messageField) {
         messageField.value = '';
       }
     });
