@@ -26,6 +26,22 @@
             {% endfor %}
           {% endif %}
 
+          {% if error %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+              <strong>Erro:</strong> {{ error }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          {% endif %}
+
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+              {% for error in form.non_field_errors %}
+                {{ error }}
+              {% endfor %}
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          {% endif %}
+
           <form method="post">
             {% csrf_token %}
             

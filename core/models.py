@@ -383,26 +383,50 @@ class Ticket(models.Model):
         ]
     
     def save(self, *args, **kwargs):
+        from django.utils import timezone
+        
         # Gerar número do ticket se não existir
         if not self.ticket_number:
-            from django.utils import timezone
-            import datetime
             prefix = "TKT"
             timestamp = timezone.now().strftime("%Y%m%d")
+            
             # Contar tickets do dia para gerar número sequencial
-            today = timezone.now().date()
-            count = Ticket.objects.filter(
-                created_at__date=today
-            ).count()
-            self.ticket_number = f"{prefix}-{timestamp}-{str(count + 1).zfill(4)}"
+            # Usar __gte para pegar tickets do dia atual, incluindo o que está sendo criado
+            today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            today_end = timezone.now().replace(hour=23, minute=59, second=59, microsecond=999999)
+            
+            # Se já tem ID, excluir da contagem para evitar duplicação
+            if self.pk:
+                count = Ticket.objects.filter(
+                    created_at__gte=today_start,
+                    created_at__lte=today_end
+                ).exclude(pk=self.pk).count()
+            else:
+                count = Ticket.objects.filter(
+                    created_at__gte=today_start,
+                    created_at__lte=today_end
+                ).count()
+            
+            # Tentar gerar número único
+            max_attempts = 10
+            attempt = 0
+            while attempt < max_attempts:
+                ticket_number = f"{prefix}-{timestamp}-{str(count + 1 + attempt).zfill(4)}"
+                if not Ticket.objects.filter(ticket_number=ticket_number).exclude(pk=self.pk if self.pk else None).exists():
+                    self.ticket_number = ticket_number
+                    break
+                attempt += 1
+            else:
+                # Se não conseguiu gerar único em 10 tentativas, usar timestamp com microsegundos
+                import time
+                unique_suffix = str(int(time.time() * 1000000))[-4:]
+                self.ticket_number = f"{prefix}-{timestamp}-{unique_suffix}"
         
         # Atualizar timestamps baseado no status
         if self.status == 'resolvido' and not self.resolved_at:
-            from django.utils import timezone
             self.resolved_at = timezone.now()
         
         if self.status == 'fechado' and not self.closed_at:
-            from django.utils import timezone
             self.closed_at = timezone.now()
         
         super().save(*args, **kwargs)

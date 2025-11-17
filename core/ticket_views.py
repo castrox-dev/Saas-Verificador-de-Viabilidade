@@ -23,38 +23,62 @@ logger = logging.getLogger(__name__)
 @company_access_required(require_admin=False, allow_user_role=True)
 def company_ticket_create(request, company_slug):
     """Criar novo ticket (empresa)"""
-    company = get_object_or_404(Company, slug=company_slug)
-    
-    if request.method == 'POST':
-        form = TicketForm(request.POST, user=request.user, company=company)
-        if form.is_valid():
-            ticket = form.save(commit=False)
-            ticket.company = company
-            ticket.created_by = request.user
-            ticket.save()
-            
-            # Criar primeira mensagem com a descrição
-            TicketMessage.objects.create(
-                ticket=ticket,
-                message=ticket.description,
-                sent_by=request.user
-            )
-            
-            # Enviar email
-            try:
-                send_ticket_created_email(ticket, request)
-            except Exception as e:
-                logger.error(f"Erro ao enviar email de ticket criado: {str(e)}")
-            
-            messages.success(request, f'Ticket {ticket.ticket_number} criado com sucesso! Você receberá um email com os detalhes.')
-            return redirect('company:ticket_detail', company_slug=company_slug, ticket_id=ticket.id)
-    else:
-        form = TicketForm(user=request.user, company=company)
-    
-    return render(request, 'company/tickets/create.html', {
-        'form': form,
-        'company': company
-    })
+    try:
+        company = get_object_or_404(Company, slug=company_slug)
+        
+        if request.method == 'POST':
+            form = TicketForm(request.POST, user=request.user, company=company)
+            if form.is_valid():
+                try:
+                    ticket = form.save(commit=False)
+                    ticket.company = company
+                    ticket.created_by = request.user
+                    ticket.save()
+                    
+                    # Criar primeira mensagem com a descrição
+                    try:
+                        TicketMessage.objects.create(
+                            ticket=ticket,
+                            message=ticket.description,
+                            sent_by=request.user
+                        )
+                    except Exception as e:
+                        logger.error(f"Erro ao criar primeira mensagem do ticket: {str(e)}")
+                        # Não deixar o ticket sem mensagem - usar descrição como fallback
+                        messages.warning(request, 'Ticket criado, mas houve um problema ao salvar a primeira mensagem.')
+                    
+                    # Enviar email
+                    try:
+                        send_ticket_created_email(ticket, request)
+                    except Exception as e:
+                        logger.error(f"Erro ao enviar email de ticket criado: {str(e)}")
+                        # Não bloquear criação do ticket por erro de email
+                    
+                    messages.success(request, f'Ticket {ticket.ticket_number} criado com sucesso! Você receberá um email com os detalhes.')
+                    return redirect('company:ticket_detail', company_slug=company_slug, ticket_id=ticket.id)
+                except Exception as e:
+                    logger.exception(f"Erro ao salvar ticket: {str(e)}")
+                    messages.error(request, f'Erro ao criar ticket: {str(e)}')
+                    # Adicionar erro ao form para exibir na página
+                    form.add_error(None, f'Erro ao salvar: {str(e)}')
+            else:
+                # Log de erros de validação
+                logger.debug(f"Erros de validação no formulário: {form.errors}")
+        else:
+            form = TicketForm(user=request.user, company=company)
+        
+        return render(request, 'company/tickets/create.html', {
+            'form': form,
+            'company': company
+        })
+    except Exception as e:
+        logger.exception(f"Erro inesperado em company_ticket_create: {str(e)}")
+        messages.error(request, f'Erro inesperado ao criar ticket: {str(e)}')
+        return render(request, 'company/tickets/create.html', {
+            'form': TicketForm(user=request.user, company=company) if 'company' in locals() else TicketForm(),
+            'company': company if 'company' in locals() else None,
+            'error': str(e)
+        })
 
 
 @login_required
