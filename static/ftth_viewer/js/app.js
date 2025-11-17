@@ -1611,7 +1611,7 @@ function hideSearchResults() {
 
 function showSearchLoading() {
     if (searchResults) {
-        searchResults.innerHTML = '<div class="search-result-item"><i class="fas fa-spinner fa-spin"></i> Pesquisando...</div>';
+        searchResults.innerHTML = '<div class="search-result-item suggestion-loading"><i class="fas fa-spinner"></i> Pesquisando...</div>';
         searchResults.style.display = 'block';
     }
 }
@@ -1641,37 +1641,30 @@ async function fetchAddressSuggestions(query) {
             suggestions.forEach((suggestion, index) => {
                 const item = document.createElement('div');
                 item.className = 'search-result-item';
-                item.style.cursor = 'pointer';
-                item.style.padding = '10px';
-                item.style.borderBottom = '1px solid rgba(255,255,255,0.1)';
+                
+                // Extrair informações do endereço para exibir de forma mais limpa
+                const displayName = suggestion.display_name || '';
+                const addressParts = displayName.split(',');
+                const primaryAddress = addressParts[0]?.trim() || displayName;
+                const secondaryAddress = addressParts.slice(1, 3).join(',').trim() || '';
+                
                 item.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <i class="fas fa-map-marker-alt" style="color: var(--rm-primary, #3b82f6);"></i>
-                        <div style="flex: 1;">
-                            <div style="font-weight: 500; color: var(--rm-text-primary, #fff);">
-                                ${suggestion.display_name}
-                            </div>
-                        </div>
+                    <i class="fas fa-map-marker-alt"></i>
+                    <div class="suggestion-text">
+                        <div class="suggestion-name">${primaryAddress}</div>
+                        ${secondaryAddress ? `<div class="suggestion-details">${secondaryAddress}</div>` : ''}
                     </div>
                 `;
                 
                 // Adicionar evento de clique
                 item.addEventListener('click', () => {
-                    searchInput.value = suggestion.display_name;
+                    searchInput.value = displayName;
                     hideSearchResults();
                     // Executar a busca com o endereço selecionado
                     performSearch().catch(error => {
                         console.error('Erro na pesquisa:', error);
                         showNotification('Erro ao realizar pesquisa', 'error');
                     });
-                });
-                
-                // Adicionar hover effect
-                item.addEventListener('mouseenter', () => {
-                    item.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
-                });
-                item.addEventListener('mouseleave', () => {
-                    item.style.backgroundColor = 'transparent';
                 });
                 
                 searchResults.appendChild(item);
