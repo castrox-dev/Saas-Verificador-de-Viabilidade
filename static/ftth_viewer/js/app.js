@@ -57,12 +57,12 @@
             ];
             
             // Filtrar erros 404 esperados (arquivos não encontrados no Railway)
+            // NÃO filtrar erros de "endereço não encontrado" da busca de endereço - esses devem ser mostrados ao usuário
             const expected404Patterns = [
                 '404',
                 'not found',
                 'não encontrado',
-                '/api/coordenadas',
-                '/api/geocode'
+                '/api/coordenadas'
             ];
             
             // Se o erro contém alguma das strings irrelevantes, não mostrar
@@ -70,8 +70,12 @@
                 return;
             }
             
-            // Se for um 404 esperado relacionado a mapas, logar como warning em vez de error
-            if (expected404Patterns.some(pattern => errorString.includes(pattern)) && 
+            // NÃO interceptar erros de "Endereço não encontrado" - esses devem ser tratados pela função de busca
+            const isAddressNotFound = errorString.includes('Endereço não encontrado') || 
+                                     (errorString.includes('/api/geocode') && errorString.includes('Endereço'));
+            
+            // Se for um 404 esperado relacionado a mapas (não endereço), logar como warning em vez de error
+            if (!isAddressNotFound && expected404Patterns.some(pattern => errorString.includes(pattern)) && 
                 !errorString.includes('RAILWAY VOLUME NÃO CONFIGURADO') &&
                 !errorString.includes('SOLUÇÃO CRÍTICA')) {
                 // Converter para warning - arquivos não encontrados são esperados no Railway
@@ -1318,14 +1322,44 @@ async function searchUnified(query) {
     try {
         const response = await fetch(`${API_BASE}/geocode?endereco=${encodeURIComponent(searchQuery)}`);
         
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        // Verificar Content-Type para saber se a resposta é JSON
+        const contentType = response.headers.get('content-type') || '';
+        const isJson = contentType.includes('application/json');
+        
+        // Fazer parse do JSON apenas uma vez
+        let result;
+        if (isJson) {
+            try {
+                result = await response.json();
+            } catch (e) {
+                // Se não conseguir fazer parse, tratar como erro
+                throw new Error(`Erro ao processar resposta do servidor: ${response.statusText}`);
+            }
+        } else {
+            // Se não for JSON, tratar como erro
+            throw new Error(`Resposta não é JSON. Status: ${response.status}`);
         }
         
-        const result = await response.json();
+        // Verificar se a resposta foi bem-sucedida
+        if (!response.ok) {
+            // Verificar se é erro de "Endereço não encontrado"
+            const errorMessage = result.erro || result.message || `Erro HTTP ${response.status}`;
+            if (response.status === 404 && errorMessage.includes('Endereço não encontrado')) {
+                showNotification('📍 Endereço não encontrado. Tente usar um endereço mais completo ou específico.', 'warning', 5000);
+                hideSearchResults();
+                return;
+            }
+            throw new Error(errorMessage);
+        }
 
         // Verificar se há erro na resposta
         if (result.erro) {
+            // Se for erro de "endereço não encontrado", mostrar mensagem ao usuário
+            if (result.erro.includes('Endereço não encontrado')) {
+                showNotification('📍 Endereço não encontrado. Tente usar um endereço mais completo ou específico.', 'warning', 5000);
+                hideSearchResults();
+                return;
+            }
             throw new Error(result.erro);
         }
 
@@ -1334,21 +1368,23 @@ async function searchUnified(query) {
             await processSearchResultWithConfirmation(parseFloat(result.lat), parseFloat(result.lng), result.endereco_completo || addressText);
             hideSearchResults();
         } else {
-            // Endereço não encontrado - marcar no centro do mapa atual e mostrar popup de confirmação
-            const center = map.getCenter();
-            await markLocationWithConfirmation(center.lat, center.lng, `Endereço não encontrado: ${query}`);
+            // Endereço não encontrado - mostrar mensagem ao usuário
+            showNotification('📍 Endereço não encontrado. Tente usar um endereço mais completo ou específico.', 'warning', 5000);
             hideSearchResults();
         }
     } catch (error) {
-        // Tratar erros 404 como warnings (podem ser mapas não encontrados, não erro crítico)
-        const isNotFound = error.message && (error.message.includes('404') || 
-                                             error.message.includes('not found') || 
-                                             error.message.includes('não encontrado'));
+        // Verificar se é erro de "endereço não encontrado"
+        const isAddressNotFound = error.message && (
+            error.message.includes('Endereço não encontrado') || 
+            (error.message.includes('404') && error.message.includes('Endereço'))
+        );
         
-        if (isNotFound) {
-            console.warn('⚠️ Erro na busca (404):', error.message || 'Recurso não encontrado');
-            // Não mostrar notificação de erro para 404s - apenas logar como warning
+        if (isAddressNotFound) {
+            // Mostrar mensagem ao usuário quando endereço não for encontrado
+            showNotification('📍 Endereço não encontrado. Tente usar um endereço mais completo ou específico.', 'warning', 5000);
+            console.warn('⚠️ Endereço não encontrado:', query);
         } else {
+            // Outros erros - logar e mostrar mensagem
             console.error('Erro na busca:', error);
             showNotification('Erro ao buscar localização: ' + (error.message || 'Erro desconhecido'), 'error');
         }
