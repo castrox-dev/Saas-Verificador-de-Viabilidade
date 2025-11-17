@@ -1,6 +1,7 @@
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from . import views
+from . import password_reset as password_reset_views
 from ftth_viewer import views as ftth_views
 
 app_name = 'company'
@@ -10,6 +11,12 @@ urlpatterns = [
     path('login/', views.company_login_view, name='login'),
     # Troca LogoutView por view própria que aceita GET e redireciona para login da empresa
     path('logout/', views.company_logout_view, name='logout'),
+    
+    # Recuperação de senha (empresa)
+    path('password-reset/', password_reset_views.CompanyPasswordResetView.as_view(), name='password_reset'),
+    path('password-reset/done/', password_reset_views.CompanyPasswordResetDoneView.as_view(), name='password_reset_done'),
+    path('password-reset/confirm/<uidb64>/<token>/', password_reset_views.CompanyPasswordResetConfirmView.as_view(), name='password_reset_confirm'),
+    path('password-reset/complete/', password_reset_views.CompanyPasswordResetCompleteView.as_view(), name='password_reset_complete'),
     
     # Painel da empresa (para admins)
     path('painel/', views.company_dashboard, name='dashboard'),

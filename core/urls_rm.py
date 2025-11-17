@@ -1,6 +1,7 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views
 from . import views
+from . import password_reset as password_reset_views
 
 app_name = 'rm'
 
@@ -9,6 +10,12 @@ urlpatterns = [
     path('login/', views.rm_login_view, name='login'),
     # Troca LogoutView por view própria para aceitar GET e redirecionar corretamente
     path('logout/', views.logout_view, name='logout'),
+    
+    # Recuperação de senha (RM)
+    path('password-reset/', password_reset_views.RMPasswordResetView.as_view(), name='password_reset'),
+    path('password-reset/done/', password_reset_views.RMPasswordResetDoneView.as_view(), name='password_reset_done'),
+    path('password-reset/confirm/<uidb64>/<token>/', password_reset_views.RMPasswordResetConfirmView.as_view(), name='password_reset_confirm'),
+    path('password-reset/complete/', password_reset_views.RMPasswordResetCompleteView.as_view(), name='password_reset_complete'),
     
     # Painel administrativo RM
     path('admin/', views.rm_admin_dashboard, name='admin_dashboard'),
