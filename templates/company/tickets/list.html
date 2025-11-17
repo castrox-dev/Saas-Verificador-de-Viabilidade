@@ -93,8 +93,8 @@
                     <td>{% if ticket.assigned_to %}{{ ticket.assigned_to.get_full_name|default:ticket.assigned_to.username }}{% else %}-{% endif %}</td>
                     <td>{{ ticket.created_at|date:"d/m/Y H:i" }}</td>
                     <td class="text-end">
-                      <a href="{% url 'company:ticket_detail' company.slug ticket.id %}" class="btn btn-sm btn-primary">
-                        <i class="fas fa-eye me-1"></i> Ver
+                      <a href="{% url 'company:ticket_detail' company.slug ticket.id %}" class="btn btn-primary">
+                        <i class="fas fa-eye me-2"></i> Ver
                       </a>
                     </td>
                   </tr>

@@ -118,7 +118,7 @@
               <div class="mt-3">
                 <form method="post" style="display: inline;">
                   {% csrf_token %}
-                  <button type="submit" name="close_ticket" class="btn btn-danger btn-sm" onclick="return confirm('Tem certeza que deseja fechar este ticket? Você não poderá adicionar mais mensagens após fechá-lo.');">
+                  <button type="submit" name="close_ticket" class="btn btn-danger" onclick="return confirm('Tem certeza que deseja fechar este ticket? Você não poderá adicionar mais mensagens após fechá-lo.');">
                     <i class="fas fa-lock me-2"></i> Fechar Ticket
                   </button>
                 </form>

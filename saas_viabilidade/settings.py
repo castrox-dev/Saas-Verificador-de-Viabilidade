@@ -12,7 +12,19 @@ load_dotenv(BASE_DIR / ".env")
 IS_RAILWAY = os.getenv("RAILWAY_ENVIRONMENT") is not None or os.getenv("RAILWAY_PUBLIC_DOMAIN") is not None
 
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-me")
-DEBUG = os.getenv("DEBUG", "True").lower() in ("1", "true", "on", "yes") and not IS_RAILWAY
+
+# DEBUG: Garantir que está desabilitado em produção
+DEBUG_ENV = os.getenv("DEBUG", "True").lower() in ("1", "true", "on", "yes")
+DEBUG = DEBUG_ENV and not IS_RAILWAY
+
+# Validação de segurança: Bloquear DEBUG=True em produção se não for desenvolvimento local explícito
+IS_LOCAL_DEV = os.getenv("IS_LOCAL_DEV", "False").lower() in ("1", "true", "on", "yes")
+if DEBUG and IS_RAILWAY and not IS_LOCAL_DEV:
+    raise ValueError("DEBUG não pode estar ativo em produção! Configure DEBUG=False ou IS_LOCAL_DEV=False.")
+
+# Validar SECRET_KEY em produção
+if not DEBUG and SECRET_KEY == "dev-secret-key-change-me":
+    raise ValueError("SECRET_KEY deve ser alterado em produção! Use uma chave forte e única.")
 ALLOWED_HOSTS_ENV = os.getenv("ALLOWED_HOSTS", "")
 
 # Configurar ALLOWED_HOSTS automaticamente para Railway
@@ -31,11 +43,26 @@ if IS_RAILWAY:
     if ALLOWED_HOSTS_ENV:
         ALLOWED_HOSTS.extend([h.strip() for h in ALLOWED_HOSTS_ENV.split(",") if h.strip()])
     
-    # Se ainda estiver vazio, usar fallback seguro
+    # Se ainda estiver vazio, exigir configuração explícita
     if not ALLOWED_HOSTS:
-        ALLOWED_HOSTS = ["*"]  # Apenas como último recurso - configure ALLOWED_HOSTS adequadamente
+        raise ValueError(
+            "ALLOWED_HOSTS deve ser configurado! Defina a variável de ambiente ALLOWED_HOSTS "
+            "com os domínios permitidos separados por vírgula (ex: 'rmsys.app,www.rmsys.app')."
+        )
 else:
-    ALLOWED_HOSTS = [h.strip() for h in ALLOWED_HOSTS_ENV.split(",") if h.strip()] or ["127.0.0.1", "localhost", "testserver", "*"]
+    # Desenvolvimento local: permitir hosts locais apenas
+    if ALLOWED_HOSTS_ENV:
+        ALLOWED_HOSTS = [h.strip() for h in ALLOWED_HOSTS_ENV.split(",") if h.strip()]
+    else:
+        # Fallback seguro para desenvolvimento local apenas
+        ALLOWED_HOSTS = ["127.0.0.1", "localhost", "testserver"]
+    
+    # Validar que não há wildcards
+    if "*" in ALLOWED_HOSTS:
+        raise ValueError(
+            "Wildcard '*' não é permitido em ALLOWED_HOSTS por segurança. "
+            "Configure domínios específicos ou use '127.0.0.1,localhost' para desenvolvimento."
+        )
 
 INSTALLED_APPS = [
     "django.contrib.admin",

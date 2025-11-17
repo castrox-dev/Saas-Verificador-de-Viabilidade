@@ -154,7 +154,7 @@
               {% if ticket.status != 'fechado' %}
               <form method="post" style="display: inline; width: 100%;">
                 {% csrf_token %}
-                <button type="submit" name="close_ticket" class="btn btn-danger w-100" onclick="return confirm('Tem certeza que deseja fechar este ticket? Você não poderá adicionar mais mensagens após fechá-lo.');">
+                <button type="submit" name="close_ticket" class="btn btn-danger w-100 mb-0" onclick="return confirm('Tem certeza que deseja fechar este ticket? Você não poderá adicionar mais mensagens após fechá-lo.');">
                   <i class="fas fa-lock me-2"></i> Fechar Ticket
                 </button>
               </form>
