@@ -61,41 +61,62 @@ def company_ticket_create(request, company_slug):
 @company_access_required(require_admin=False, allow_user_role=True)
 def company_ticket_list(request, company_slug):
     """Listar tickets da empresa"""
-    company = get_object_or_404(Company, slug=company_slug)
-    
-    # Filtrar tickets da empresa e do usuário (se não for admin)
-    if request.user.is_company_admin:
-        tickets = Ticket.objects.filter(company=company)
-    else:
-        tickets = Ticket.objects.filter(company=company, created_by=request.user)
-    
-    # Filtros
-    status_filter = request.GET.get('status', '')
-    if status_filter:
-        tickets = tickets.filter(status=status_filter)
-    
-    # Ordenação
-    tickets = tickets.order_by('-created_at')
-    
-    # Paginação
-    paginator = Paginator(tickets, 20)
-    page = request.GET.get('page', 1)
     try:
-        page = int(page)
-        if page < 1:
+        company = get_object_or_404(Company, slug=company_slug)
+        
+        # Verificar se os modelos existem no banco (migrações aplicadas)
+        try:
+            # Filtrar tickets da empresa e do usuário (se não for admin)
+            if request.user.is_company_admin:
+                tickets = Ticket.objects.filter(company=company)
+            else:
+                tickets = Ticket.objects.filter(company=company, created_by=request.user)
+        except Exception as e:
+            logger.error(f"Erro ao acessar modelos Ticket: {str(e)}")
+            messages.error(request, 'Erro ao carregar tickets. Por favor, execute as migrações do banco de dados.')
+            return render(request, 'company/tickets/list.html', {
+                'tickets': [],
+                'company': company,
+                'status_filter': '',
+                'error': 'Modelos não migrados. Execute: python manage.py migrate'
+            })
+        
+        # Filtros
+        status_filter = request.GET.get('status', '')
+        if status_filter:
+            tickets = tickets.filter(status=status_filter)
+        
+        # Ordenação
+        tickets = tickets.order_by('-created_at')
+        
+        # Paginação
+        paginator = Paginator(tickets, 20)
+        page = request.GET.get('page', 1)
+        try:
+            page = int(page)
+            if page < 1:
+                page = 1
+        except (ValueError, TypeError):
             page = 1
-    except (ValueError, TypeError):
-        page = 1
-    try:
-        tickets_page = paginator.get_page(page)
-    except (EmptyPage, PageNotAnInteger):
-        tickets_page = paginator.get_page(1)
-    
-    return render(request, 'company/tickets/list.html', {
-        'tickets': tickets_page,
-        'company': company,
-        'status_filter': status_filter
-    })
+        try:
+            tickets_page = paginator.get_page(page)
+        except (EmptyPage, PageNotAnInteger):
+            tickets_page = paginator.get_page(1)
+        
+        return render(request, 'company/tickets/list.html', {
+            'tickets': tickets_page,
+            'company': company,
+            'status_filter': status_filter
+        })
+    except Exception as e:
+        logger.exception(f"Erro inesperado em company_ticket_list: {str(e)}")
+        messages.error(request, f'Erro ao carregar tickets: {str(e)}')
+        return render(request, 'company/tickets/list.html', {
+            'tickets': [],
+            'company': company if 'company' in locals() else None,
+            'status_filter': '',
+            'error': str(e)
+        })
 
 
 @login_required
