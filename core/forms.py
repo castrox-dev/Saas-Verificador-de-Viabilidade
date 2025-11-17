@@ -197,7 +197,7 @@ class CustomUserForm(UserCreationForm):
         if 'password1' in self.fields:
             self.fields['password1'].required = False
             self.fields['password1'].label = 'Senha'
-            self.fields['password1'].help_text = 'Clique no botão "Gerar Senha" para criar uma senha aleatória de 8 dígitos, ou deixe em branco para gerar automaticamente ao salvar.'
+            self.fields['password1'].help_text = 'Clique no botão "Gerar Senha" para criar uma senha aleatória de 8 caracteres (letras e números), ou deixe em branco para gerar automaticamente ao salvar.'
             self.fields['password1'].widget = forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Clique em "Gerar Senha" ou deixe em branco',

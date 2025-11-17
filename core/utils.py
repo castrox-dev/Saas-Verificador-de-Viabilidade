@@ -16,14 +16,29 @@ def generate_random_password(length=12, simple=False):
     
     Args:
         length (int): Tamanho da senha (padrão: 12)
-        simple (bool): Se True, gera senha simples de apenas dígitos
+        simple (bool): Se True, gera senha simples com letras e números (sem símbolos)
     
     Returns:
         str: Senha aleatória
     """
     if simple:
-        # Senha simples de apenas dígitos
-        return ''.join(secrets.choice(string.digits) for _ in range(length))
+        # Senha simples com letras (maiúsculas e minúsculas) e números
+        # Garantir que tenha pelo menos uma letra minúscula, uma maiúscula e um número
+        password = [
+            secrets.choice(string.ascii_lowercase),  # Pelo menos 1 letra minúscula
+            secrets.choice(string.ascii_uppercase),  # Pelo menos 1 letra maiúscula
+            secrets.choice(string.digits),           # Pelo menos 1 número
+        ]
+        
+        # Preencher o resto com letras e números aleatórios
+        alphabet = string.ascii_letters + string.digits
+        for _ in range(length - 3):
+            password.append(secrets.choice(alphabet))
+        
+        # Embaralhar a senha
+        secrets.SystemRandom().shuffle(password)
+        
+        return ''.join(password)
     
     # Caracteres permitidos: letras minúsculas, maiúsculas, números e símbolos
     alphabet = string.ascii_letters + string.digits + "!@#$%&*"
