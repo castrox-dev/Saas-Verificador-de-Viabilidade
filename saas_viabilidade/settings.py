@@ -8,18 +8,20 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Load environment variables from .env file
 load_dotenv(BASE_DIR / ".env")
 
-# Detectar se está rodando no Railway
+# Detectar ambiente de execução
 IS_RAILWAY = os.getenv("RAILWAY_ENVIRONMENT") is not None or os.getenv("RAILWAY_PUBLIC_DOMAIN") is not None
+IS_VPS = os.path.exists("/etc/nginx") or os.getenv("VPS_ENVIRONMENT") is not None
+IS_PRODUCTION = not os.getenv("DEBUG", "").lower() in ("1", "true", "on", "yes") or IS_RAILWAY or IS_VPS
 
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-me")
 
 # DEBUG: Garantir que está desabilitado em produção
 DEBUG_ENV = os.getenv("DEBUG", "True").lower() in ("1", "true", "on", "yes")
-DEBUG = DEBUG_ENV and not IS_RAILWAY
+DEBUG = DEBUG_ENV and not IS_PRODUCTION
 
 # Validação de segurança: Bloquear DEBUG=True em produção se não for desenvolvimento local explícito
 IS_LOCAL_DEV = os.getenv("IS_LOCAL_DEV", "False").lower() in ("1", "true", "on", "yes")
-if DEBUG and IS_RAILWAY and not IS_LOCAL_DEV:
+if DEBUG and (IS_RAILWAY or IS_VPS) and not IS_LOCAL_DEV:
     raise ValueError("DEBUG não pode estar ativo em produção! Configure DEBUG=False ou IS_LOCAL_DEV=False.")
 
 # Validar SECRET_KEY em produção
@@ -117,7 +119,13 @@ if not DATABASE_URL:
         "DATABASE_URL não está configurada. Defina a string de conexão (ex.: Neon) no arquivo .env."
     )
 
-requires_ssl = not DATABASE_URL.startswith("postgresql://localhost") and not DATABASE_URL.startswith("postgres://localhost")
+# Detectar se precisa de SSL (não precisa para localhost/local)
+requires_ssl = (
+    not DATABASE_URL.startswith("postgresql://localhost") 
+    and not DATABASE_URL.startswith("postgres://localhost")
+    and not DATABASE_URL.startswith("postgresql://127.0.0.1")
+    and not DATABASE_URL.startswith("postgres://127.0.0.1")
+)
 
 DATABASES = {
     "default": dj_database_url.parse(
@@ -160,23 +168,37 @@ WHITENOISE_USE_FINDERS = DEBUG  # Em dev, usar finders para arquivos não coleta
 WHITENOISE_AUTOREFRESH = DEBUG  # Em dev, recarregar automaticamente
 MEDIA_URL = "/media/"
 
-# Configurar MEDIA_ROOT para usar Railway Volume se disponível
+# Configurar MEDIA_ROOT
 # No Railway, volumes são montados em /data ou caminho configurado
+# Em VPS, usar diretório padrão /var/www/saas-viabilidade/media
 RAILWAY_VOLUME_PATH = os.getenv("RAILWAY_VOLUME_PATH", "/data")
+VPS_MEDIA_ROOT = os.getenv("VPS_MEDIA_ROOT", "/var/www/saas-viabilidade/media")
+
 if IS_RAILWAY and os.path.exists(RAILWAY_VOLUME_PATH):
     # Usar volume persistente do Railway
     MEDIA_ROOT = Path(RAILWAY_VOLUME_PATH) / "media"
     # Criar diretório se não existir
     MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
-    print("=" * 80)
-    print("✅ RAILWAY VOLUME CONFIGURADO CORRETAMENTE")
-    print(f"✅ Arquivos de mídia sendo salvos em: {MEDIA_ROOT}")
-    print("✅ Os arquivos persistem após reinicializações do container")
-    print("=" * 80)
+    if DEBUG:
+        print("=" * 80)
+        print("✅ RAILWAY VOLUME CONFIGURADO CORRETAMENTE")
+        print(f"✅ Arquivos de mídia sendo salvos em: {MEDIA_ROOT}")
+        print("✅ Os arquivos persistem após reinicializações do container")
+        print("=" * 80)
+elif IS_VPS and os.path.exists(VPS_MEDIA_ROOT):
+    # Usar diretório configurado para VPS
+    MEDIA_ROOT = Path(VPS_MEDIA_ROOT)
+    MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
+    if DEBUG:
+        print("=" * 80)
+        print("✅ VPS MEDIA ROOT CONFIGURADO CORRETAMENTE")
+        print(f"✅ Arquivos de mídia sendo salvos em: {MEDIA_ROOT}")
+        print("=" * 80)
 else:
     # Usar diretório local (desenvolvimento ou sem volume configurado)
     MEDIA_ROOT = BASE_DIR / "media"
-    if IS_RAILWAY:
+    MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
+    if IS_RAILWAY and not os.path.exists(RAILWAY_VOLUME_PATH):
         print("=" * 80)
         print("🚨 ATENÇÃO CRÍTICA: RAILWAY VOLUME NÃO CONFIGURADO!")
         print("=" * 80)
