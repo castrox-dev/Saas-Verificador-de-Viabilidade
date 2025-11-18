@@ -56,9 +56,37 @@
                 'ResizeObserver loop limit exceeded'
             ];
             
+            // Filtrar erros 404 esperados (arquivos não encontrados no Railway)
+            // NÃO filtrar erros de "endereço não encontrado" da busca de endereço - esses devem ser mostrados ao usuário
+            const expected404Patterns = [
+                '404',
+                'not found',
+                'não encontrado',
+                '/api/coordenadas'
+            ];
+            
             // Se o erro contém alguma das strings irrelevantes, não mostrar
             if (irrelevantErrors.some(pattern => errorString.includes(pattern))) {
                 return;
+            }
+            
+            // NÃO interceptar erros de "Endereço não encontrado" - esses devem ser tratados pela função de busca
+            const isAddressNotFound = errorString.includes('Endereço não encontrado') || 
+                                     (errorString.includes('/api/geocode') && errorString.includes('Endereço'));
+            
+            // Se for um 404 esperado relacionado a mapas (não endereço), logar como warning em vez de error
+            if (!isAddressNotFound && expected404Patterns.some(pattern => errorString.includes(pattern)) && 
+                !errorString.includes('RAILWAY VOLUME NÃO CONFIGURADO') &&
+                !errorString.includes('SOLUÇÃO CRÍTICA')) {
+                // Converter para warning - arquivos não encontrados são esperados no Railway
+                console.warn('⚠️ [404 Esperado]', ...Array.from(arguments).map(a => {
+                    if (a instanceof Error) return a.message || 'Recurso não encontrado';
+                    if (typeof a === 'string') {
+                        return a.replace(/(api[_-]?key|token|secret|senha)=([^&\s]+)/ig, '$1=***');
+                    }
+                    return a;
+                }));
+                return; // Não mostrar como erro crítico
             }
             
             const sanitized = Array.from(arguments).map(a => {
@@ -1213,12 +1241,17 @@ function initializeMainSearch() {
         }
     });
 
-    // Debounce para pesquisa - evitar muitas requisições
+    // Debounce para pesquisa e autocomplete - evitar muitas requisições
     let searchTimeout = null;
+    let suggestionTimeout = null;
+    
     searchInput.addEventListener('input', (e) => {
         // Limpar timeout anterior
         if (searchTimeout) {
             clearTimeout(searchTimeout);
+        }
+        if (suggestionTimeout) {
+            clearTimeout(suggestionTimeout);
         }
         
         const query = e.target.value.trim();
@@ -1230,6 +1263,15 @@ function initializeMainSearch() {
         } else {
             if (clearSearchBtn) {
                 clearSearchBtn.style.display = 'block';
+            }
+            
+            // Mostrar sugestões enquanto digita (após 3 caracteres)
+            if (query.length >= 3) {
+                suggestionTimeout = setTimeout(() => {
+                    fetchAddressSuggestions(query);
+                }, 300); // Aguardar 300ms após parar de digitar
+            } else {
+                hideSearchResults();
             }
         }
     });
@@ -1294,14 +1336,44 @@ async function searchUnified(query) {
     try {
         const response = await fetch(`${API_BASE}/geocode?endereco=${encodeURIComponent(searchQuery)}`);
         
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        // Verificar Content-Type para saber se a resposta é JSON
+        const contentType = response.headers.get('content-type') || '';
+        const isJson = contentType.includes('application/json');
+        
+        // Fazer parse do JSON apenas uma vez
+        let result;
+        if (isJson) {
+            try {
+                result = await response.json();
+            } catch (e) {
+                // Se não conseguir fazer parse, tratar como erro
+                throw new Error(`Erro ao processar resposta do servidor: ${response.statusText}`);
+            }
+        } else {
+            // Se não for JSON, tratar como erro
+            throw new Error(`Resposta não é JSON. Status: ${response.status}`);
         }
         
-        const result = await response.json();
+        // Verificar se a resposta foi bem-sucedida
+        if (!response.ok) {
+            // Verificar se é erro de "Endereço não encontrado"
+            const errorMessage = result.erro || result.message || `Erro HTTP ${response.status}`;
+            if (response.status === 404 && errorMessage.includes('Endereço não encontrado')) {
+                showNotification('📍 Endereço não encontrado. Tente usar um endereço mais completo ou específico.', 'warning', 5000);
+                hideSearchResults();
+                return;
+            }
+            throw new Error(errorMessage);
+        }
 
         // Verificar se há erro na resposta
         if (result.erro) {
+            // Se for erro de "endereço não encontrado", mostrar mensagem ao usuário
+            if (result.erro.includes('Endereço não encontrado')) {
+                showNotification('📍 Endereço não encontrado. Tente usar um endereço mais completo ou específico.', 'warning', 5000);
+                hideSearchResults();
+                return;
+            }
             throw new Error(result.erro);
         }
 
@@ -1310,14 +1382,26 @@ async function searchUnified(query) {
             await processSearchResultWithConfirmation(parseFloat(result.lat), parseFloat(result.lng), result.endereco_completo || addressText);
             hideSearchResults();
         } else {
-            // Endereço não encontrado - marcar no centro do mapa atual e mostrar popup de confirmação
-            const center = map.getCenter();
-            await markLocationWithConfirmation(center.lat, center.lng, `Endereço não encontrado: ${query}`);
+            // Endereço não encontrado - mostrar mensagem ao usuário
+            showNotification('📍 Endereço não encontrado. Tente usar um endereço mais completo ou específico.', 'warning', 5000);
             hideSearchResults();
         }
     } catch (error) {
-        console.error('Erro na busca:', error);
-        showNotification('Erro ao buscar localização: ' + (error.message || 'Erro desconhecido'), 'error');
+        // Verificar se é erro de "endereço não encontrado"
+        const isAddressNotFound = error.message && (
+            error.message.includes('Endereço não encontrado') || 
+            (error.message.includes('404') && error.message.includes('Endereço'))
+        );
+        
+        if (isAddressNotFound) {
+            // Mostrar mensagem ao usuário quando endereço não for encontrado
+            showNotification('📍 Endereço não encontrado. Tente usar um endereço mais completo ou específico.', 'warning', 5000);
+            console.warn('⚠️ Endereço não encontrado:', query);
+        } else {
+            // Outros erros - logar e mostrar mensagem
+            console.error('Erro na busca:', error);
+            showNotification('Erro ao buscar localização: ' + (error.message || 'Erro desconhecido'), 'error');
+        }
         hideSearchResults();
     }
 }
@@ -1521,13 +1605,79 @@ function clearSearch() {
 function hideSearchResults() {
     if (searchResults) {
         searchResults.style.display = 'none';
+        searchResults.innerHTML = '';
     }
 }
 
 function showSearchLoading() {
     if (searchResults) {
-        searchResults.innerHTML = '<div class="search-result-item">Pesquisando...</div>';
+        searchResults.innerHTML = '<div class="search-result-item suggestion-loading"><i class="fas fa-spinner"></i> Pesquisando...</div>';
         searchResults.style.display = 'block';
+    }
+}
+
+// Função para buscar sugestões de endereços enquanto o usuário digita
+async function fetchAddressSuggestions(query) {
+    if (!query || query.length < 3) {
+        hideSearchResults();
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/geocode/suggestions?q=${encodeURIComponent(query)}`);
+        
+        if (!response.ok) {
+            return; // Silenciosamente falha se não conseguir buscar sugestões
+        }
+        
+        const data = await response.json();
+        const suggestions = data.suggestions || [];
+        
+        if (suggestions.length > 0 && searchResults) {
+            // Limpar resultados anteriores
+            searchResults.innerHTML = '';
+            
+            // Criar itens de sugestão
+            suggestions.forEach((suggestion, index) => {
+                const item = document.createElement('div');
+                item.className = 'search-result-item';
+                
+                // Extrair informações do endereço para exibir de forma mais limpa
+                const displayName = suggestion.display_name || '';
+                const addressParts = displayName.split(',');
+                const primaryAddress = addressParts[0]?.trim() || displayName;
+                const secondaryAddress = addressParts.slice(1, 3).join(',').trim() || '';
+                
+                item.innerHTML = `
+                    <i class="fas fa-map-marker-alt"></i>
+                    <div class="suggestion-text">
+                        <div class="suggestion-name">${primaryAddress}</div>
+                        ${secondaryAddress ? `<div class="suggestion-details">${secondaryAddress}</div>` : ''}
+                    </div>
+                `;
+                
+                // Adicionar evento de clique
+                item.addEventListener('click', () => {
+                    searchInput.value = displayName;
+                    hideSearchResults();
+                    // Executar a busca com o endereço selecionado
+                    performSearch().catch(error => {
+                        console.error('Erro na pesquisa:', error);
+                        showNotification('Erro ao realizar pesquisa', 'error');
+                    });
+                });
+                
+                searchResults.appendChild(item);
+            });
+            
+            searchResults.style.display = 'block';
+        } else {
+            hideSearchResults();
+        }
+    } catch (error) {
+        // Silenciosamente falha se houver erro (não queremos mostrar erro para sugestões)
+        console.debug('Erro ao buscar sugestões:', error);
+        hideSearchResults();
     }
 }
 
@@ -1556,11 +1706,35 @@ async function verificarViabilidade(lat, lon, endereco = '') {
         // Remover notificação desnecessária
         showViabilityLoading(); // Mostrar loading screen
         
+        // Coletar IDs dos mapas ativos para incluir no cache
+        const activeMapIds = [];
+        activeMapLayers.forEach((entry, key) => {
+            const mapId = entry?.meta?.mapId;
+            if (mapId) {
+                activeMapIds.push(mapId);
+            }
+        });
+        
+        // Criar hash dos mapas ativos (ordem importa, então ordenar)
+        const mapIdsHash = activeMapIds.length > 0 
+            ? activeMapIds.sort().join(',')
+            : '';
+        
+        // Construir URL com parâmetros
+        const params = new URLSearchParams({
+            lat: lat.toString(),
+            lon: lon.toString()
+        });
+        
+        if (mapIdsHash) {
+            params.append('map_ids', mapIdsHash);
+        }
+        
         // Timeout para a verificação de viabilidade
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 segundos
         
-        const response = await fetch(`${API_BASE}/verificar-viabilidade?lat=${lat}&lon=${lon}`, {
+        const response = await fetch(`${API_BASE}/verificar-viabilidade?${params.toString()}`, {
             signal: controller.signal
         });
         clearTimeout(timeoutId);

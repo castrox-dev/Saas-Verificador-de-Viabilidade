@@ -10,6 +10,8 @@ import zipfile
 import math
 import csv
 import pandas as pd
+import unicodedata
+import re
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from django.conf import settings
@@ -329,17 +331,119 @@ def classificar_viabilidade(distancia_metros):
         }
 
 
+def normalize_address(address):
+    """Normaliza endereço removendo acentos e normalizando abreviações comuns"""
+    if not address:
+        return address
+    
+    # Remover acentos
+    nfkd = unicodedata.normalize('NFKD', address)
+    text = ''.join([c for c in nfkd if not unicodedata.combining(c)])
+    
+    # Normalizar para minúsculas
+    text = text.lower().strip()
+    
+    # Normalizar abreviações comuns de endereços brasileiros
+    abbreviations = {
+        r'\br\b': 'rua',
+        r'\bav\b': 'avenida',
+        r'\bavenida\b': 'avenida',
+        r'\bpç\b': 'praça',
+        r'\bpraça\b': 'praça',
+        r'\btv\b': 'travessa',
+        r'\btravessa\b': 'travessa',
+        r'\bal\b': 'alameda',
+        r'\balameda\b': 'alameda',
+        r'\bstr\b': 'rua',
+        r'\bst\b': 'rua',
+        r'\brod\b': 'rodovia',
+        r'\brodovia\b': 'rodovia',
+        r'\besp\b': 'estrada',
+        r'\bestrada\b': 'estrada',
+        r'\bpr\b': 'praia',
+        r'\bpraia\b': 'praia',
+        r'\bcond\b': 'condominio',
+        r'\bcondominio\b': 'condominio',
+        r'\bcondomínio\b': 'condominio',
+        r'\bres\b': 'residencial',
+        r'\bresidencial\b': 'residencial',
+        r'\bap\b': 'apartamento',
+        r'\bapto\b': 'apartamento',
+        r'\bapartamento\b': 'apartamento',
+        r'\bbl\b': 'bloco',
+        r'\bbloco\b': 'bloco',
+        r'\bqd\b': 'quadra',
+        r'\bquadra\b': 'quadra',
+        r'\blt\b': 'lote',
+        r'\blote\b': 'lote',
+        r'\bs/n\b': '',
+        r'\bsin numero\b': '',
+        r'\bsem numero\b': '',
+    }
+    
+    for pattern, replacement in abbreviations.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    
+    # Remover caracteres especiais e normalizar espaços
+    text = re.sub(r'[^\w\s]', ' ', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    
+    return text
+
+
+def generate_search_variations(address):
+    """Gera variações da busca para tentar encontrar o endereço"""
+    variations = []
+    
+    # Versão original
+    variations.append(address.strip())
+    
+    # Versão normalizada
+    normalized = normalize_address(address)
+    if normalized != address.lower().strip():
+        variations.append(normalized)
+    
+    # Versão com "Brasil" no final (ajuda Nominatim)
+    if 'brasil' not in address.lower() and 'brazil' not in address.lower():
+        variations.append(f"{address.strip()}, Brasil")
+        variations.append(f"{normalized}, brasil")
+    
+    # Versão com "Rio de Janeiro" no final (se não mencionar cidade)
+    if 'rio de janeiro' not in address.lower() and 'rj' not in address.lower():
+        variations.append(f"{address.strip()}, Rio de Janeiro, RJ, Brasil")
+        variations.append(f"{normalized}, rio de janeiro, rj, brasil")
+    
+    # Remover duplicatas mantendo a ordem
+    seen = set()
+    unique_variations = []
+    for var in variations:
+        var_lower = var.lower().strip()
+        if var_lower and var_lower not in seen:
+            seen.add(var_lower)
+            unique_variations.append(var)
+    
+    return unique_variations
+
+
 def get_cached_geocoding(endereco):
-    """Busca geocodificação no cache"""
+    """Busca geocodificação no cache (também verifica versão normalizada)"""
     try:
+        # Tentar busca exata primeiro
         cache_obj = GeocodingCache.objects.get(endereco=endereco)
         return cache_obj.to_dict()
     except GeocodingCache.DoesNotExist:
-        return None
+        # Tentar busca normalizada
+        try:
+            normalized = normalize_address(endereco)
+            cache_obj = GeocodingCache.objects.get(endereco=normalized)
+            return cache_obj.to_dict()
+        except (GeocodingCache.DoesNotExist, Exception):
+            return None
 
 
 def set_cached_geocoding(endereco, data):
-    """Salva geocodificação no cache"""
+    """Salva geocodificação no cache (salva tanto a versão original quanto normalizada)"""
+    # Salvar versão original
     GeocodingCache.objects.update_or_create(
         endereco=endereco,
         defaults={
@@ -348,6 +452,18 @@ def set_cached_geocoding(endereco, data):
             'endereco_completo': data.get('endereco_completo', '')
         }
     )
+    
+    # Salvar versão normalizada se diferente
+    normalized = normalize_address(endereco)
+    if normalized != endereco.lower().strip():
+        GeocodingCache.objects.update_or_create(
+            endereco=normalized,
+            defaults={
+                'lat': data['lat'],
+                'lng': data['lng'],
+                'endereco_completo': data.get('endereco_completo', '')
+            }
+        )
 
 
 def get_all_ctos(company=None):

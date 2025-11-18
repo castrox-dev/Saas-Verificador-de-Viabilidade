@@ -57,7 +57,7 @@ class CTOFile(models.Model):
 
 
 class ViabilidadeCache(models.Model):
-    """Cache de verificações de viabilidade - separado por empresa"""
+    """Cache de verificações de viabilidade - separado por empresa e mapas ativos"""
     lat = models.FloatField()
     lon = models.FloatField()
     company = models.ForeignKey(
@@ -67,19 +67,27 @@ class ViabilidadeCache(models.Model):
         null=False,  # Obrigatório - sempre deve ter empresa
         verbose_name="Empresa"
     )
+    mapas_hash = models.CharField(
+        max_length=500,
+        blank=True,
+        default='',
+        db_index=True,
+        help_text="Hash dos IDs dos mapas ativos quando a verificação foi feita"
+    )
     resultado = models.JSONField()
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
         verbose_name = 'Cache de Viabilidade'
         verbose_name_plural = 'Cache de Viabilidades'
-        unique_together = [['lat', 'lon', 'company']]  # Cache único por coordenada E empresa
+        unique_together = [['lat', 'lon', 'company', 'mapas_hash']]  # Cache único por coordenada, empresa E mapas ativos
         indexes = [
-            models.Index(fields=['lat', 'lon', 'company']),
+            models.Index(fields=['lat', 'lon', 'company', 'mapas_hash']),
         ]
     
     def __str__(self):
         status = self.resultado.get('viabilidade', {}).get('status', 'N/A')
         company_name = self.company.name if self.company else 'N/A'
-        return f"({self.lat:.6f}, {self.lon:.6f}) - {company_name} - {status}"
+        mapas_info = f" - {len(self.mapas_hash.split(','))} mapa(s)" if self.mapas_hash else ""
+        return f"({self.lat:.6f}, {self.lon:.6f}) - {company_name}{mapas_info} - {status}"
 

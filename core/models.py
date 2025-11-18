@@ -59,6 +59,11 @@ class CustomUser(AbstractUser):
         verbose_name="Empresa"
     )
     phone = models.CharField(max_length=20, blank=True, verbose_name="Telefone")
+    must_change_password = models.BooleanField(
+        default=True,
+        verbose_name="Deve mudar senha",
+        help_text="Força a mudança de senha no primeiro acesso"
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
 

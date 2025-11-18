@@ -1273,6 +1273,139 @@ body {
     font-size: 18px;
 }
 
+/* ===== SUGESTÕES DE ENDEREÇO ===== */
+.search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 8px;
+    background: var(--rm-card-bg);
+    border: 2px solid var(--rm-border-primary);
+    border-radius: var(--rm-border-radius-lg);
+    box-shadow: var(--rm-shadow-lg);
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 1000;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.search-results::-webkit-scrollbar {
+    width: 8px;
+}
+
+.search-results::-webkit-scrollbar-track {
+    background: var(--rm-bg-secondary);
+    border-radius: var(--rm-border-radius-sm);
+}
+
+.search-results::-webkit-scrollbar-thumb {
+    background: var(--rm-primary);
+    border-radius: var(--rm-border-radius-sm);
+}
+
+.search-results::-webkit-scrollbar-thumb:hover {
+    background: var(--rm-primary-dark);
+}
+
+.search-result-item {
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: var(--transition-fast);
+    border-bottom: 1px solid var(--rm-border-primary);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: transparent;
+}
+
+.search-result-item:last-child {
+    border-bottom: none;
+}
+
+.search-result-item:hover {
+    background: var(--rm-bg-accent);
+}
+
+.search-result-item:active {
+    background: var(--rm-bg-secondary);
+    transform: scale(0.99);
+}
+
+.search-result-item i {
+    color: var(--rm-primary);
+    font-size: 18px;
+    flex-shrink: 0;
+    width: 24px;
+    text-align: center;
+}
+
+.search-result-item .suggestion-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.search-result-item .suggestion-name {
+    font-weight: 500;
+    color: var(--rm-text-primary);
+    font-size: clamp(0.875rem, 2vw, 0.9375rem);
+    line-height: 1.5;
+    margin-bottom: 4px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.search-result-item .suggestion-details {
+    font-size: clamp(0.75rem, 1.5vw, 0.8125rem);
+    color: var(--rm-text-secondary);
+    line-height: 1.4;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.search-result-item .suggestion-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 20px;
+    color: var(--rm-text-secondary);
+    font-size: clamp(0.875rem, 2vw, 0.9375rem);
+}
+
+.search-result-item .suggestion-loading i {
+    color: var(--rm-primary);
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Melhorias para mobile */
+@media (max-width: 768px) {
+    .search-results {
+        max-height: 300px;
+        border-radius: var(--rm-border-radius-md);
+    }
+    
+    .search-result-item {
+        padding: 12px 14px;
+        gap: 10px;
+    }
+    
+    .search-result-item i {
+        font-size: 16px;
+        width: 20px;
+    }
+}
+
 /* ===== BOTÕES DE AÇÃO FIBRAMAR ===== */
 .action-buttons {
     display: flex;
@@ -1710,7 +1843,6 @@ body {
 @keyframes spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
-}
 }
 
 /* Analytics Grid */

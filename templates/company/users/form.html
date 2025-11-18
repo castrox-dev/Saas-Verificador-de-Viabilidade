@@ -118,25 +118,20 @@
             {% endif %}
 
             {% if form.password1 %}
-            <div class="row">
-              <div class="col-md-6">
-                <div class="form-group mb-3">
-                  <label for="{{ form.password1.id_for_label }}" class="form-label">{{ form.password1.label }}</label>
-                  {{ form.password1 }}
-                  {% if form.password1.errors %}
-                    <div class="text-danger">{{ form.password1.errors }}</div>
-                  {% endif %}
-                </div>
+            <div class="form-group mb-3">
+              <label for="{{ form.password1.id_for_label }}" class="form-label">{{ form.password1.label }}</label>
+              <div class="input-group">
+                {{ form.password1 }}
+                <button type="button" class="btn btn-outline-primary" id="generatePasswordBtn">
+                  <i class="fas fa-key me-2"></i>Gerar Senha
+                </button>
               </div>
-              <div class="col-md-6">
-                <div class="form-group mb-3">
-                  <label for="{{ form.password2.id_for_label }}" class="form-label">{{ form.password2.label }}</label>
-                  {{ form.password2 }}
-                  {% if form.password2.errors %}
-                    <div class="text-danger">{{ form.password2.errors }}</div>
-                  {% endif %}
-                </div>
-              </div>
+              {% if form.password1.help_text %}
+                <div class="form-text">{{ form.password1.help_text }}</div>
+              {% endif %}
+              {% if form.password1.errors %}
+                <div class="text-danger">{{ form.password1.errors }}</div>
+              {% endif %}
             </div>
             {% endif %}
 
@@ -306,6 +301,68 @@
       phoneInput.addEventListener('input', enforcePhoneMask);
       phoneInput.addEventListener('blur', enforcePhoneMask);
       enforcePhoneMask();
+    }
+
+    // Gerador de senha (letras e números para novos usuários, apenas números para antigos)
+    const generatePasswordBtn = document.getElementById('generatePasswordBtn');
+    const passwordInput = document.getElementById('id_password1');
+    
+    if (generatePasswordBtn && passwordInput) {
+      generatePasswordBtn.addEventListener('click', function() {
+        // Verificar se é novo usuário ou edição
+        const isNewUser = passwordInput.getAttribute('data-is-new-user') === 'true';
+        let password = '';
+        
+        if (isNewUser) {
+          // Novo usuário: senha alfanumérica (letras e números)
+          const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+          const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+          const digits = '0123456789';
+          const allChars = lowercase + uppercase + digits;
+          
+          // Garantir pelo menos uma letra minúscula, uma maiúscula e um número
+          password = [
+            lowercase[Math.floor(Math.random() * lowercase.length)],
+            uppercase[Math.floor(Math.random() * uppercase.length)],
+            digits[Math.floor(Math.random() * digits.length)]
+          ];
+          
+          // Preencher o resto com caracteres aleatórios
+          for (let i = 0; i < 5; i++) {
+            password.push(allChars[Math.floor(Math.random() * allChars.length)]);
+          }
+          
+          // Embaralhar a senha
+          password = password.sort(() => Math.random() - 0.5).join('');
+        } else {
+          // Usuário antigo ou superusuário: senha apenas números (padrão antigo)
+          for (let i = 0; i < 8; i++) {
+            password += Math.floor(Math.random() * 10).toString();
+          }
+        }
+        
+        // Preencher o campo de senha
+        passwordInput.value = password;
+        passwordInput.removeAttribute('readonly');
+        
+        // Adicionar efeito visual
+        passwordInput.style.background = '#d4edda';
+        setTimeout(() => {
+          passwordInput.style.background = '';
+        }, 500);
+        
+        // Feedback ao usuário
+        const originalText = generatePasswordBtn.innerHTML;
+        generatePasswordBtn.innerHTML = '<i class="fas fa-check me-2"></i>Senha Gerada!';
+        generatePasswordBtn.classList.remove('btn-outline-primary');
+        generatePasswordBtn.classList.add('btn-success');
+        
+        setTimeout(() => {
+          generatePasswordBtn.innerHTML = originalText;
+          generatePasswordBtn.classList.remove('btn-success');
+          generatePasswordBtn.classList.add('btn-outline-primary');
+        }, 1500);
+      });
     }
   });
 </script>
