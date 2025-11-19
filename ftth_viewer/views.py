@@ -647,19 +647,40 @@ def api_verificar_viabilidade(request, company_slug=None):
         if not ctos:
             return JsonResponse({"erro": "Nenhum CTO encontrado" + (" nos mapas selecionados" if map_ids_list else "")}, status=404)
         
-        # Fase 1: Filtrar por distância euclidiana
+        # Fase 1: Filtrar por distância euclidiana (otimizado)
+        # Limitar busca inicial a CTOs próximos (raio de ~5km) para reduzir processamento
         ctos_com_distancia = []
+        MAX_INITIAL_RADIUS = 5000  # 5km em metros
+        
         for cto in ctos:
             try:
                 cto_lat = float(cto["lat"])
                 cto_lon = float(cto["lng"])
                 distancia_euclidiana = calcular_distancia(lat, lon, cto_lat, cto_lon)
-                ctos_com_distancia.append({
-                    **cto,
-                    "distancia_euclidiana": distancia_euclidiana
-                })
+                
+                # Filtrar apenas CTOs dentro do raio inicial (otimização)
+                if distancia_euclidiana <= MAX_INITIAL_RADIUS:
+                    ctos_com_distancia.append({
+                        **cto,
+                        "distancia_euclidiana": distancia_euclidiana
+                    })
             except (ValueError, TypeError, KeyError):
                 continue
+        
+        # Se não encontrou CTOs próximos, expandir busca
+        if not ctos_com_distancia:
+            # Buscar todos os CTOs sem filtro de raio
+            for cto in ctos:
+                try:
+                    cto_lat = float(cto["lat"])
+                    cto_lon = float(cto["lng"])
+                    distancia_euclidiana = calcular_distancia(lat, lon, cto_lat, cto_lon)
+                    ctos_com_distancia.append({
+                        **cto,
+                        "distancia_euclidiana": distancia_euclidiana
+                    })
+                except (ValueError, TypeError, KeyError):
+                    continue
         
         if not ctos_com_distancia:
             return JsonResponse({"erro": "Nenhum CTO válido encontrado"}, status=404)
@@ -683,8 +704,8 @@ def api_verificar_viabilidade(request, company_slug=None):
             except (ValueError, TypeError, KeyError):
                 continue
         
-        # Executar cálculos em paralelo
-        with ThreadPoolExecutor(max_workers=4) as executor:
+        # Executar cálculos em paralelo (aumentar workers para mais velocidade)
+        with ThreadPoolExecutor(max_workers=min(5, len(tarefas))) as executor:
             futures = {
                 executor.submit(calcular_rota_ruas_single, tarefa[0], tarefa[1], tarefa[2], tarefa[3], tarefa[4]): i 
                 for i, tarefa in enumerate(tarefas)

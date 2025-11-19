@@ -276,7 +276,8 @@ def calcular_rota_ruas(lat1, lon1, lat2, lon2):
         }
         headers = {"User-Agent": "FTTH-Viewer-Django/1.0"}
         
-        timeout = getattr(settings, 'FTTH_ROUTING_TIMEOUT', 15)
+        # Reduzir timeout para respostas mais rápidas (5 segundos ao invés de 15)
+        timeout = min(getattr(settings, 'FTTH_ROUTING_TIMEOUT', 15), 5)  # Máximo 5 segundos
         resp = requests.get(url, params=params, headers=headers, timeout=timeout)
         resp.raise_for_status()
         data = resp.json()
@@ -468,6 +469,15 @@ def set_cached_geocoding(endereco, data):
 
 def get_all_ctos(company=None):
     """Retorna todos os CTOs apenas dos arquivos enviados via upload (banco de dados)"""
+    from django.core.cache import cache
+    
+    # Verificar cache primeiro (por empresa)
+    if company:
+        cache_key = f'get_all_ctos_{company.id}'
+        cached_coords = cache.get(cache_key)
+        if cached_coords is not None:
+            return cached_coords
+    
     coords = []
     
     # Primeiro, tentar buscar do banco de dados
@@ -479,8 +489,11 @@ def get_all_ctos(company=None):
             # Se não foi fornecida empresa, não retornar nada
             return []
         
-        # Filtrar APENAS por empresa específica
-        map_files = CTOMapFile.objects.filter(company=company, file__isnull=False)
+        # Filtrar APENAS por empresa específica - otimizar query
+        map_files = CTOMapFile.objects.filter(
+            company=company, 
+            file__isnull=False
+        ).only('id', 'file', 'company_id').select_related('company')
         
         # Processar cada arquivo do banco
         for map_file in map_files:
@@ -530,6 +543,11 @@ def get_all_ctos(company=None):
     
     # Não buscar mais de pastas antigas ou diretórios do sistema
     # Apenas usar mapas que foram enviados via upload (banco de dados)
+    
+    # Cachear resultado por 1 hora (CTOs não mudam frequentemente)
+    if company:
+        cache_key = f'get_all_ctos_{company.id}'
+        cache.set(cache_key, coords, 3600)  # 1 hora
     
     return coords
 

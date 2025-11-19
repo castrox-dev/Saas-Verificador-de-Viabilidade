@@ -605,6 +605,9 @@ def company_map_upload(request, company_slug):
                         f'api_arquivos_{request.user.id}_none',
                     ])
                 
+                # Invalidar cache de CTOs também
+                cache_keys_to_delete.append(f'get_all_ctos_{company.id}')
+                
                 # Deletar todos os caches relacionados
                 if cache_keys_to_delete:
                     cache.delete_many(cache_keys_to_delete)

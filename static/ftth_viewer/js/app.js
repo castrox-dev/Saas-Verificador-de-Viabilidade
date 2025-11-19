@@ -3649,31 +3649,185 @@ function toggleCursorMode() {
     }
 }
 
+// Debounce para evitar múltiplos cliques
+let lastClickTime = 0;
+const CLICK_DEBOUNCE_MS = 500; // 500ms entre cliques
+
 // Função para lidar com cliques no mapa quando em modo marcação
 async function onMapClick(e) {
     if (!isClickMode) return;
     
+    // Debounce: ignorar cliques muito rápidos
+    const now = Date.now();
+    if (now - lastClickTime < CLICK_DEBOUNCE_MS) {
+        return;
+    }
+    lastClickTime = now;
+    
     const lat = e.latlng.lat;
     const lng = e.latlng.lng;
     
-    // Tentar obter endereço via geocodificação reversa
-    let addressText = `Coordenadas: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-    try {
-        const geoResponse = await fetch(`${API_BASE}/geocode?lat=${lat}&lon=${lng}`);
-        if (geoResponse.ok) {
-            const geoData = await geoResponse.json();
-            if (geoData.endereco_completo) {
-                addressText = geoData.endereco_completo;
-            }
-        }
-    } catch (error) {
-        // Ignorar erro de geocodificação, usar coordenadas como fallback
-        console.warn('Erro ao geocodificar coordenadas:', error);
+    // Mostrar marcador IMEDIATAMENTE para feedback visual rápido
+    map.setView([lat, lng], 16);
+    
+    // Remover marcador anterior se existir
+    if (window.searchMarker && map.hasLayer(window.searchMarker)) {
+        map.removeLayer(window.searchMarker);
     }
     
-    // Usar o mesmo método de marcação com confirmação que funciona em todas as pesquisas
-    // NÃO alternar o modo aqui - será alternado após o usuário clicar em Sim/Não no popup
-    await markLocationWithConfirmation(lat, lng, addressText, true); // Passar flag indicando que veio do modo marcação
+    // Criar ícone do marcador de pesquisa
+    const searchIcon = L.divIcon({
+        className: 'search-marker',
+        html: '<div style="background-color: #ff4444; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(255,68,68,0.8); position: relative;"><div style="position: absolute; top: -2px; left: -2px; width: 20px; height: 20px; border-radius: 50%; background-color: rgba(255,68,68,0.4); animation: pulse 1s infinite;"></div></div>',
+        iconSize: [22, 22],
+        iconAnchor: [11, 11]
+    });
+    
+    // Adicionar marcador IMEDIATAMENTE
+    window.searchMarker = L.marker([lat, lng], { icon: searchIcon }).addTo(map);
+    
+    // Tentar obter endereço via geocodificação reversa (com timeout curto)
+    let addressText = `Coordenadas: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    
+    // Fazer geocodificação em paralelo (não bloquear)
+    const geoController = new AbortController();
+    const geoTimeout = setTimeout(() => geoController.abort(), 2000); // Timeout de 2 segundos
+    
+    const geoPromise = fetch(`${API_BASE}/geocode?lat=${lat}&lon=${lng}`, {
+        signal: geoController.signal
+    }).then(response => {
+        clearTimeout(geoTimeout);
+        if (response.ok) {
+            return response.json();
+        }
+        return null;
+    }).then(geoData => {
+        if (geoData && geoData.endereco_completo) {
+            addressText = geoData.endereco_completo;
+            // Atualizar popup se já estiver aberto
+            if (window.searchMarker && window.searchMarker.isPopupOpen()) {
+                window.searchMarker.setPopupContent(createLocationPopupContent(lat, lng, addressText, true));
+            }
+        }
+    }).catch(error => {
+        // Ignorar erro silenciosamente
+        console.warn('Geocodificação em background falhou:', error);
+    });
+    
+    // Mostrar popup IMEDIATAMENTE (sem esperar geocodificação)
+    const popupContent = createLocationPopupContent(lat, lng, addressText, true);
+    window.searchMarker.bindPopup(popupContent, {
+        closeOnClick: false,
+        autoClose: false,
+        closeButton: true
+    }).openPopup();
+    
+    // Aguardar geocodificação (mas não bloquear)
+    await geoPromise;
+    
+    // Usar o mesmo método de marcação com confirmação
+    // A flag fromClickMode será usada no popup
+    const popupNode = window.searchMarker.getPopup().getElement();
+    if (popupNode) {
+        attachPopupListeners(popupNode, lat, lng, addressText, true);
+    }
+}
+
+// Função helper para criar conteúdo do popup
+function createLocationPopupContent(lat, lng, addressText, fromClickMode) {
+    return `
+        <div class="location-popup">
+            <h4 style="margin: 0 0 10px 0; font-size: 16px;">📍 Local Selecionado</h4>
+            <p style="margin: 0 0 15px 0; color: #666; font-size: 14px;">${addressText}</p>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button class="confirm-verify-btn" style="padding: 8px 16px; background: #4facfe; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">
+                    <i class="fas fa-check"></i> Verificar Viabilidade
+                </button>
+                <button class="cancel-verify-btn" style="padding: 8px 16px; background: #ccc; color: #333; border: none; border-radius: 4px; cursor: pointer;">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+// Função helper para anexar listeners do popup
+function attachPopupListeners(popupNode, lat, lng, addressText, fromClickMode) {
+    if (!popupNode) return;
+    
+    const confirmBtn = popupNode.querySelector('.confirm-verify-btn');
+    const cancelBtn = popupNode.querySelector('.cancel-verify-btn');
+    
+    if (confirmBtn && !confirmBtn.hasAttribute('data-connected')) {
+        confirmBtn.setAttribute('data-connected', 'true');
+        confirmBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (fromClickMode && isClickMode) {
+                window.shouldReturnToNavigationMode = true;
+            }
+            
+            if (window.searchMarker && typeof window.searchMarker.setPopupContent === 'function') {
+                window.searchMarker.setPopupContent('<div class="loading-popup">Verificando viabilidade...</div>');
+            }
+            
+            try {
+                await verificarViabilidade(lat, lng, addressText);
+                if (window.shouldReturnToNavigationMode && isClickMode) {
+                    setTimeout(() => {
+                        if (isClickMode) {
+                            toggleCursorMode();
+                        }
+                        window.shouldReturnToNavigationMode = false;
+                    }, 300);
+                }
+            } catch (error) {
+                console.error('Erro na verificação de viabilidade:', error);
+                showNotification('Erro ao verificar viabilidade', 'error');
+                if (window.shouldReturnToNavigationMode && isClickMode) {
+                    setTimeout(() => {
+                        if (isClickMode) {
+                            toggleCursorMode();
+                        }
+                        window.shouldReturnToNavigationMode = false;
+                    }, 300);
+                }
+            }
+        });
+    }
+    
+    if (cancelBtn && !cancelBtn.hasAttribute('data-connected')) {
+        cancelBtn.setAttribute('data-connected', 'true');
+        cancelBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            
+            if (window.searchMarker) {
+                try {
+                    window.searchMarker.closePopup();
+                } catch (err) {}
+            }
+            
+            try {
+                map.closePopup();
+            } catch (err) {}
+            
+            if (window.searchMarker && map.hasLayer(window.searchMarker)) {
+                map.removeLayer(window.searchMarker);
+            }
+            window.searchMarker = null;
+            
+            if (fromClickMode && isClickMode) {
+                setTimeout(() => {
+                    if (isClickMode) {
+                        toggleCursorMode();
+                    }
+                }, 100);
+            }
+        });
+    }
 }
 
 // Disponibilizar ação global para fechar a verificação e resetar o mapa
