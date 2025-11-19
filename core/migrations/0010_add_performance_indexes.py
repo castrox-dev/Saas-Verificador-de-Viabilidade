@@ -1,6 +1,4 @@
 # Generated migration for performance indexes
-# Execute: python manage.py makemigrations --empty core
-# Depois adicione este conteúdo
 
 from django.db import migrations, models
 
@@ -8,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0001_initial'),  # Ajuste conforme sua última migração
+        ('core', '0009_customuser_must_change_password'),
     ]
 
     operations = [
