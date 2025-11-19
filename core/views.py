@@ -172,7 +172,10 @@ def rm_login_view(request):
 @login_required
 @rm_admin_required
 def company_list(request):
-    qs = Company.objects.all().order_by('name')
+    from django.core.paginator import Paginator
+    
+    # Otimizar query com only() para campos necessários
+    qs = Company.objects.all().only('id', 'name', 'slug', 'cnpj', 'email', 'is_active').order_by('name')
     q = request.GET.get('q', '').strip()
     if q:
         qs = qs.filter(Q(name__icontains=q) | Q(cnpj__icontains=q) | Q(email__icontains=q))
@@ -722,8 +725,16 @@ def company_verificar_coordenadas(request, company_slug):
 @login_required
 @company_access_required(require_admin=False)
 def company_user_list(request, company_slug):
+    from django.core.paginator import Paginator
+    
     company = get_object_or_404(Company, slug=company_slug)
-    users = CustomUser.objects.filter(company=company).order_by('username')
+    users_qs = CustomUser.objects.filter(company=company).select_related('company').order_by('username')
+    
+    # Paginação
+    paginator = Paginator(users_qs, 25)  # 25 usuários por página
+    page_number = request.GET.get('page')
+    users = paginator.get_page(page_number)
+    
     return render(request, 'company/users/list.html', {'users': users, 'company': company})
 
 
@@ -731,13 +742,24 @@ def company_user_list(request, company_slug):
 @company_access_required(require_admin=True)
 def company_map_list(request, company_slug):
     """Lista de mapas da empresa (painel admin)"""
+    from django.core.paginator import Paginator
+    
     if not (request.user.is_company_admin or request.user.is_rm_admin or request.user.is_superuser):
         return HttpResponseForbidden()
     company = get_object_or_404(Company, slug=company_slug)
     if not (request.user.is_rm_admin or request.user.is_superuser) and request.user.company != company:
         return HttpResponseForbidden()
 
-    maps = CTOMapFile.objects.filter(company=company)
+    # Otimizar query com select_related
+    maps_qs = CTOMapFile.objects.filter(company=company).select_related(
+        'company', 'uploaded_by'
+    ).order_by('-uploaded_at')
+    
+    # Paginação
+    paginator = Paginator(maps_qs, 20)  # 20 mapas por página
+    page_number = request.GET.get('page')
+    maps = paginator.get_page(page_number)
+    
     return render(request, 'company/maps/list.html', {'maps': maps, 'company': company})
 
 
@@ -1079,34 +1101,42 @@ def company_reports(request, company_slug):
 def rm_map_list(request):
     """Lista de todos os mapas (visão RM), agrupados por empresa"""
     from django.db.models import Count, Prefetch
+    from django.core.paginator import Paginator
     
     # Buscar todas as empresas com seus mapas, ordenadas por nome
-    # O related_name é 'cto_maps', não 'ctomapfile'
-    companies = Company.objects.annotate(
+    # Otimizar com select_related e prefetch_related
+    companies_qs = Company.objects.annotate(
         map_count=Count('cto_maps')
-    ).filter(map_count__gt=0).order_by('name')
+    ).filter(map_count__gt=0).select_related().order_by('name')
     
-    # Agrupar mapas por empresa
+    # Paginação de empresas
+    paginator = Paginator(companies_qs, 15)  # 15 empresas por página
+    page_number = request.GET.get('page')
+    companies_page = paginator.get_page(page_number)
+    
+    # Agrupar mapas por empresa (apenas para empresas da página atual)
     companies_with_maps = []
-    for company in companies:
+    for company in companies_page:
+        # Limitar a 10 mapas mais recentes por empresa para performance
         maps = CTOMapFile.objects.filter(company=company).select_related(
-            'uploaded_by'
-        ).order_by('-uploaded_at')
+            'uploaded_by', 'company'
+        ).order_by('-uploaded_at')[:10]
         companies_with_maps.append({
             'company': company,
             'maps': maps,
-            'count': maps.count()
+            'count': company.map_count  # Usar o count do annotation
         })
     
-    # Empresas sem mapas (se necessário)
+    # Empresas sem mapas (opcional, pode ser removido se não for usado)
     companies_without_maps = Company.objects.annotate(
         map_count=Count('cto_maps')
-    ).filter(map_count=0).order_by('name')
+    ).filter(map_count=0).order_by('name')[:10]  # Limitar a 10
     
     context = {
         'companies_with_maps': companies_with_maps,
         'companies_without_maps': companies_without_maps,
-        'total_companies': len(companies_with_maps),
+        'total_companies': paginator.count,
+        'companies_page': companies_page,  # Para paginação no template
     }
     
     return render(request, 'rm/maps/list.html', context)

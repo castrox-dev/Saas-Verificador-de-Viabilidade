@@ -97,13 +97,22 @@
      </script>
     <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
     <link rel="apple-touch-icon" href="{% static 'img/Logo_rmsys.png' %}">
+    
+    <!-- Preload de recursos críticos -->
+    <link rel="preload" href="{% static 'css/theme_colors.css' %}" as="style">
+    <link rel="preload" href="{% static 'css/styles.css' %}" as="style">
+    <link rel="preload" href="{% static 'js/global-loading.js' %}" as="script">
+    
+    <!-- CSS crítico -->
     <link rel="stylesheet" href="{% static 'css/theme_colors.css' %}" />
     <link rel="stylesheet" href="{% static 'css/theme_rm.css' %}" />
     <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
     <link rel="stylesheet" href="{% static 'css/global.css' %}" />
     <link rel="stylesheet" href="{% static 'css/mobile-scroll-fix.css' %}" />
-    <link rel="manifest" href="{% static 'manifest.json' %}" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="manifest" href="{% static 'manifest.json' %}">
+    
+    <!-- Font Awesome com defer -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" crossorigin="anonymous">
     <style>
       /* Hamburger Menu Styles */
       .navbar-toggler {
@@ -457,8 +466,10 @@
       });
     </script>
     
-    <!-- Loading States and Toast Notifications -->
-    <script src="{% static 'js/loading-states.js' %}"></script>
+    <!-- Global Loading Screen (crítico - sem defer) -->
+    <script src="{% static 'js/global-loading.js' %}"></script>
+    <!-- Loading States (pode ser defer) -->
+    <script src="{% static 'js/loading-states.js' %}" defer></script>
     <!-- toast-notifications.js removido -->
     
     {% block extra_scripts %}{% endblock %}

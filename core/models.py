@@ -20,6 +20,11 @@ class Company(models.Model):
         verbose_name = "Empresa"
         verbose_name_plural = "Empresas"
         ordering = ['name']
+        indexes = [
+            models.Index(fields=['slug']),
+            models.Index(fields=['is_active', 'name']),
+            models.Index(fields=['cnpj']),
+        ]
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -56,7 +61,8 @@ class CustomUser(AbstractUser):
         null=True, 
         blank=True,
         related_name='users',
-        verbose_name="Empresa"
+        verbose_name="Empresa",
+        db_index=True
     )
     phone = models.CharField(max_length=20, blank=True, verbose_name="Telefone")
     must_change_password = models.BooleanField(
@@ -64,12 +70,17 @@ class CustomUser(AbstractUser):
         verbose_name="Deve mudar senha",
         help_text="Força a mudança de senha no primeiro acesso"
     )
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criado em", db_index=True)
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
 
     class Meta:
         verbose_name = "Usuário"
         verbose_name_plural = "Usuários"
+        indexes = [
+            models.Index(fields=['company', 'role']),
+            models.Index(fields=['username']),
+            models.Index(fields=['email']),
+        ]
 
     def clean(self):
         """Validações customizadas"""
@@ -171,15 +182,17 @@ class CTOMapFile(models.Model):
         Company, 
         on_delete=models.CASCADE,
         related_name='cto_maps',
-        verbose_name="Empresa"
+        verbose_name="Empresa",
+        db_index=True
     )
     uploaded_by = models.ForeignKey(
         CustomUser, 
         on_delete=models.CASCADE,
         related_name='uploaded_maps',
-        verbose_name="Enviado por"
+        verbose_name="Enviado por",
+        db_index=True
     )
-    uploaded_at = models.DateTimeField(auto_now_add=True, verbose_name="Enviado em")
+    uploaded_at = models.DateTimeField(auto_now_add=True, verbose_name="Enviado em", db_index=True)
     
     # Status de processamento
     processing_status = models.CharField(
