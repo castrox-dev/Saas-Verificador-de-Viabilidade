@@ -468,22 +468,35 @@ html {
 }
 
 /* Estilos para popups customizados */
-.viability-popup {
+.viability-popup,
+.location-popup {
     background: var(--rm-card-bg);
     border: 1px solid var(--rm-card-border);
     border-radius: var(--rm-border-radius-md);
     box-shadow: var(--rm-card-shadow);
     padding: clamp(8px, 2vw, 12px);
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
-.viability-popup-title {
+.viability-popup-title,
+.location-popup-title {
     margin: 0 0 8px 0;
-    font-size: 14px;
+    font-size: clamp(14px, 3.5vw, 18px);
     color: var(--rm-text-primary);
     font-weight: 600;
 }
 
-.popup-actions {
+.location-popup-address {
+    margin: 0 0 15px 0;
+    color: var(--rm-text-secondary);
+    font-size: clamp(14px, 3.5vw, 15px);
+    word-wrap: break-word;
+    line-height: 1.4;
+}
+
+.popup-actions,
+.location-popup-actions {
     margin-top: clamp(6px, 2vw, 12px);
     display: flex;
     gap: clamp(4px, 2vw, 8px);
@@ -505,12 +518,21 @@ html {
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
     box-shadow: var(--rm-shadow-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
 }
 
 .confirm-verify-btn:hover {
     background: var(--rm-success-dark);
     box-shadow: var(--rm-shadow);
     transform: translateY(-1px);
+}
+
+.confirm-verify-btn:active {
+    transform: scale(0.98);
+    opacity: 0.9;
 }
 
 .cancel-verify-btn {
@@ -528,12 +550,42 @@ html {
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
     box-shadow: var(--rm-shadow-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
 }
 
 .cancel-verify-btn:hover {
     background: var(--rm-error-dark);
     box-shadow: var(--rm-shadow);
     transform: translateY(-1px);
+}
+
+.cancel-verify-btn:active {
+    transform: scale(0.98);
+    opacity: 0.9;
+}
+
+/* Estilos mobile para botões */
+@media (max-width: 768px) {
+    .confirm-verify-btn.mobile-button,
+    .cancel-verify-btn.mobile-button {
+        width: 100%;
+        padding: 12px 20px;
+        min-height: 48px;
+        font-size: 16px;
+    }
+    
+    .location-popup-actions {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .viability-popup .popup-actions {
+        flex-direction: column;
+        gap: 12px;
+    }
 }
 
 /* Estilos específicos para o popup do mapa clicado */
@@ -2794,6 +2846,34 @@ Dark Mode Colors:
         padding: 12px 16px;
         font-size: 0.875rem;
         min-height: 44px;
+    }
+    
+    .confirm-verify-btn.mobile-button,
+    .cancel-verify-btn.mobile-button {
+        width: 100%;
+        padding: 12px 20px;
+        min-height: 48px;
+        font-size: 16px;
+    }
+    
+    .location-popup-actions,
+    .viability-popup .popup-actions {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .viability-popup,
+    .location-popup {
+        padding: clamp(12px, 3vw, 20px);
+    }
+    
+    .viability-popup-title,
+    .location-popup-title {
+        font-size: 18px;
+    }
+    
+    .location-popup-address {
+        font-size: 15px;
     }
     
     .viability-close-btn {

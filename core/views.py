@@ -27,6 +27,9 @@ from .ticket_views import (
     rm_ticket_list, rm_ticket_detail,
     get_new_messages, rm_get_new_messages
 )
+from .notification_views import (
+    get_notifications, mark_notification_read, mark_all_notifications_read, get_unread_count
+)
 from .permissions import (
     is_rm_admin, is_company_admin, can_manage_users,
     rm_admin_required, user_management_required, company_access_required, company_access_required_json

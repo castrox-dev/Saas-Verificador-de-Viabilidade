@@ -539,6 +539,71 @@ class TicketMessage(models.Model):
     def __str__(self):
         return f"Mensagem {self.id} - Ticket {self.ticket.ticket_number}"
 
+
+class TicketNotification(models.Model):
+    """Modelo para notificações de tickets"""
+    
+    NOTIFICATION_TYPES = [
+        ('ticket_created', 'Ticket Criado'),
+        ('new_message', 'Nova Mensagem'),
+        ('status_changed', 'Status Alterado'),
+        ('assigned', 'Ticket Atribuído'),
+        ('priority_changed', 'Prioridade Alterada'),
+    ]
+    
+    ticket = models.ForeignKey(
+        Ticket,
+        on_delete=models.CASCADE,
+        related_name='notifications',
+        verbose_name="Ticket"
+    )
+    notification_type = models.CharField(
+        max_length=20,
+        choices=NOTIFICATION_TYPES,
+        verbose_name="Tipo de Notificação"
+    )
+    recipient = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='ticket_notifications',
+        verbose_name="Destinatário"
+    )
+    message = models.TextField(verbose_name="Mensagem")
+    read = models.BooleanField(default=False, verbose_name="Lida", db_index=True)
+    read_at = models.DateTimeField(null=True, blank=True, verbose_name="Lida em")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criado em", db_index=True)
+    
+    # Campos adicionais para contexto
+    created_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_notifications',
+        verbose_name="Criado por"
+    )
+    
+    class Meta:
+        verbose_name = "Notificação de Ticket"
+        verbose_name_plural = "Notificações de Tickets"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['recipient', 'read', 'created_at']),
+            models.Index(fields=['ticket', 'created_at']),
+            models.Index(fields=['notification_type', 'created_at']),
+        ]
+    
+    def mark_as_read(self):
+        """Marca a notificação como lida"""
+        if not self.read:
+            from django.utils import timezone
+            self.read = True
+            self.read_at = timezone.now()
+            self.save()
+    
+    def __str__(self):
+        return f"Notificação {self.id} - {self.get_notification_type_display()} - Ticket {self.ticket.ticket_number}"
+
 # -----------------------------------------------------------------------------
 # Controle opcional de sessão única por usuário
 # -----------------------------------------------------------------------------

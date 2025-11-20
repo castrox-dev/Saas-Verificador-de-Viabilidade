@@ -4,7 +4,7 @@ from django.contrib.admin import AdminSite
 from django.utils.html import format_html
 from django.urls import reverse
 from django.utils import timezone
-from .models import Company, CustomUser, CTOMapFile, Ticket, TicketMessage
+from .models import Company, CustomUser, CTOMapFile, Ticket, TicketMessage, TicketNotification
 
 class RMOnlyAdminSite(AdminSite):
     site_header = "RM Systems Admin"
@@ -356,6 +356,8 @@ class TicketAdmin(admin.ModelAdmin):
         return qs.none()
 
 @admin.register(TicketMessage)
+
+
 class TicketMessageAdmin(admin.ModelAdmin):
     list_display = [
         'id',
@@ -441,3 +443,18 @@ rm_admin_site.register(CustomUser, CustomUserAdmin)
 rm_admin_site.register(CTOMapFile, CTOMapFileAdmin)
 rm_admin_site.register(Ticket, TicketAdmin)
 rm_admin_site.register(TicketMessage, TicketMessageAdmin)
+
+
+@admin.register(TicketNotification)
+class TicketNotificationAdmin(admin.ModelAdmin):
+    list_display = ('id', 'ticket', 'notification_type', 'recipient', 'read', 'created_at')
+    list_filter = ('notification_type', 'read', 'created_at')
+    search_fields = ('ticket__ticket_number', 'recipient__username', 'message')
+    readonly_fields = ('created_at', 'read_at')
+    date_hierarchy = 'created_at'
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('ticket', 'recipient', 'created_by')
+
+rm_admin_site.register(TicketNotification, TicketNotificationAdmin)

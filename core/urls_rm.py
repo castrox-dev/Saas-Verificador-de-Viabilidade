@@ -52,4 +52,10 @@ urlpatterns = [
     path('tickets/', views.rm_ticket_list, name='ticket_list'),
     path('tickets/<int:ticket_id>/', views.rm_ticket_detail, name='ticket_detail'),
     path('tickets/<int:ticket_id>/mensagens/', views.rm_get_new_messages, name='get_new_messages'),
+    
+    # Notificações de tickets
+    path('notificacoes/', views.get_notifications, name='notifications'),
+    path('notificacoes/contagem/', views.get_unread_count, name='notifications_count'),
+    path('notificacoes/<int:notification_id>/ler/', views.mark_notification_read, name='mark_notification_read'),
+    path('notificacoes/marcar-todas-lidas/', views.mark_all_notifications_read, name='mark_all_notifications_read'),
 ]

@@ -1599,20 +1599,15 @@ async function markLocationWithConfirmation(lat, lng, addressText, fromClickMode
                           (window.innerWidth <= 768) ||
                           ('ontouchstart' in window);
     
-    const buttonStyle = isMobileDevice 
-        ? 'padding: 12px 20px; min-height: 44px; font-size: 16px; touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; width: 100%;'
-        : 'padding: 8px 16px;';
+    const mobileClass = isMobileDevice ? ' mobile-popup' : '';
+    const buttonMobileClass = isMobileDevice ? ' mobile-button' : '';
     
     const confirmPopup = `
-        <div class="viability-popup" style="touch-action: manipulation; -webkit-tap-highlight-color: transparent;">
-            <h4 class="viability-popup-title" style="font-size: ${isMobileDevice ? '18px' : '16px'};">Verificar Viabilidade?</h4>
-            <div class="popup-actions" style="display: flex; gap: ${isMobileDevice ? '12px' : '10px'}; flex-direction: ${isMobileDevice ? 'column' : 'row'};">
-                <button class="confirm-verify-btn" style="${buttonStyle} background: #4facfe; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-                    Sim
-                </button>
-                <button class="cancel-verify-btn" style="${buttonStyle} background: #ccc; color: #333; border: none; border-radius: 6px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-                    Não
-                </button>
+        <div class="viability-popup${mobileClass}">
+            <h4 class="viability-popup-title">Verificar Viabilidade?</h4>
+            <div class="popup-actions">
+                <button class="confirm-verify-btn${buttonMobileClass}">Sim</button>
+                <button class="cancel-verify-btn${buttonMobileClass}">Não</button>
             </div>
         </div>`;
     
@@ -3960,19 +3955,18 @@ function createLocationPopupContent(lat, lng, addressText, fromClickMode) {
                           (window.innerWidth <= 768) ||
                           ('ontouchstart' in window);
     
-    const buttonStyle = isMobileDevice 
-        ? 'padding: 12px 20px; min-height: 44px; font-size: 16px; touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none;'
-        : 'padding: 8px 16px;';
+    const mobileClass = isMobileDevice ? ' mobile-popup' : '';
+    const buttonMobileClass = isMobileDevice ? ' mobile-button' : '';
     
     return `
-        <div class="location-popup" style="touch-action: manipulation; -webkit-tap-highlight-color: transparent;">
-            <h4 style="margin: 0 0 10px 0; font-size: ${isMobileDevice ? '18px' : '16px'};">📍 Local Selecionado</h4>
-            <p style="margin: 0 0 15px 0; color: #666; font-size: ${isMobileDevice ? '15px' : '14px'}; word-wrap: break-word;">${addressText}</p>
-            <div style="display: flex; gap: ${isMobileDevice ? '12px' : '10px'}; justify-content: center; flex-wrap: wrap;">
-                <button class="confirm-verify-btn" style="${buttonStyle} background: #4facfe; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; width: ${isMobileDevice ? '100%' : 'auto'}; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+        <div class="location-popup${mobileClass}">
+            <h4 class="location-popup-title">📍 Local Selecionado</h4>
+            <p class="location-popup-address">${addressText}</p>
+            <div class="location-popup-actions">
+                <button class="confirm-verify-btn${buttonMobileClass}">
                     <i class="fas fa-check"></i> Verificar Viabilidade
                 </button>
-                <button class="cancel-verify-btn" style="${buttonStyle} background: #ccc; color: #333; border: none; border-radius: 6px; cursor: pointer; width: ${isMobileDevice ? '100%' : 'auto'}; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                <button class="cancel-verify-btn${buttonMobileClass}">
                     <i class="fas fa-times"></i> Cancelar
                 </button>
             </div>
