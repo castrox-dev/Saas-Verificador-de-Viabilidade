@@ -1441,10 +1441,20 @@ async function markLocationWithConfirmation(lat, lng, addressText, fromClickMode
         
         if (confirmBtn && !confirmBtn.hasAttribute('data-connected')) {
             confirmBtn.setAttribute('data-connected', 'true');
-            confirmBtn.addEventListener('click', async (e) => {
+            
+            // Função para lidar com o clique/toque
+            const handleConfirm = async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                e.stopImmediatePropagation();
                 console.log('Botão Sim clicado');
+                
+                // Prevenir fechamento do popup
+                if (window.searchMarker && window.searchMarker.getPopup()) {
+                    const popup = window.searchMarker.getPopup();
+                    popup.options.closeOnClick = false;
+                    popup.options.autoClose = false;
+                }
                 
                 // Se veio do modo marcação, marcar para voltar ao modo navegação após verificação
                 if (fromClickMode && isClickMode) {
@@ -1483,12 +1493,21 @@ async function markLocationWithConfirmation(lat, lng, addressText, fromClickMode
                         }, 300);
                     }
                 }
-            });
+            };
+            
+            // Adicionar listeners para mobile e desktop
+            confirmBtn.addEventListener('click', handleConfirm);
+            confirmBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                handleConfirm(e);
+            }, { passive: false });
         }
         
         if (cancelBtn && !cancelBtn.hasAttribute('data-connected')) {
             cancelBtn.setAttribute('data-connected', 'true');
-            cancelBtn.addEventListener('click', function(e) {
+            
+            // Função para lidar com o clique/toque
+            const handleCancel = function(e) {
                 e.preventDefault();
                 e.stopPropagation();
                 e.stopImmediatePropagation();
@@ -1526,21 +1545,67 @@ async function markLocationWithConfirmation(lat, lng, addressText, fromClickMode
                 setTimeout(closeAndRemove, 50);
                 
                 return false;
-            });
+            };
+            
+            // Adicionar listeners para mobile e desktop
+            cancelBtn.addEventListener('click', handleCancel);
+            cancelBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                handleCancel(e);
+            }, { passive: false });
         }
     };
 
     // Popup de confirmação
+    const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                          (window.innerWidth <= 768) ||
+                          ('ontouchstart' in window);
+    
+    const buttonStyle = isMobileDevice 
+        ? 'padding: 12px 20px; min-height: 44px; font-size: 16px; touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; width: 100%;'
+        : 'padding: 8px 16px;';
+    
     const confirmPopup = `
-        <div class="viability-popup">
-            <h4 class="viability-popup-title">Verificar Viabilidade?</h4>
-            <div class="popup-actions">
-                <button class="confirm-verify-btn">Sim</button>
-                <button class="cancel-verify-btn">Não</button>
+        <div class="viability-popup" style="touch-action: manipulation; -webkit-tap-highlight-color: transparent;">
+            <h4 class="viability-popup-title" style="font-size: ${isMobileDevice ? '18px' : '16px'};">Verificar Viabilidade?</h4>
+            <div class="popup-actions" style="display: flex; gap: ${isMobileDevice ? '12px' : '10px'}; flex-direction: ${isMobileDevice ? 'column' : 'row'};">
+                <button class="confirm-verify-btn" style="${buttonStyle} background: #4facfe; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                    Sim
+                </button>
+                <button class="cancel-verify-btn" style="${buttonStyle} background: #ccc; color: #333; border: none; border-radius: 6px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                    Não
+                </button>
             </div>
         </div>`;
     
-    window.searchMarker.bindPopup(confirmPopup).openPopup();
+    window.searchMarker.bindPopup(confirmPopup, {
+        closeOnClick: false,
+        autoClose: false,
+        closeButton: true
+    }).openPopup();
+    
+    // Prevenir fechamento acidental do popup no mobile
+    if (window.searchMarker) {
+        window.searchMarker.on('popupopen', function() {
+            const popup = window.searchMarker.getPopup();
+            const popupElement = popup.getElement();
+            if (popupElement) {
+                // Prevenir fechamento ao clicar/tocar dentro do popup
+                popupElement.addEventListener('touchstart', (e) => {
+                    e.stopPropagation();
+                }, { passive: true });
+                popupElement.addEventListener('touchend', (e) => {
+                    e.stopPropagation();
+                }, { passive: true });
+                popupElement.addEventListener('click', (e) => {
+                    // Só prevenir se não for o botão de fechar
+                    if (!e.target.closest('.leaflet-popup-close-button')) {
+                        e.stopPropagation();
+                    }
+                });
+            }
+        });
+    }
     
     // Conectar botões do popup quando renderizado
     const connectPopupButtons = () => {
@@ -3773,6 +3838,29 @@ async function onMapClick(e) {
         closeButton: true
     }).openPopup();
     
+    // Prevenir fechamento acidental do popup no mobile
+    if (window.searchMarker) {
+        window.searchMarker.on('popupopen', function() {
+            const popup = window.searchMarker.getPopup();
+            const popupElement = popup.getElement();
+            if (popupElement) {
+                // Prevenir fechamento ao clicar/tocar dentro do popup
+                popupElement.addEventListener('touchstart', (e) => {
+                    e.stopPropagation();
+                }, { passive: true });
+                popupElement.addEventListener('touchend', (e) => {
+                    e.stopPropagation();
+                }, { passive: true });
+                popupElement.addEventListener('click', (e) => {
+                    // Só prevenir se não for o botão de fechar
+                    if (!e.target.closest('.leaflet-popup-close-button')) {
+                        e.stopPropagation();
+                    }
+                });
+            }
+        });
+    }
+    
     // Usar o mesmo método de marcação com confirmação
     // A flag fromClickMode será usada no popup
     const popupNode = window.searchMarker.getPopup().getElement();
@@ -3783,15 +3871,24 @@ async function onMapClick(e) {
 
 // Função helper para criar conteúdo do popup
 function createLocationPopupContent(lat, lng, addressText, fromClickMode) {
+    // Detectar mobile para ajustar estilos
+    const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                          (window.innerWidth <= 768) ||
+                          ('ontouchstart' in window);
+    
+    const buttonStyle = isMobileDevice 
+        ? 'padding: 12px 20px; min-height: 44px; font-size: 16px; touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none;'
+        : 'padding: 8px 16px;';
+    
     return `
-        <div class="location-popup">
-            <h4 style="margin: 0 0 10px 0; font-size: 16px;">📍 Local Selecionado</h4>
-            <p style="margin: 0 0 15px 0; color: #666; font-size: 14px;">${addressText}</p>
-            <div style="display: flex; gap: 10px; justify-content: center;">
-                <button class="confirm-verify-btn" style="padding: 8px 16px; background: #4facfe; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">
+        <div class="location-popup" style="touch-action: manipulation; -webkit-tap-highlight-color: transparent;">
+            <h4 style="margin: 0 0 10px 0; font-size: ${isMobileDevice ? '18px' : '16px'};">📍 Local Selecionado</h4>
+            <p style="margin: 0 0 15px 0; color: #666; font-size: ${isMobileDevice ? '15px' : '14px'}; word-wrap: break-word;">${addressText}</p>
+            <div style="display: flex; gap: ${isMobileDevice ? '12px' : '10px'}; justify-content: center; flex-wrap: wrap;">
+                <button class="confirm-verify-btn" style="${buttonStyle} background: #4facfe; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; width: ${isMobileDevice ? '100%' : 'auto'}; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
                     <i class="fas fa-check"></i> Verificar Viabilidade
                 </button>
-                <button class="cancel-verify-btn" style="padding: 8px 16px; background: #ccc; color: #333; border: none; border-radius: 4px; cursor: pointer;">
+                <button class="cancel-verify-btn" style="${buttonStyle} background: #ccc; color: #333; border: none; border-radius: 6px; cursor: pointer; width: ${isMobileDevice ? '100%' : 'auto'}; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
                     <i class="fas fa-times"></i> Cancelar
                 </button>
             </div>
@@ -3808,9 +3905,19 @@ function attachPopupListeners(popupNode, lat, lng, addressText, fromClickMode) {
     
     if (confirmBtn && !confirmBtn.hasAttribute('data-connected')) {
         confirmBtn.setAttribute('data-connected', 'true');
-        confirmBtn.addEventListener('click', async (e) => {
+        
+        // Função para lidar com o clique/toque
+        const handleConfirm = async (e) => {
             e.preventDefault();
             e.stopPropagation();
+            e.stopImmediatePropagation();
+            
+            // Prevenir fechamento do popup
+            if (window.searchMarker && window.searchMarker.getPopup()) {
+                const popup = window.searchMarker.getPopup();
+                popup.options.closeOnClick = false;
+                popup.options.autoClose = false;
+            }
             
             if (fromClickMode && isClickMode) {
                 window.shouldReturnToNavigationMode = true;
@@ -3845,16 +3952,26 @@ function attachPopupListeners(popupNode, lat, lng, addressText, fromClickMode) {
                     }, 300);
                 }
             }
-        });
+        };
+        
+        // Adicionar listeners para mobile e desktop
+        confirmBtn.addEventListener('click', handleConfirm);
+        confirmBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            handleConfirm(e);
+        }, { passive: false });
     }
     
     if (cancelBtn && !cancelBtn.hasAttribute('data-connected')) {
         cancelBtn.setAttribute('data-connected', 'true');
-        cancelBtn.addEventListener('click', function(e) {
+        
+        // Função para lidar com o clique/toque
+        const handleCancel = function(e) {
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
             
+            // Prevenir fechamento acidental - garantir que fecha apenas quando queremos
             if (window.searchMarker) {
                 try {
                     window.searchMarker.closePopup();
@@ -3877,7 +3994,14 @@ function attachPopupListeners(popupNode, lat, lng, addressText, fromClickMode) {
                     }
                 }, 100);
             }
-        });
+        };
+        
+        // Adicionar listeners para mobile e desktop
+        cancelBtn.addEventListener('click', handleCancel);
+        cancelBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            handleCancel(e);
+        }, { passive: false });
     }
 }
 

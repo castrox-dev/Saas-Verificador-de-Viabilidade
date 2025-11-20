@@ -691,6 +691,80 @@ body.no-scroll {
     margin-bottom: var(--spacing-md);
 }
 
+/* ===== MELHORIAS PARA POPUPS NO MOBILE ===== */
+/* Prevenir fechamento acidental de popups no mobile */
+.leaflet-popup-content-wrapper {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    pointer-events: auto;
+}
+
+.leaflet-popup-content {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    pointer-events: auto;
+}
+
+/* Botões do popup de confirmação - área de toque maior no mobile */
+.confirm-verify-btn,
+.cancel-verify-btn {
+    min-height: 48px !important;
+    min-width: 100% !important;
+    padding: 14px 20px !important;
+    font-size: 16px !important;
+    touch-action: manipulation !important;
+    -webkit-tap-highlight-color: transparent !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    pointer-events: auto !important;
+    position: relative;
+    z-index: 1000;
+}
+
+/* Feedback visual ao tocar nos botões */
+.confirm-verify-btn:active,
+.cancel-verify-btn:active {
+    transform: scale(0.98);
+    opacity: 0.9;
+    transition: transform 0.1s ease, opacity 0.1s ease;
+}
+
+/* Prevenir que o popup feche ao tocar nos botões */
+.viability-popup,
+.location-popup {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    pointer-events: auto;
+}
+
+.viability-popup *,
+.location-popup * {
+    pointer-events: auto;
+}
+
+/* Garantir que os botões não sejam bloqueados */
+.viability-popup button,
+.location-popup button {
+    pointer-events: auto !important;
+    z-index: 1001 !important;
+    position: relative;
+}
+
+/* Prevenir fechamento ao tocar dentro do popup */
+.leaflet-popup-content-wrapper:active {
+    pointer-events: auto;
+}
+
+/* Melhorar área de toque do botão de fechar do popup */
+.leaflet-popup-close-button {
+    min-width: 44px !important;
+    min-height: 44px !important;
+    touch-action: manipulation !important;
+    -webkit-tap-highlight-color: transparent !important;
+}
+
 /* ===== CONTROLES LEAFLET CUSTOMIZADOS ===== */
 .leaflet-control-zoom {
     border: none !important;
