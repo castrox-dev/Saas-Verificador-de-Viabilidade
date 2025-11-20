@@ -1452,8 +1452,11 @@ async function markLocationWithConfirmation(lat, lng, addressText, fromClickMode
                     window.shouldReturnToNavigationMode = true;
                 }
                 
+                // Mostrar loading screen IMEDIATAMENTE quando confirmar
+                showViabilityLoading('Verificando viabilidade...', 'Buscando CTOs próximos e calculando rotas');
+                
                 if (window.searchMarker && typeof window.searchMarker.setPopupContent === 'function') {
-                    window.searchMarker.setPopupContent('<div class="loading-popup">Verificando viabilidade...</div>');
+                    window.searchMarker.setPopupContent('<div class="loading-popup"><i class="fas fa-spinner fa-spin"></i> Verificando viabilidade...</div>');
                 }
                 
                 try {
@@ -1686,25 +1689,41 @@ function hideSearchLoading() {
 }
 
 // Funções para o loading screen da verificação de viabilidade
-function showViabilityLoading() {
+function showViabilityLoading(message = 'Verificando viabilidade...', subtext = 'Analisando CTOs próximos e calculando rotas') {
     const loadingOverlay = document.getElementById('loading-overlay');
     if (loadingOverlay) {
+        // Atualizar mensagens
+        const textEl = loadingOverlay.querySelector('.loading-text');
+        const subtextEl = loadingOverlay.querySelector('.loading-subtext');
+        if (textEl) textEl.textContent = message;
+        if (subtextEl) subtextEl.textContent = subtext;
+        
+        // Mostrar overlay
         loadingOverlay.style.display = 'flex';
+        
+        // Adicionar animação de fade-in
+        setTimeout(() => {
+            loadingOverlay.style.opacity = '1';
+        }, 10);
     }
 }
 
 function hideViabilityLoading() {
     const loadingOverlay = document.getElementById('loading-overlay');
     if (loadingOverlay) {
-        loadingOverlay.style.display = 'none';
+        // Fade-out antes de esconder
+        loadingOverlay.style.opacity = '0';
+        setTimeout(() => {
+            loadingOverlay.style.display = 'none';
+        }, 300);
     }
 }
 
 // Função para verificar viabilidade
 async function verificarViabilidade(lat, lon, endereco = '') {
     try {
-        // Remover notificação desnecessária
-        showViabilityLoading(); // Mostrar loading screen
+        // Loading screen já deve estar visível (chamado antes), mas garantir que está
+        showViabilityLoading('Verificando viabilidade...', 'Buscando CTOs próximos e calculando rotas');
         
         // Coletar IDs dos mapas ativos para incluir no cache
         const activeMapIds = [];
@@ -2252,23 +2271,29 @@ async function loadKML(filename, mapId = null, options = {}) {
         return processKMLData(cachedData, filename, mapId, options);
     }
 
+    // Mostrar loading manual para carregamento de mapas grandes
+    let loadingId = null;
+    if (window.globalLoadingScreen) {
+        loadingId = window.globalLoadingScreen.forceShow('Carregando mapa...');
+    }
+
     performanceMonitor.recordCacheMiss();
     performanceMonitor.recordApiCall();
 
-    // Timeout controlado
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s
-
-    // Construir URL com ID se disponível (prioridade) ou filename
-    let url = `${API_BASE}/coordenadas?`;
-    if (mapId) {
-        url += `id=${encodeURIComponent(mapId)}`;
-        if (filename) url += `&arquivo=${encodeURIComponent(filename)}`;
-    } else {
-        url += `arquivo=${encodeURIComponent(filename)}`;
-    }
-    let data;
     try {
+        // Timeout controlado
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s
+
+        // Construir URL com ID se disponível (prioridade) ou filename
+        let url = `${API_BASE}/coordenadas?`;
+        if (mapId) {
+            url += `id=${encodeURIComponent(mapId)}`;
+            if (filename) url += `&arquivo=${encodeURIComponent(filename)}`;
+        } else {
+            url += `arquivo=${encodeURIComponent(filename)}`;
+        }
+        let data;
         const resp = await fetch(url, { signal: controller.signal });
         clearTimeout(timeoutId);
         
@@ -2426,15 +2451,21 @@ async function loadKML(filename, mapId = null, options = {}) {
         error.volume_configurado = data.volume_configurado;
         throw error;
     }
-    if (!Array.isArray(data) || data.length === 0) {
-        console.warn('Nenhuma coordenada encontrada no arquivo:', filename);
-        if (typeof showNotification === 'function') {
-            showNotification(`Sem coordenadas em ${filename}`, 'error');
+        if (!Array.isArray(data) || data.length === 0) {
+            console.warn('Nenhuma coordenada encontrada no arquivo:', filename);
+            if (typeof showNotification === 'function') {
+                showNotification(`Sem coordenadas em ${filename}`, 'error');
+            }
+            return;
         }
-        return;
-    }
 
-    return processKMLData(data, filename, mapId, options);
+        return processKMLData(data, filename, mapId, options);
+    } finally {
+        // Remover loading manual se foi criado
+        if (loadingId && window.globalLoadingScreen) {
+            window.globalLoadingScreen.forceHideManual(loadingId);
+        }
+    }
 }
 
 // Função separada para processar dados KML (reutilizável e otimizada)
@@ -3667,6 +3698,9 @@ async function onMapClick(e) {
     const lat = e.latlng.lat;
     const lng = e.latlng.lng;
     
+    // Mostrar loading screen IMEDIATAMENTE para feedback visual rápido
+    showViabilityLoading('Processando local...', 'Obtendo informações do endereço');
+    
     // Mostrar marcador IMEDIATAMENTE para feedback visual rápido
     map.setView([lat, lng], 16);
     
@@ -3714,6 +3748,15 @@ async function onMapClick(e) {
         console.warn('Geocodificação em background falhou:', error);
     });
     
+    // Aguardar geocodificação (mas não bloquear muito)
+    await Promise.race([
+        geoPromise,
+        new Promise(resolve => setTimeout(resolve, 2000)) // Máximo 2 segundos
+    ]);
+    
+    // Esconder loading screen temporariamente (será mostrado novamente quando confirmar)
+    hideViabilityLoading();
+    
     // Mostrar popup IMEDIATAMENTE (sem esperar geocodificação)
     const popupContent = createLocationPopupContent(lat, lng, addressText, true);
     window.searchMarker.bindPopup(popupContent, {
@@ -3721,9 +3764,6 @@ async function onMapClick(e) {
         autoClose: false,
         closeButton: true
     }).openPopup();
-    
-    // Aguardar geocodificação (mas não bloquear)
-    await geoPromise;
     
     // Usar o mesmo método de marcação com confirmação
     // A flag fromClickMode será usada no popup
@@ -3768,8 +3808,11 @@ function attachPopupListeners(popupNode, lat, lng, addressText, fromClickMode) {
                 window.shouldReturnToNavigationMode = true;
             }
             
+            // Mostrar loading screen IMEDIATAMENTE quando confirmar
+            showViabilityLoading('Verificando viabilidade...', 'Buscando CTOs próximos e calculando rotas');
+            
             if (window.searchMarker && typeof window.searchMarker.setPopupContent === 'function') {
-                window.searchMarker.setPopupContent('<div class="loading-popup">Verificando viabilidade...</div>');
+                window.searchMarker.setPopupContent('<div class="loading-popup"><i class="fas fa-spinner fa-spin"></i> Verificando viabilidade...</div>');
             }
             
             try {

@@ -7,9 +7,10 @@
 class GlobalLoadingScreen {
     constructor() {
         this.loadingOverlay = null;
-        this.activeRequests = new Set();
-        this.minLoadingTime = 500; // Mostrar loading apenas se demorar mais de 500ms
+        this.activeRequests = new Map(); // Mudar para Map para armazenar metadados
+        this.minLoadingTime = 100; // Reduzir para 100ms - mostrar loading mais rápido
         this.loadingTimeout = null;
+        this.currentMessage = 'Carregando...';
         this.init();
     }
 
@@ -200,15 +201,24 @@ class GlobalLoadingScreen {
     /**
      * Mostra o loading screen
      */
-    show() {
+    show(message = null) {
         if (!this.loadingOverlay) return;
+
+        // Atualizar mensagem se fornecida
+        if (message) {
+            this.currentMessage = message;
+            const textElement = this.loadingOverlay.querySelector('.global-loading-text');
+            if (textElement) {
+                textElement.textContent = message;
+            }
+        }
 
         // Limpar timeout anterior se existir
         if (this.loadingTimeout) {
             clearTimeout(this.loadingTimeout);
         }
 
-        // Mostrar após delay mínimo
+        // Mostrar após delay mínimo (muito rápido agora)
         this.loadingTimeout = setTimeout(() => {
             if (this.activeRequests.size > 0) {
                 this.loadingOverlay.classList.add('show');
@@ -237,9 +247,21 @@ class GlobalLoadingScreen {
     /**
      * Adiciona uma requisição ativa
      */
-    addRequest(requestId) {
-        this.activeRequests.add(requestId);
-        this.show();
+    addRequest(requestId, metadata = {}) {
+        this.activeRequests.set(requestId, {
+            url: metadata.url || '',
+            message: metadata.message || this.getContextualMessage(metadata.url || ''),
+            timestamp: Date.now(),
+            ...metadata
+        });
+        
+        // Atualizar mensagem se fornecida
+        const requestData = this.activeRequests.get(requestId);
+        if (requestData.message) {
+            this.show(requestData.message);
+        } else {
+            this.show();
+        }
     }
 
     /**
@@ -249,7 +271,69 @@ class GlobalLoadingScreen {
         this.activeRequests.delete(requestId);
         if (this.activeRequests.size === 0) {
             this.hide();
+        } else {
+            // Atualizar mensagem para a próxima requisição ativa
+            const nextRequest = Array.from(this.activeRequests.values())[0];
+            if (nextRequest && nextRequest.message) {
+                this.show(nextRequest.message);
+            }
         }
+    }
+
+    /**
+     * Obtém mensagem contextual baseada na URL
+     */
+    getContextualMessage(url) {
+        if (!url) return 'Carregando...';
+        
+        const urlLower = url.toLowerCase();
+        
+        // Mapa de viabilidade
+        if (urlLower.includes('verificar-viabilidade') || urlLower.includes('viabilidade')) {
+            return 'Verificando viabilidade...';
+        }
+        
+        // Geocodificação
+        if (urlLower.includes('geocode')) {
+            return 'Buscando endereço...';
+        }
+        
+        // Carregamento de mapas/CTOs
+        if (urlLower.includes('coordenadas') || urlLower.includes('arquivos') || urlLower.includes('cto')) {
+            return 'Carregando mapas...';
+        }
+        
+        // Upload
+        if (urlLower.includes('upload') || urlLower.includes('enviar')) {
+            return 'Enviando arquivo...';
+        }
+        
+        // Busca
+        if (urlLower.includes('search') || urlLower.includes('buscar') || urlLower.includes('pesquisar')) {
+            return 'Pesquisando...';
+        }
+        
+        // Login/Auth
+        if (urlLower.includes('login') || urlLower.includes('auth')) {
+            return 'Entrando...';
+        }
+        
+        // Salvar/Atualizar
+        if (urlLower.includes('save') || urlLower.includes('update') || urlLower.includes('salvar') || urlLower.includes('atualizar')) {
+            return 'Salvando...';
+        }
+        
+        // Deletar
+        if (urlLower.includes('delete') || urlLower.includes('remove') || urlLower.includes('deletar') || urlLower.includes('remover')) {
+            return 'Removendo...';
+        }
+        
+        // API genérica
+        if (urlLower.includes('/api/')) {
+            return 'Processando...';
+        }
+        
+        return 'Carregando...';
     }
 
     /**
@@ -262,32 +346,39 @@ class GlobalLoadingScreen {
         window.fetch = async function(...args) {
             const url = args[0];
             const options = args[1] || {};
+            
+            // Obter URL como string
+            let urlString = '';
+            if (typeof url === 'string') {
+                urlString = url;
+            } else if (url instanceof Request) {
+                urlString = url.url;
+            } else if (url instanceof URL) {
+                urlString = url.toString();
+            }
 
             // Ignorar requisições de recursos estáticos e algumas APIs
             const ignorePatterns = [
-                /\.(css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/i,
+                /\.(css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|webp|mp4|mp3)$/i,
                 /\/static\//,
                 /\/media\//,
                 /\/api\/health/,
-                /\/api\/status/
+                /\/api\/status/,
+                /\/favicon\.ico/,
+                /\/manifest\.json/,
+                /\/sw\.js/,
+                /\/service-worker\.js/
             ];
 
-            const shouldIgnore = ignorePatterns.some(pattern => {
-                if (typeof url === 'string') {
-                    return pattern.test(url);
-                }
-                if (url instanceof Request) {
-                    return pattern.test(url.url);
-                }
-                return false;
-            });
+            const shouldIgnore = ignorePatterns.some(pattern => pattern.test(urlString));
 
             if (shouldIgnore) {
                 return originalFetch.apply(this, args);
             }
 
             const requestId = `fetch_${Date.now()}_${Math.random()}`;
-            self.addRequest(requestId);
+            const message = self.getContextualMessage(urlString);
+            self.addRequest(requestId, { url: urlString, message });
 
             try {
                 const response = await originalFetch.apply(this, args);
@@ -332,7 +423,8 @@ class GlobalLoadingScreen {
             }
 
             const requestId = `xhr_${Date.now()}_${Math.random()}`;
-            self.addRequest(requestId);
+            const message = self.getContextualMessage(url);
+            self.addRequest(requestId, { url, message });
 
             const originalOnReadyStateChange = this.onreadystatechange;
             this.onreadystatechange = function() {
@@ -393,13 +485,25 @@ class GlobalLoadingScreen {
      * Força mostrar loading (útil para operações manuais)
      */
     forceShow(message = 'Carregando...') {
-        if (this.loadingOverlay) {
-            const textElement = this.loadingOverlay.querySelector('.global-loading-text');
-            if (textElement) {
-                textElement.textContent = message;
+        const requestId = `manual_${Date.now()}_${Math.random()}`;
+        this.addRequest(requestId, { message, manual: true });
+        return requestId;
+    }
+
+    /**
+     * Força esconder loading manual
+     */
+    forceHideManual(requestId) {
+        if (requestId) {
+            this.removeRequest(requestId);
+        } else {
+            // Remover todos os manuais
+            for (const [id, data] of this.activeRequests.entries()) {
+                if (data.manual) {
+                    this.removeRequest(id);
+                }
             }
         }
-        this.show();
     }
 
     /**
