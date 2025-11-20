@@ -2474,7 +2474,7 @@ async function loadKML(filename, mapId = null, options = {}) {
             window.globalLoadingScreen.forceHideManual(loadingId);
         }
     }
-}
+} // Fim da função loadKML
 
 // Função separada para processar dados KML (reutilizável e otimizada)
 function processKMLData(data, filename, mapId = null, options = {}) {
