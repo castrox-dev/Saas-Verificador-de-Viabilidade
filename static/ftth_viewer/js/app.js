@@ -1449,11 +1449,44 @@ async function markLocationWithConfirmation(lat, lng, addressText, fromClickMode
                 e.stopImmediatePropagation();
                 console.log('Botão Sim clicado');
                 
-                // Prevenir fechamento do popup
+                // BLOQUEAR fechamento do popup durante o processamento
+                window.popupClosingLocked = true;
+                
+                // Prevenir fechamento do popup - MÚLTIPLAS CAMADAS DE PROTEÇÃO
                 if (window.searchMarker && window.searchMarker.getPopup()) {
                     const popup = window.searchMarker.getPopup();
                     popup.options.closeOnClick = false;
                     popup.options.autoClose = false;
+                    
+                    // Interceptar método close do popup
+                    const originalClose = popup.close;
+                    popup.close = function() {
+                        if (window.popupClosingLocked) {
+                            console.log('🚫 Fechamento do popup bloqueado durante processamento');
+                            return;
+                        }
+                        originalClose.call(this);
+                    };
+                    
+                    // Interceptar método closePopup do marcador também
+                    const originalMarkerClose = window.searchMarker.closePopup;
+                    window.searchMarker.closePopup = function() {
+                        if (window.popupClosingLocked) {
+                            console.log('🚫 Fechamento do popup do marcador bloqueado durante processamento');
+                            return this;
+                        }
+                        return originalMarkerClose.call(this);
+                    };
+                    
+                    // Interceptar método closePopup do mapa também
+                    const originalMapClose = map.closePopup;
+                    map.closePopup = function() {
+                        if (window.popupClosingLocked && window.searchMarker && window.searchMarker.isPopupOpen()) {
+                            console.log('🚫 Fechamento do popup do mapa bloqueado durante processamento');
+                            return this;
+                        }
+                        return originalMapClose.call(this);
+                    };
                 }
                 
                 // Se veio do modo marcação, marcar para voltar ao modo navegação após verificação
@@ -1492,6 +1525,11 @@ async function markLocationWithConfirmation(lat, lng, addressText, fromClickMode
                             window.shouldReturnToNavigationMode = false;
                         }, 300);
                     }
+                } finally {
+                    // Liberar bloqueio após processamento (com delay para garantir)
+                    setTimeout(() => {
+                        window.popupClosingLocked = false;
+                    }, 1000);
                 }
             };
             
@@ -1586,6 +1624,9 @@ async function markLocationWithConfirmation(lat, lng, addressText, fromClickMode
     
     // Prevenir fechamento acidental do popup no mobile
     if (window.searchMarker) {
+        // Flag para prevenir fechamento acidental
+        window.popupClosingLocked = false;
+        
         window.searchMarker.on('popupopen', function() {
             const popup = window.searchMarker.getPopup();
             const popupElement = popup.getElement();
@@ -1593,6 +1634,8 @@ async function markLocationWithConfirmation(lat, lng, addressText, fromClickMode
                 // Prevenir fechamento ao clicar/tocar dentro do popup
                 popupElement.addEventListener('touchstart', (e) => {
                     e.stopPropagation();
+                    window.popupClosingLocked = true;
+                    setTimeout(() => { window.popupClosingLocked = false; }, 500);
                 }, { passive: true });
                 popupElement.addEventListener('touchend', (e) => {
                     e.stopPropagation();
@@ -1601,10 +1644,36 @@ async function markLocationWithConfirmation(lat, lng, addressText, fromClickMode
                     // Só prevenir se não for o botão de fechar
                     if (!e.target.closest('.leaflet-popup-close-button')) {
                         e.stopPropagation();
+                        e.stopImmediatePropagation();
                     }
-                });
+                }, true); // Usar capture phase
             }
         });
+        
+        // Interceptar tentativas de fechar o popup
+        window.searchMarker.on('popupclose', function(e) {
+            // Se o fechamento estiver bloqueado, cancelar
+            if (window.popupClosingLocked) {
+                e.popup.openOn(window.searchMarker);
+                return false;
+            }
+        });
+        
+        // Prevenir fechamento ao clicar no mapa quando o popup está aberto
+        map.on('click', function(e) {
+            if (window.searchMarker && window.searchMarker.isPopupOpen()) {
+                const popupElement = window.searchMarker.getPopup().getElement();
+                if (popupElement) {
+                    // Verificar se o clique foi dentro do popup
+                    const clickTarget = e.originalEvent?.target;
+                    if (clickTarget && popupElement.contains(clickTarget)) {
+                        e.originalEvent?.stopPropagation();
+                        e.originalEvent?.stopImmediatePropagation();
+                        return false;
+                    }
+                }
+            }
+        }, true);
     }
     
     // Conectar botões do popup quando renderizado
@@ -3710,7 +3779,22 @@ function toggleCursorMode() {
         map.keyboard.disable();
         
         // Adicionar evento de clique no mapa
-        map.on('click', onMapClick);
+        // Prevenir que cliques dentro do popup fechem o popup
+        map.on('click', function(e) {
+            // Se houver popup aberto, verificar se o clique foi dentro dele
+            if (window.searchMarker && window.searchMarker.isPopupOpen()) {
+                const popupElement = window.searchMarker.getPopup().getElement();
+                if (popupElement) {
+                    const clickTarget = e.originalEvent?.target;
+                    if (clickTarget && popupElement.contains(clickTarget)) {
+                        // Clique foi dentro do popup, não processar
+                        return;
+                    }
+                }
+            }
+            // Se não foi dentro do popup, processar normalmente
+            onMapClick(e);
+        });
         
         showNotification('Modo marcação ativado', 'info');
     } else {
@@ -3912,11 +3996,44 @@ function attachPopupListeners(popupNode, lat, lng, addressText, fromClickMode) {
             e.stopPropagation();
             e.stopImmediatePropagation();
             
-            // Prevenir fechamento do popup
+            // BLOQUEAR fechamento do popup durante o processamento
+            window.popupClosingLocked = true;
+            
+            // Prevenir fechamento do popup - MÚLTIPLAS CAMADAS DE PROTEÇÃO
             if (window.searchMarker && window.searchMarker.getPopup()) {
                 const popup = window.searchMarker.getPopup();
                 popup.options.closeOnClick = false;
                 popup.options.autoClose = false;
+                
+                // Interceptar método close do popup
+                const originalClose = popup.close;
+                popup.close = function() {
+                    if (window.popupClosingLocked) {
+                        console.log('🚫 Fechamento do popup bloqueado durante processamento');
+                        return;
+                    }
+                    originalClose.call(this);
+                };
+                
+                // Interceptar método closePopup do marcador também
+                const originalMarkerClose = window.searchMarker.closePopup;
+                window.searchMarker.closePopup = function() {
+                    if (window.popupClosingLocked) {
+                        console.log('🚫 Fechamento do popup do marcador bloqueado durante processamento');
+                        return this;
+                    }
+                    return originalMarkerClose.call(this);
+                };
+                
+                // Interceptar método closePopup do mapa também
+                const originalMapClose = map.closePopup;
+                map.closePopup = function() {
+                    if (window.popupClosingLocked && window.searchMarker && window.searchMarker.isPopupOpen()) {
+                        console.log('🚫 Fechamento do popup do mapa bloqueado durante processamento');
+                        return this;
+                    }
+                    return originalMapClose.call(this);
+                };
             }
             
             if (fromClickMode && isClickMode) {
@@ -3951,6 +4068,11 @@ function attachPopupListeners(popupNode, lat, lng, addressText, fromClickMode) {
                         window.shouldReturnToNavigationMode = false;
                     }, 300);
                 }
+            } finally {
+                // Liberar bloqueio após processamento (com delay para garantir)
+                setTimeout(() => {
+                    window.popupClosingLocked = false;
+                }, 1000);
             }
         };
         
