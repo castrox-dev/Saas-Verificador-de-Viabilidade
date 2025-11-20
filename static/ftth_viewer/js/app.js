@@ -2280,10 +2280,13 @@ async function loadKML(filename, mapId = null, options = {}) {
     performanceMonitor.recordCacheMiss();
     performanceMonitor.recordApiCall();
 
+    // Declarar timeoutId fora do try para poder limpar no catch/finally
+    let timeoutId = null;
+    
     try {
         // Timeout controlado
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s
+        timeoutId = setTimeout(() => controller.abort(), 15000); // 15s
 
         // Construir URL com ID se disponível (prioridade) ou filename
         let url = `${API_BASE}/coordenadas?`;
@@ -2372,6 +2375,62 @@ async function loadKML(filename, mapId = null, options = {}) {
         // Fazer parse do JSON
         data = await resp.json();
         
+        // Verificar se há erro na resposta
+        if (data && data.erro) {
+            // Construir mensagem de erro mais informativa
+            let errorMessage = data.erro;
+            
+            // Tratar erros 404 como warnings (arquivos não encontrados são esperados no Railway)
+            const isNotFound = data.erro.includes('não encontrado') || 
+                              data.erro.includes('not found') || 
+                              data.erro.includes('404');
+            
+            // Verificar se Railway Volume não está configurado
+            const volumeNotConfigured = data.solucao && (
+                data.solucao.includes('RAILWAY VOLUME NÃO CONFIGURADO') || 
+                data.solucao.includes('SOLUÇÃO CRÍTICA') ||
+                data.volume_configurado === false
+            );
+            
+            if (isNotFound) {
+                if (volumeNotConfigured) {
+                    // Railway Volume não configurado - mensagem crítica
+                    console.error('🔴 RAILWAY VOLUME NÃO CONFIGURADO!');
+                    console.error('🔴 Arquivos serão PERDIDOS a cada reinicialização!');
+                    console.error('🔴 Configure um Railway Volume para persistência.');
+                    console.info('📖 Documentação: docs/railway-volume-setup.md');
+                } else {
+                    // Arquivo não encontrado - logar como warning
+                    console.warn('⚠️ Arquivo não encontrado:', filename || mapId, '-', data.erro);
+                    if (data.volume_configurado === true) {
+                        console.info('💡 Railway Volume configurado. O arquivo precisa ser re-enviado.');
+                    } else {
+                        console.info('💡 Este erro é esperado quando arquivos não foram enviados após o deploy no Railway (filesystem efêmero).');
+                    }
+                }
+            } else {
+                // Outros erros - logar como erro crítico
+                console.error('❌ Erro da API:', data.erro);
+            }
+            
+            // Criar erro com todas as informações
+            const error = new Error(errorMessage);
+            error.status = 404; // Definir status para erro 404
+            error.details = data.detalhes;
+            error.solucao = data.solucao;
+            error.volume_configurado = data.volume_configurado;
+            throw error;
+        }
+
+        // Verificar se há dados válidos
+        if (!Array.isArray(data) || data.length === 0) {
+            console.warn('Nenhuma coordenada encontrada no arquivo:', filename);
+            if (typeof showNotification === 'function') {
+                showNotification(`Sem coordenadas em ${filename}`, 'error');
+            }
+            return;
+        }
+
         // Salvar no cache apenas se for sucesso
         if (data && !data.erro) {
             smartCache.set('coordinates', cacheKey, data);
@@ -2379,8 +2438,13 @@ async function loadKML(filename, mapId = null, options = {}) {
         
         const duration = performanceMonitor.endTimer(timer, 'loadKML-api');
         console.log(`⚡ Arquivo carregado em ${duration.toFixed(2)}ms`);
+
+        return processKMLData(data, filename, mapId, options);
     } catch (err) {
-        clearTimeout(timeoutId);
+        // Limpar timeout se ainda estiver ativo
+        if (timeoutId) {
+            clearTimeout(timeoutId);
+        }
         
         // Tratar erros 404 como warnings (arquivos não encontrados são esperados no Railway)
         const isNotFound = err.status === 404 || 
@@ -2404,62 +2468,6 @@ async function loadKML(filename, mapId = null, options = {}) {
         
         performanceMonitor.endTimer(timer, 'loadKML-error');
         throw err;
-    }
-
-        if (data && data.erro) {
-        // Construir mensagem de erro mais informativa
-        let errorMessage = data.erro;
-        
-        // Tratar erros 404 como warnings (arquivos não encontrados são esperados no Railway)
-        const isNotFound = data.erro.includes('não encontrado') || 
-                          data.erro.includes('not found') || 
-                          data.erro.includes('404');
-        
-        // Verificar se Railway Volume não está configurado
-        const volumeNotConfigured = data.solucao && (
-            data.solucao.includes('RAILWAY VOLUME NÃO CONFIGURADO') || 
-            data.solucao.includes('SOLUÇÃO CRÍTICA') ||
-            data.volume_configurado === false
-        );
-        
-        if (isNotFound) {
-            if (volumeNotConfigured) {
-                // Railway Volume não configurado - mensagem crítica
-                console.error('🔴 RAILWAY VOLUME NÃO CONFIGURADO!');
-                console.error('🔴 Arquivos serão PERDIDOS a cada reinicialização!');
-                console.error('🔴 Configure um Railway Volume para persistência.');
-                console.info('📖 Documentação: docs/railway-volume-setup.md');
-            } else {
-                // Arquivo não encontrado - logar como warning
-                console.warn('⚠️ Arquivo não encontrado:', filename || mapId, '-', data.erro);
-                if (data.volume_configurado === true) {
-                    console.info('💡 Railway Volume configurado. O arquivo precisa ser re-enviado.');
-                } else {
-                    console.info('💡 Este erro é esperado quando arquivos não foram enviados após o deploy no Railway (filesystem efêmero).');
-                }
-            }
-        } else {
-            // Outros erros - logar como erro crítico
-            console.error('❌ Erro da API:', data.erro);
-        }
-        
-        // Criar erro com todas as informações
-        const error = new Error(errorMessage);
-        error.status = 404; // Definir status para erro 404
-        error.details = data.detalhes;
-        error.solucao = data.solucao;
-        error.volume_configurado = data.volume_configurado;
-        throw error;
-    }
-        if (!Array.isArray(data) || data.length === 0) {
-            console.warn('Nenhuma coordenada encontrada no arquivo:', filename);
-            if (typeof showNotification === 'function') {
-                showNotification(`Sem coordenadas em ${filename}`, 'error');
-            }
-            return;
-        }
-
-        return processKMLData(data, filename, mapId, options);
     } finally {
         // Remover loading manual se foi criado
         if (loadingId && window.globalLoadingScreen) {
